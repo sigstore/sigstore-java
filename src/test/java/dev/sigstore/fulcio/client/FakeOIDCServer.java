@@ -38,6 +38,8 @@ import java.util.HashMap;
 
 public class FakeOIDCServer implements AutoCloseable {
 
+  public static final String USER = "test@example.com";
+
   private final RSAKey keyPair;
   private final HttpServer server;
 
@@ -99,6 +101,8 @@ public class FakeOIDCServer implements AutoCloseable {
             .expirationTime(Date.from(Instant.now().plus(30, ChronoUnit.MINUTES)))
             .subject(subject)
             .audience("sigstore")
+            .claim("email", USER)
+            .claim("email_verified", true)
             .build();
     SignedJWT signedJWT = new SignedJWT(header, claims);
     signedJWT.sign(signer);
@@ -108,7 +112,7 @@ public class FakeOIDCServer implements AutoCloseable {
   public String getFulcioConfig() {
     String issuer = getURI().toString();
     return String.format(
-        "{\"OIDCIssuers\":{ \"%s\": { \"IssuerURL\": \"%s\", \"ClientID\": \"sigstore\", \"Type\": \"spiffe\"}}}",
+        "{\"OIDCIssuers\":{ \"%s\": { \"IssuerURL\": \"%s\", \"ClientID\": \"sigstore\", \"Type\": \"email\"}}}",
         issuer, issuer);
   }
 }

@@ -44,10 +44,8 @@ public class ClientTest {
             FulcioWrapper.startNewServer(fulcioConfig, ctLogServer.getURI().toString())) {
           Client c = Client.Builder().setServerUrl(fulcioServer.getURI()).build();
 
-          // create a "subject" and sign it with the oidc server key (signed JWT) [the test fixture
-          // expects spiffe]
-          String subject =
-              oidcServer.getURI().resolve("/foo/bar").toString().replaceAll("http", "spiffe");
+          // create a "subject" and sign it with the oidc server key (signed JWT)
+          String subject = oidcServer.USER;
           String token = oidcServer.sign(subject);
 
           // create an ECDSA p-256 keypair, this is our key that we want to generate certs for
