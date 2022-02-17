@@ -15,8 +15,10 @@
  */
 package dev.sigstore.fulcio.client;
 
-import static com.google.common.io.Files.write;
-
+import com.google.common.io.Files;
+import dev.sigstore.testing.FakeCTLogServer;
+import dev.sigstore.testing.FakeOIDCServer;
+import dev.sigstore.testing.FulcioWrapper;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -36,7 +38,7 @@ public class ClientTest {
     // start oidc server
     try (FakeOIDCServer oidcServer = FakeOIDCServer.startNewServer()) {
       File fulcioConfig = testRoot.newFile("fulcio-config.json");
-      write(oidcServer.getFulcioConfig().getBytes(StandardCharsets.UTF_8), fulcioConfig);
+      Files.write(oidcServer.getFulcioConfig().getBytes(StandardCharsets.UTF_8), fulcioConfig);
       try (FakeCTLogServer ctLogServer = FakeCTLogServer.startNewServer()) {
 
         // start fulcio client with config from oidc server
@@ -45,7 +47,7 @@ public class ClientTest {
           Client c = Client.Builder().setServerUrl(fulcioServer.getURI()).build();
 
           // create a "subject" and sign it with the oidc server key (signed JWT)
-          String subject = oidcServer.USER;
+          String subject = FakeOIDCServer.USER;
           String token = oidcServer.sign(subject);
 
           // create an ECDSA p-256 keypair, this is our key that we want to generate certs for

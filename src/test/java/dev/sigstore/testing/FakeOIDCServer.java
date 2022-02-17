@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.fulcio.client;
+package dev.sigstore.testing;
 
 import com.google.gson.Gson;
 import com.nimbusds.jose.JOSEException;

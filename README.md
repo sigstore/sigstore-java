@@ -1,6 +1,8 @@
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
+Minimum Java 8
+
 This is a WIP, currently only consists
 - fulcio client
 
@@ -10,7 +12,7 @@ String subject // email of signer
 String idToken // idtoken from OIDC server for email
 
 // create a new client
-Client fulcioClient = Client.Builder().setServerUrl(fulcioServer.getURI()).build();
+Client fulcioClient = Client.Builder().setServerUrl("my fulcio url").build();
 
 // create an ECDSA p-256 keypair, this is our key that we want to generate certs for
 KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
