@@ -31,7 +31,7 @@ jobs:
         go-version: '1.17.x'
 
     # at some point this should just be replaced with something that can bring up a sigstore test env
-    - name: install fulcio
+    - name: Install Fulcio
       run: |
           go install github.com/sigstore/fulcio@main
           
