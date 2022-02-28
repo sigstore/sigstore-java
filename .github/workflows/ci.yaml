@@ -33,7 +33,7 @@ jobs:
     # at some point this should just be replaced with something that can bring up a sigstore test env
     - name: install fulcio
       run: |
-          go install github.com/sigstore/fulcio@latest
+          go install github.com/sigstore/fulcio@main
           
     - name: Build with Gradle
       uses: gradle/gradle-build-action@937999e9cc2425eddc7fd62d1053baf041147db7
