@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    `maven-publish`
     id("com.diffplug.spotless") version "6.4.2"
     id("org.jsonschema2dataclass") version "4.2.0"
 }
@@ -63,8 +64,6 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.13.3")
 }
 
-println("${project.buildDir}")
-
 spotless {
     kotlinGradle {
         target("*.gradle.kts") // default target for kotlinGradle
@@ -90,4 +89,47 @@ jsonSchema2Pojo {
     targetPackage.set("dev.sigstore.rekor")
     generateBuilders.set(true)
     annotationStyle.set("gson")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            artifactId = rootProject.name
+            from(components["java"])
+
+            pom {
+                name.set(rootProject.name)
+                description.set("A java client for signing and verifying using sigstore")
+                url.set("https://github.com/sigstore/sigstore-java")
+
+                // https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven:resolved_dependencies
+                versionMapping {
+                    usage("java-api") {
+                        fromResolutionOf("runtimeClasspath")
+                    }
+                    usage("java-runtime") {
+                        fromResolutionResult()
+                    }
+                }
+
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        organization.set("sigstore authors")
+                        organizationUrl.set("https://sigstore.dev")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/sigstore/sigstore-java.git")
+                    developerConnection.set("scm:git:ssh://github.com/sigstore/sigstore-java.git")
+                    url.set("https://github.com/sigstore/sigstore-java")
+                }
+            }
+        }
+    }
 }
