@@ -23,18 +23,20 @@ import java.net.URI;
  * A test fixture to start fulcio from an executable on the system path. This requires fulcio to be
  * installed, do something like go install github.com/sigstore/fulcio
  */
-public class FulcioWrapper implements AutoCloseable {
+public class FulcioWrapper {
 
-  private final Process p;
+  private final Process fulcioProcess;
 
   private FulcioWrapper(Process p) {
-    this.p = p;
+    this.fulcioProcess = p;
   }
 
-  public static FulcioWrapper startNewServer(File config, String ctLogUrl) throws IOException {
-    ProcessBuilder pb = new ProcessBuilder();
-    String fulcioEnv = System.getenv("FULCIO_BINARY");
-    String fulcioCmd = fulcioEnv == null ? "fulcio" : fulcioEnv;
+  public static FulcioWrapper startNewServer(File config, String ctLogUrl)
+      throws IOException, InterruptedException {
+    var pb = new ProcessBuilder();
+    var fulcioEnv = System.getenv("FULCIO_BINARY");
+    var fulcioCmd = fulcioEnv == null ? "fulcio" : fulcioEnv;
+    var ctLogOpt = ctLogUrl == null ? "--ct-log-url=" : "--ct-log-url=" + ctLogUrl;
     pb.command(
         fulcioCmd,
         "serve",
@@ -42,19 +44,21 @@ public class FulcioWrapper implements AutoCloseable {
         "5555",
         "--ca",
         "ephemeralca",
-        "--ct-log-url",
-        ctLogUrl,
+        ctLogOpt,
         "--config-path",
         config.getAbsolutePath());
     pb.redirectErrorStream(true);
     pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-    Process p = pb.start();
-    return new FulcioWrapper(p);
+    var fp = pb.start();
+    Thread.sleep(1000); // wait for the server to come up
+    return new FulcioWrapper(fp);
   }
 
-  @Override
-  public void close() {
-    p.destroy();
+  public void shutdown() throws Exception {
+    // forcible kill fulcio and all it's subprocesses
+    fulcioProcess.destroyForcibly();
+    fulcioProcess.waitFor();
+    Thread.sleep(1000); // give the server a chance to shutdown
   }
 
   public URI getURI() {
