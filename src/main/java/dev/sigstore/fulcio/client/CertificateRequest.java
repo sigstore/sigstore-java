@@ -15,8 +15,10 @@
  */
 package dev.sigstore.fulcio.client;
 
+import dev.sigstore.json.GsonSupplier;
 import java.security.PublicKey;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 public class CertificateRequest {
@@ -48,5 +50,17 @@ public class CertificateRequest {
 
   public byte[] getSignedEmailAddress() {
     return signedEmailAddress;
+  }
+
+  public String toJsonPayload() {
+    HashMap<String, Object> key = new HashMap<>();
+    key.put("content", getPublicKey().getEncoded());
+    key.put("algorithm", getPublicKey().getAlgorithm());
+
+    HashMap<String, Object> data = new HashMap<>();
+    data.put("publicKey", key);
+    data.put("signedEmailAddress", getSignedEmailAddress());
+
+    return new GsonSupplier().get().toJson(data);
   }
 }

@@ -23,6 +23,9 @@ dependencies {
     implementation("com.google.api-client:google-api-client-gson:1.31.5")
 
     implementation("com.google.code.gson:gson:2.8.9")
+    implementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2") {
+        because("contains library code for all platforms")
+    }
 
     testImplementation("junit:junit:4.12")
     testImplementation("com.nimbusds:oauth2-oidc-sdk:6.21.2")

@@ -15,19 +15,16 @@
  */
 package dev.sigstore.fulcio.client;
 
-import dev.sigstore.json.GsonSupplier;
-import java.util.HashMap;
+public class FulcioValidationException extends Exception {
+  public FulcioValidationException(String message) {
+    super(message);
+  }
 
-public class CertificateRequests {
-  public static String toJsonPayload(CertificateRequest cr) {
-    HashMap<String, Object> key = new HashMap<>();
-    key.put("content", cr.getPublicKey().getEncoded());
-    key.put("algorithm", cr.getPublicKey().getAlgorithm());
+  public FulcioValidationException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-    HashMap<String, Object> data = new HashMap<>();
-    data.put("publicKey", key);
-    data.put("signedEmailAddress", cr.getSignedEmailAddress());
-
-    return new GsonSupplier().get().toJson(data);
+  public FulcioValidationException(Throwable cause) {
+    super(cause);
   }
 }
