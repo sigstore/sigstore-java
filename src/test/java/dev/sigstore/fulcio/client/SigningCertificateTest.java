@@ -16,17 +16,22 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
+import com.google.protobuf.ByteString;
+import dev.sigstore.fulcio.v2.SigningCertificateDetachedSCT;
+import dev.sigstore.fulcio.v2.SigningCertificateEmbeddedSCT;
+import dev.sigstore.testing.grpc.GrpcTypes;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateParsingException;
+import java.util.Base64;
 import org.conscrypt.ct.SerializationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class SigningCertificateTest {
   @Test
-  public void TestDecode() throws SerializationException, IOException, CertificateException {
+  public void testDecode() throws SerializationException, IOException, CertificateException {
     String sctBase64 =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/sct.base64"),
@@ -36,11 +41,26 @@ public class SigningCertificateTest {
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/cert.pem"),
             StandardCharsets.UTF_8);
 
-    SigningCertificate.newSigningCertificate(certs, sctBase64);
+    var signingCert = SigningCertificate.newSigningCertificate(certs, sctBase64);
+    Assertions.assertTrue(signingCert.getDetachedSct().isPresent());
+    Assertions.assertEquals(2, signingCert.getCertificates().size());
   }
 
   @Test
-  public void TestDecode_DerCert() throws CertificateException, IOException {
+  public void testDecode_embedded()
+      throws SerializationException, IOException, CertificateException {
+    String certs =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/certWithSct.pem"),
+            StandardCharsets.UTF_8);
+
+    var signingCert = SigningCertificate.newSigningCertificate(certs, null);
+    Assertions.assertTrue(signingCert.hasEmbeddedSct());
+    Assertions.assertEquals(3, signingCert.getCertificates().size());
+  }
+
+  @Test
+  public void testDecode_derCert() throws CertificateException, IOException {
     String certs =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/certs/cert.der"), StandardCharsets.UTF_8);
@@ -51,5 +71,42 @@ public class SigningCertificateTest {
       Assertions.assertEquals(
           "no valid PEM certificates were found in response from Fulcio", cpe.getMessage());
     }
+  }
+
+  @Test
+  public void testDecode_grpc() throws IOException, CertificateException, SerializationException {
+    var certs =
+        GrpcTypes.PemToCertificateChain(
+            Resources.toString(
+                Resources.getResource("dev/sigstore/samples/fulcio-response/valid/cert.pem"),
+                StandardCharsets.UTF_8));
+    String sctBase64 =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/sct.base64"),
+            StandardCharsets.UTF_8);
+    var signingCert =
+        SigningCertificate.newSigningCertificate(
+            SigningCertificateDetachedSCT.newBuilder()
+                .setChain(certs)
+                .setSignedCertificateTimestamp(
+                    ByteString.copyFrom(Base64.getDecoder().decode(sctBase64)))
+                .build());
+    Assertions.assertTrue(signingCert.getDetachedSct().isPresent());
+    Assertions.assertEquals(2, signingCert.getCertificates().size());
+  }
+
+  @Test
+  public void testDecode_embeddedGrpc()
+      throws IOException, CertificateException, SerializationException {
+    var certs =
+        GrpcTypes.PemToCertificateChain(
+            Resources.toString(
+                Resources.getResource("dev/sigstore/samples/fulcio-response/valid/certWithSct.pem"),
+                StandardCharsets.UTF_8));
+    var signingCert =
+        SigningCertificate.newSigningCertificate(
+            SigningCertificateEmbeddedSCT.newBuilder().setChain(certs).build());
+    Assertions.assertTrue(signingCert.hasEmbeddedSct());
+    Assertions.assertEquals(3, signingCert.getCertificates().size());
   }
 }

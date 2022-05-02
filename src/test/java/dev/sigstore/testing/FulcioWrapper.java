@@ -39,6 +39,10 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     return URI.create("http://localhost:5555");
   }
 
+  public URI getGrpcURI() {
+    return URI.create("localhost:5554");
+  }
+
   private Path createConfig(String issuer) throws IOException {
     fulcioConfig = Files.createTempFile("fulcio-config", ".json");
     Files.writeString(
@@ -76,10 +80,9 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     pb.command(
         fulcioCmd,
         "serve",
-        "--port",
-        "5555",
-        "--ca",
-        "ephemeralca",
+        "--port=5555",
+        "--grpc-port=5554",
+        "--ca=ephemeralca",
         ctLogOpt,
         "--config-path",
         config.toAbsolutePath().toString());
