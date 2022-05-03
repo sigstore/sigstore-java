@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
 
+/** HttpProvider defines http connection behaviour for sigstore clients. */
 public class HttpProvider {
   public static final String DEFAULT_USER_AGENT = "sigstoreJavaClient/0.0.1";
   public static final int DEFAULT_TIMEOUT = 60;
@@ -75,14 +76,14 @@ public class HttpProvider {
     }
 
     public HttpProvider build() {
-      HttpClientBuilder hcb = ApacheHttpTransport.newDefaultHttpClientBuilder();
-      hcb.setConnectionTimeToLive(timeout, TimeUnit.SECONDS);
+      HttpClientBuilder hcb =
+          ApacheHttpTransport.newDefaultHttpClientBuilder()
+              .setConnectionTimeToLive(timeout, TimeUnit.SECONDS)
+              .setUserAgent(userAgent);
       if (!useSSLVerification) {
-        hcb = hcb.setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
+        hcb.setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
       }
-      hcb.setUserAgent(userAgent);
-      HttpTransport httpTransport = new ApacheHttpTransport(hcb.build());
-      return new HttpProvider(httpTransport);
+      return new HttpProvider(new ApacheHttpTransport(hcb.build()));
     }
   }
 }

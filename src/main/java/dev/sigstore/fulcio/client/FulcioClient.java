@@ -16,98 +16,86 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.api.client.http.*;
-import com.google.api.client.http.apache.v2.ApacheHttpTransport;
 import com.google.common.io.CharStreams;
+import dev.sigstore.http.HttpProvider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.security.cert.CertificateException;
-import java.util.concurrent.TimeUnit;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.conscrypt.ct.SerializationException;
 
+/** A client to communicate with a fulcio ca service instance. */
 public class FulcioClient {
   public static final String PUBLIC_FULCIO_SERVER = "https://fulcio.sigstore.dev";
   public static final String SIGNING_CERT_PATH = "/api/v1/signingCert";
-  public static final String DEFAULT_USER_AGENT = "fulcioJavaClient/0.0.1";
-  public static final int DEFAULT_TIMEOUT = 60;
+  public static final boolean DEFAULT_REQUIRE_SCT = true;
 
-  private final HttpTransport httpTransport;
+  private final HttpProvider httpProvider;
   private final URI serverUrl;
-  private final String userAgent;
   private final boolean requireSct;
 
   public static Builder builder() {
     return new Builder();
   }
 
-  private FulcioClient(
-      HttpTransport httpTransport, URI serverUrl, String userAgent, boolean requireSct) {
-    this.httpTransport = httpTransport;
+  private FulcioClient(HttpProvider httpProvider, URI serverUrl, boolean requireSct) {
     this.serverUrl = serverUrl;
-    this.userAgent = userAgent;
     this.requireSct = requireSct;
+    this.httpProvider = httpProvider;
   }
 
   public static class Builder {
-    private long timeout = DEFAULT_TIMEOUT;
     private URI serverUrl = URI.create(PUBLIC_FULCIO_SERVER);
-    private String userAgent = DEFAULT_USER_AGENT;
-    private boolean useSSLVerification = true;
-    private boolean requireSct = true;
+    private boolean requireSct = DEFAULT_REQUIRE_SCT;
+    private HttpProvider httpProvider;
 
     private Builder() {}
 
-    public Builder setTimeout(long timeout) {
-      if (timeout < 0) {
-        throw new IllegalArgumentException("Invalid timeout: " + timeout);
-      }
-      this.timeout = timeout;
+    /** Configure the http properties, see {@link HttpProvider}. */
+    public Builder setHttpProvider(HttpProvider httpConfiguration) {
+      this.httpProvider = httpConfiguration;
       return this;
     }
 
+    /** The fulcio remote server URI, defaults to {@value PUBLIC_FULCIO_SERVER}. */
     public Builder setServerUrl(URI uri) {
       this.serverUrl = uri;
       return this;
     }
 
-    public Builder setUserAgent(String userAgent) {
-      if (userAgent == null || userAgent.trim().isEmpty()) {
-        throw new IllegalArgumentException("Invalid useragent: " + userAgent);
-      }
-      this.userAgent = userAgent;
-      return this;
-    }
-
-    public Builder setUseSSLVerification(boolean enable) {
-      this.useSSLVerification = enable;
-      return this;
-    }
-
+    /**
+     * Configure whether we should expect the fulcio instance to return an sct with the signing
+     * certificate, defaults to {@value DEFAULT_REQUIRE_SCT}.
+     */
     public Builder requireSct(boolean requireSct) {
       this.requireSct = requireSct;
       return this;
     }
 
     public FulcioClient build() {
-      HttpClientBuilder hcb = ApacheHttpTransport.newDefaultHttpClientBuilder();
-      hcb.setConnectionTimeToLive(timeout, TimeUnit.SECONDS);
-      if (!useSSLVerification) {
-        hcb = hcb.setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
-      }
-      HttpTransport httpTransport = new ApacheHttpTransport(hcb.build());
-      return new FulcioClient(httpTransport, serverUrl, userAgent, requireSct);
+      HttpProvider hp = httpProvider != null ? httpProvider : HttpProvider.builder().build();
+      return new FulcioClient(hp, serverUrl, requireSct);
     }
   }
 
+  /**
+   * Request a signing certificate from fulcio.
+   *
+   * @param cr certificate request parameters
+   * @param bearerToken a oidc token from an oidc provider
+   * @return a {@link SigningCertificate} from fulcio
+   * @throws IOException if the http request fials
+   * @throws CertificateException if returned certificates could not be decoded
+   * @throws SerializationException if return sct could not be parsed
+   */
   public SigningCertificate SigningCert(CertificateRequest cr, String bearerToken)
       throws IOException, CertificateException, SerializationException {
     URI fulcioEndpoint = serverUrl.resolve(SIGNING_CERT_PATH);
 
     HttpRequest req =
-        httpTransport
+        httpProvider
+            .getHttpTransport()
             .createRequestFactory()
             .buildPostRequest(
                 new GenericUrl(fulcioEndpoint),
