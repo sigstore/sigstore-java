@@ -1,0 +1,24 @@
+{
+  "tokenProvider" : {
+    "keyProvider" : {
+      "initialKeys" : "{\"alg\": \"ES256\",\"kty\": \"EC\",\"d\": \"o9INzHyU_I97djF36YQRpHCJxFTgDTbS1OtwUnHc34U\",\"use\":\"sig\",\"crv\": \"P-256\",\"kid\": \"test-default\",\"x\": \"umybCYzE-VX_UAIJaX3wc-GTOgB7WDp7A3JJAKW_hqU\",\"y\": \"m_sCzuMjiBSQ7At9yNktMQvE1cCKq68jO7wnRczwKw8\"}",
+      "algorithm" : "ES256"
+    }
+  },
+  "tokenCallbacks" : [
+    {
+      "issuerId": "test-default",
+      "tokenExpiry": 120,
+      "requestMappings": [
+        {
+          "requestParam": "scope",
+          "match": "openid email",
+          "claims": {
+            "audience": "sigstore",
+            "email": "test.person@test.com",
+            "email_verified": true
+          }
+        }
+      ]
+    }]
+}
