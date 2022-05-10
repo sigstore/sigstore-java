@@ -23,6 +23,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,8 +56,19 @@ public class FakeCTLogServer implements AutoCloseable {
   public void handleSctRequest(HttpExchange t) throws IOException {
     // we dont really care about the input, we're are not testing fulcio, just the api
     Map<String, Object> content = new HashMap<>();
-    content.put("sct_version", 1);
-    content.put("id", "test_id");
+    content.put("sct_version", 0);
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      content.put("id", digest.digest("test_id".getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException(e);
+    }
+    // this is a signature stolen from a valid sct, but will not verify
+    content.put(
+        "signature",
+        Base64.getDecoder()
+            .decode(
+                "BAMARjBEAiBwHMgDtObhrT8wkWid01FXlqvXz1tsRei64siSuwZp7gIgdyRBYHatNaOezI/AW57lKkUffra4cKOGdO+oHKBJARI="));
     content.put("timestamp", System.currentTimeMillis());
     String resp = new GsonSupplier().get().toJson(content);
 
