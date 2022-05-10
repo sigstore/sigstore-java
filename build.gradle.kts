@@ -12,6 +12,11 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+tasks.compileTestJava {
+    sourceCompatibility = JavaVersion.VERSION_11.majorVersion
+    targetCompatibility = JavaVersion.VERSION_11.majorVersion
+}
+
 dependencies {
     implementation(platform("com.google.cloud:libraries-bom:24.3.0"))
     implementation("com.google.http-client:google-http-client-apache-v2")
