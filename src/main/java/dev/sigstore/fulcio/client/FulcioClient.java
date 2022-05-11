@@ -17,21 +17,18 @@ package dev.sigstore.fulcio.client;
 
 import com.google.api.client.http.*;
 import com.google.api.client.http.apache.v2.ApacheHttpTransport;
-import com.google.api.client.util.PemReader;
-import java.io.ByteArrayInputStream;
+import com.google.common.io.CharStreams;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.conscrypt.ct.SerializationException;
 
-public class Client {
+public class FulcioClient {
   public static final String PUBLIC_FULCIO_SERVER = "https://fulcio.sigstore.dev";
   public static final String SIGNING_CERT_PATH = "/api/v1/signingCert";
   public static final String DEFAULT_USER_AGENT = "fulcioJavaClient/0.0.1";
@@ -40,15 +37,18 @@ public class Client {
   private final HttpTransport httpTransport;
   private final URI serverUrl;
   private final String userAgent;
+  private final boolean requireSct;
 
-  public static Builder Builder() {
+  public static Builder builder() {
     return new Builder();
   }
 
-  private Client(HttpTransport httpTransport, URI serverUrl, String userAgent) {
+  private FulcioClient(
+      HttpTransport httpTransport, URI serverUrl, String userAgent, boolean requireSct) {
     this.httpTransport = httpTransport;
     this.serverUrl = serverUrl;
     this.userAgent = userAgent;
+    this.requireSct = requireSct;
   }
 
   public static class Builder {
@@ -56,6 +56,7 @@ public class Client {
     private URI serverUrl = URI.create(PUBLIC_FULCIO_SERVER);
     private String userAgent = DEFAULT_USER_AGENT;
     private boolean useSSLVerification = true;
+    private boolean requireSct = true;
 
     private Builder() {}
 
@@ -85,19 +86,24 @@ public class Client {
       return this;
     }
 
-    public Client build() {
+    public Builder requireSct(boolean requireSct) {
+      this.requireSct = requireSct;
+      return this;
+    }
+
+    public FulcioClient build() {
       HttpClientBuilder hcb = ApacheHttpTransport.newDefaultHttpClientBuilder();
       hcb.setConnectionTimeToLive(timeout, TimeUnit.SECONDS);
       if (!useSSLVerification) {
         hcb = hcb.setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
       }
       HttpTransport httpTransport = new ApacheHttpTransport(hcb.build());
-      return new Client(httpTransport, serverUrl, userAgent);
+      return new FulcioClient(httpTransport, serverUrl, userAgent, requireSct);
     }
   }
 
-  public CertificateResponse SigningCert(CertificateRequest cr, String bearerToken)
-      throws IOException, CertificateException {
+  public SigningCertificate SigningCert(CertificateRequest cr, String bearerToken)
+      throws IOException, CertificateException, SerializationException {
     URI fulcioEndpoint = serverUrl.resolve(SIGNING_CERT_PATH);
 
     HttpRequest req =
@@ -105,8 +111,7 @@ public class Client {
             .createRequestFactory()
             .buildPostRequest(
                 new GenericUrl(fulcioEndpoint),
-                ByteArrayContent.fromString(
-                    "application/json", CertificateRequests.toJsonPayload(cr)));
+                ByteArrayContent.fromString("application/json", cr.toJsonPayload()));
 
     req.getHeaders().setAccept("application/pem-certificate-chain");
     req.getHeaders().setAuthorization("Bearer " + bearerToken);
@@ -119,29 +124,14 @@ public class Client {
     }
 
     String sctHeader = resp.getHeaders().getFirstHeaderStringValue("SCT");
-    if (sctHeader == null) {
+    if (sctHeader == null && requireSct) {
       throw new IOException("no signed certificate timestamps were found in response from Fulcio");
     }
-    byte[] sct = Base64.getDecoder().decode(sctHeader);
 
-    System.out.println(new String(sct));
-
-    CertificateFactory cf = CertificateFactory.getInstance("X.509");
-    ArrayList<X509Certificate> certList = new ArrayList<>();
-    PemReader pemReader = new PemReader(new InputStreamReader(resp.getContent()));
-    while (true) {
-      PemReader.Section section = pemReader.readNextSection();
-      if (section == null) {
-        break;
-      }
-
-      byte[] certBytes = section.getBase64DecodedBytes();
-      certList.add((X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certBytes)));
+    try (InputStream content = resp.getContent()) {
+      return SigningCertificate.newSigningCertificate(
+          CharStreams.toString(new InputStreamReader(content, resp.getContentCharset())),
+          sctHeader);
     }
-    if (certList.isEmpty()) {
-      throw new IOException("no certificates were found in response from Fulcio");
-    }
-
-    return new CertificateResponse(cf.generateCertPath(certList), sct);
   }
 }

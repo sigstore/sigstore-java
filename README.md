@@ -29,7 +29,7 @@ byte[] signed = signature.sign();
 CertificateRequest cReq = new CertificateRequest(keys.getPublic(), signed);
 
 // ask fulcio for a signing cert chain for our public key
-CertificateResponse cResp = fulcioClient.SigningCert(cReq, token);
+SigningCertificate signingCert = fulcioClient.SigningCert(cReq, token);
 
 // sign something with our private key, throw it away and save the cert with the artifact
 ```

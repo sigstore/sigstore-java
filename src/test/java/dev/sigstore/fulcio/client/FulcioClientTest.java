@@ -29,7 +29,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public class ClientTest {
+public class FulcioClientTest {
   @Rule public TemporaryFolder testRoot = new TemporaryFolder();
 
   @Test
@@ -42,9 +42,11 @@ public class ClientTest {
       try (FakeCTLogServer ctLogServer = FakeCTLogServer.startNewServer()) {
 
         // start fulcio client with config from oidc server
-        try (FulcioWrapper fulcioServer =
-            FulcioWrapper.startNewServer(fulcioConfig, ctLogServer.getURI().toString())) {
-          Client c = Client.Builder().setServerUrl(fulcioServer.getURI()).build();
+        FulcioWrapper fulcioServer = null;
+        try {
+          fulcioServer =
+              FulcioWrapper.startNewServer(fulcioConfig, ctLogServer.getURI().toString());
+          FulcioClient c = FulcioClient.builder().setServerUrl(fulcioServer.getURI()).build();
 
           // create a "subject" and sign it with the oidc server key (signed JWT)
           String subject = FakeOIDCServer.USER;
@@ -65,11 +67,59 @@ public class ClientTest {
           CertificateRequest cReq = new CertificateRequest(keys.getPublic(), signed);
 
           // ask fulcio for a signing cert
-          CertificateResponse cResp = c.SigningCert(cReq, token);
+          SigningCertificate sc = c.SigningCert(cReq, token);
 
           // some pretty basic assertions
-          Assert.assertTrue(cResp.getCertPath().getCertificates().size() > 0);
-          Assert.assertTrue(cResp.getSct().length > 0);
+          Assert.assertTrue(sc.getCertPath().getCertificates().size() > 0);
+          Assert.assertNotNull(sc.getSct());
+        } finally {
+          if (fulcioServer != null) {
+            fulcioServer.shutdown();
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testSigningCert_NoSct() throws Exception {
+    try (FakeOIDCServer oidcServer = FakeOIDCServer.startNewServer()) {
+      File fulcioConfig = testRoot.newFile("fulcio-config.json");
+      Files.write(oidcServer.getFulcioConfig().getBytes(StandardCharsets.UTF_8), fulcioConfig);
+      // start fulcio client with config from oidc server
+      FulcioWrapper fulcioServer = null;
+      try {
+        fulcioServer = FulcioWrapper.startNewServer(fulcioConfig, null);
+        FulcioClient c =
+            FulcioClient.builder().setServerUrl(fulcioServer.getURI()).requireSct(false).build();
+
+        // create a "subject" and sign it with the oidc server key (signed JWT)
+        String subject = FakeOIDCServer.USER;
+        String token = oidcServer.sign(subject);
+
+        // create an ECDSA p-256 keypair, this is our key that we want to generate certs for
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
+        keyGen.initialize(256);
+        KeyPair keys = keyGen.generateKeyPair();
+
+        // sign the "subject" with our key, this signer already generates asn1 notation
+        Signature signature = Signature.getInstance("SHA256withECDSA");
+        signature.initSign(keys.getPrivate());
+        signature.update(subject.getBytes(StandardCharsets.UTF_8));
+        byte[] signed = signature.sign();
+
+        // create a certificate request with our public key and our signed "subject"
+        CertificateRequest cReq = new CertificateRequest(keys.getPublic(), signed);
+
+        // ask fulcio for a signing cert
+        SigningCertificate sc = c.SigningCert(cReq, token);
+
+        // some pretty basic assertions
+        Assert.assertTrue(sc.getCertPath().getCertificates().size() > 0);
+        Assert.assertFalse(sc.getSct().isPresent());
+      } finally {
+        if (fulcioServer != null) {
+          fulcioServer.shutdown();
         }
       }
     }
