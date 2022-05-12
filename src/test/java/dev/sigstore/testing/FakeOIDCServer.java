@@ -36,6 +36,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 
+// TODO: this can probably be replaces with a MockOauth2Server like in OidcClietTest
 public class FakeOIDCServer implements AutoCloseable {
 
   public static final String USER = "test@example.com";

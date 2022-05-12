@@ -3,8 +3,9 @@ A sigstore java client for interacting with sigstore infrastructure
 
 Minimum Java 8
 
-This is a WIP, currently only consists
-- fulcio client
+This is a WIP, currently consists of
+
+### fulcio client
 
 ```java
 // pre-requisites
@@ -29,14 +30,27 @@ byte[] signed = signature.sign();
 CertificateRequest cReq = new CertificateRequest(keys.getPublic(), signed);
 
 // ask fulcio for a signing cert chain for our public key
-SigningCertificate signingCert = fulcioClient.SigningCert(cReq, token);
+SigningCertificate signingCert = fulcioClient.SigningCert(cReq, idToken);
 
 // sign something with our private key, throw it away and save the cert with the artifact
 ```
 
+### oidc client
+
+```
+OidcClient oidcClient = OidcClient.builder().build();
+
+EmailIdToken eid = oidcClient.getIDToken(null);
+
+// email address, to sign and use when creating a CertificateRequest for fulcio
+eid.getEmailAddress();
+// idToken, to use when making a call to FulcioClient#SigningCert
+eid.getIdToken();
+
+```
+
 To be added
 - rekor client
-- dex/oidc client
 
 Maybe to be added here or somewhere else
 - signer
