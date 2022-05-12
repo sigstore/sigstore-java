@@ -23,9 +23,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import org.conscrypt.ct.SerializationException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class FulcioValidatorTest {
   private String sctBase64;
@@ -33,7 +33,7 @@ public class FulcioValidatorTest {
   private byte[] fulcioRoot;
   private byte[] ctfePub;
 
-  @Before
+  @BeforeEach
   public void loadResources() throws IOException {
     sctBase64 =
         Resources.toString(
@@ -72,9 +72,9 @@ public class FulcioValidatorTest {
 
     try {
       fulcioValidator.validateSct(signingCertificate);
-      Assert.fail();
+      Assertions.fail();
     } catch (FulcioValidationException fve) {
-      Assert.assertEquals("No ct-log public key was provided to validator", fve.getMessage());
+      Assertions.assertEquals("No ct-log public key was provided to validator", fve.getMessage());
     }
   }
 
@@ -87,9 +87,9 @@ public class FulcioValidatorTest {
 
     try {
       fulcioValidator.validateSct(signingCertificate);
-      Assert.fail();
+      Assertions.fail();
     } catch (FulcioValidationException fve) {
-      Assert.assertEquals("No SCT was found to validate", fve.getMessage());
+      Assertions.assertEquals("No SCT was found to validate", fve.getMessage());
     }
   }
 }

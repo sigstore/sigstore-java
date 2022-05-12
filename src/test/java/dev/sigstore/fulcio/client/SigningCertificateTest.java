@@ -21,8 +21,8 @@ import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateParsingException;
 import org.conscrypt.ct.SerializationException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SigningCertificateTest {
   @Test
@@ -46,9 +46,9 @@ public class SigningCertificateTest {
             Resources.getResource("dev/sigstore/samples/certs/cert.der"), Charset.defaultCharset());
     try {
       SigningCertificate.decodeCerts(certs);
-      Assert.fail("DER certificate was unexpectedly successfully parsed");
+      Assertions.fail("DER certificate was unexpectedly successfully parsed");
     } catch (CertificateParsingException cpe) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "no valid PEM certificates were found in response from Fulcio", cpe.getMessage());
     }
   }

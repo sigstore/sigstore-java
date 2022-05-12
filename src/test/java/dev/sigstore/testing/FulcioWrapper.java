@@ -15,9 +15,9 @@
  */
 package dev.sigstore.testing;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 
 /**
  * A test fixture to start fulcio from an executable on the system path. This requires fulcio to be
@@ -31,7 +31,7 @@ public class FulcioWrapper {
     this.fulcioProcess = p;
   }
 
-  public static FulcioWrapper startNewServer(File config, String ctLogUrl)
+  public static FulcioWrapper startNewServer(Path config, String ctLogUrl)
       throws IOException, InterruptedException {
     var pb = new ProcessBuilder();
     var fulcioEnv = System.getenv("FULCIO_BINARY");
@@ -46,7 +46,7 @@ public class FulcioWrapper {
         "ephemeralca",
         ctLogOpt,
         "--config-path",
-        config.getAbsolutePath());
+        config.toAbsolutePath().toString());
     pb.redirectErrorStream(true);
     pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
     var fp = pb.start();

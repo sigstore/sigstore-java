@@ -17,11 +17,17 @@ tasks.compileTestJava {
     targetCompatibility = JavaVersion.VERSION_11.majorVersion
 }
 
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
+}
+
 dependencies {
     implementation(platform("com.google.cloud:libraries-bom:24.3.0"))
     implementation("com.google.http-client:google-http-client-apache-v2")
     implementation("com.google.http-client:google-http-client-gson")
-
     implementation("com.google.code.gson:gson:2.8.9")
     implementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2") {
         because("contains library code for all platforms")
@@ -32,10 +38,12 @@ dependencies {
     implementation("com.google.oauth-client:google-oauth-client-jetty")
     implementation("com.google.oauth-client:google-oauth-client-java6")
 
-    testImplementation("junit:junit:4.12")
+    testImplementation(platform("org.junit:junit-bom:5.8.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("com.nimbusds:oauth2-oidc-sdk:6.21.2")
     testImplementation("com.nimbusds:nimbus-jose-jwt:9.18")
     testImplementation("no.nav.security:mock-oauth2-server:0.4.4")
+
     testImplementation("org.bouncycastle:bcutil-jdk15on:1.70")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.61.0")
 }

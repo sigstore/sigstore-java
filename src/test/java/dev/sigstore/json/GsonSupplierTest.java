@@ -17,26 +17,29 @@ package dev.sigstore.json;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
-import junit.framework.TestCase;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class GsonSupplierTest extends TestCase {
+public class GsonSupplierTest {
   private final Gson gson = new GsonSupplier().get();
 
+  @Test
   public void testWrite() {
-    Assert.assertEquals("\"YWJjZA==\"", gson.toJson("abcd".getBytes()));
+    Assertions.assertEquals("\"YWJjZA==\"", gson.toJson("abcd".getBytes()));
   }
 
+  @Test
   public void testRead() {
-    Assert.assertArrayEquals("abcd".getBytes(), gson.fromJson("\"YWJjZA==\"", byte[].class));
-    Assert.assertArrayEquals(new byte[] {}, gson.fromJson("\"\"", byte[].class));
-    Assert.assertArrayEquals(new byte[] {}, gson.fromJson("null", byte[].class));
+    Assertions.assertArrayEquals("abcd".getBytes(), gson.fromJson("\"YWJjZA==\"", byte[].class));
+    Assertions.assertArrayEquals(new byte[] {}, gson.fromJson("\"\"", byte[].class));
+    Assertions.assertArrayEquals(new byte[] {}, gson.fromJson("null", byte[].class));
   }
 
+  @Test
   public void testReadException() {
     try {
       gson.fromJson("%", byte[].class);
-      Assert.fail("Expected JsonParseException but got nothing");
+      Assertions.fail("Expected JsonParseException but got nothing");
     } catch (JsonParseException e) {
       // pass
     }
