@@ -21,16 +21,16 @@ import com.google.common.io.Resources;
 import java.io.IOException;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class OidcClientTest {
 
   private MockOAuth2Server server;
 
-  @Before
+  @BeforeEach
   public void setUpServer() throws IOException {
     // TODO: Remove custom config key once (https://github.com/navikt/mock-oauth2-server/issues/247)
     // is updated
@@ -42,13 +42,13 @@ public class OidcClientTest {
     server.start();
   }
 
-  @After
+  @AfterEach
   public void shutdownServer() throws IOException {
     server.shutdown();
   }
 
   @Test
-  public void testAuthFlow() throws IOException, OidcException {
+  public void testAuthFlow() throws OidcException {
     var issuerId = "test-default";
 
     try (var webClient = new WebClient()) {
@@ -59,7 +59,7 @@ public class OidcClientTest {
               .build();
 
       var eid = oidcClient.getIDToken(null);
-      Assert.assertEquals("test.person@test.com", eid.getEmailAddress());
+      Assertions.assertEquals("test.person@test.com", eid.getEmailAddress());
     }
   }
 }

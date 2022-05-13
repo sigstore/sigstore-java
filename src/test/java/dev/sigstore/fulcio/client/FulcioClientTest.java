@@ -15,32 +15,31 @@
  */
 package dev.sigstore.fulcio.client;
 
-import com.google.common.io.Files;
 import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FakeOIDCServer;
 import dev.sigstore.testing.FulcioWrapper;
-import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.Signature;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class FulcioClientTest {
-  @Rule public TemporaryFolder testRoot = new TemporaryFolder();
+  @TempDir public Path testRoot;
 
   @Test
   public void testSigningCert() throws Exception {
     // TODO: convert all these fixtures into junit rules/extensions
     // start oidc server
     try (FakeOIDCServer oidcServer = FakeOIDCServer.startNewServer()) {
-      File fulcioConfig = testRoot.newFile("fulcio-config.json");
-      Files.write(oidcServer.getFulcioConfig().getBytes(StandardCharsets.UTF_8), fulcioConfig);
-      try (FakeCTLogServer ctLogServer = FakeCTLogServer.startNewServer()) {
+      var fulcioConfig = testRoot.resolve("fulcio-config.json");
+      Files.writeString(fulcioConfig, oidcServer.getFulcioConfig());
 
+      try (FakeCTLogServer ctLogServer = FakeCTLogServer.startNewServer()) {
         // start fulcio client with config from oidc server
         FulcioWrapper fulcioServer = null;
         try {
@@ -70,8 +69,8 @@ public class FulcioClientTest {
           SigningCertificate sc = c.SigningCert(cReq, token);
 
           // some pretty basic assertions
-          Assert.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-          Assert.assertNotNull(sc.getSct());
+          Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
+          Assertions.assertNotNull(sc.getSct());
         } finally {
           if (fulcioServer != null) {
             fulcioServer.shutdown();
@@ -84,9 +83,8 @@ public class FulcioClientTest {
   @Test
   public void testSigningCert_NoSct() throws Exception {
     try (FakeOIDCServer oidcServer = FakeOIDCServer.startNewServer()) {
-      File fulcioConfig = testRoot.newFile("fulcio-config.json");
-      Files.write(oidcServer.getFulcioConfig().getBytes(StandardCharsets.UTF_8), fulcioConfig);
-      // start fulcio client with config from oidc server
+      var fulcioConfig = testRoot.resolve("fulcio-config.json");
+      Files.writeString(fulcioConfig, oidcServer.getFulcioConfig());
       FulcioWrapper fulcioServer = null;
       try {
         fulcioServer = FulcioWrapper.startNewServer(fulcioConfig, null);
@@ -115,8 +113,8 @@ public class FulcioClientTest {
         SigningCertificate sc = c.SigningCert(cReq, token);
 
         // some pretty basic assertions
-        Assert.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-        Assert.assertFalse(sc.getSct().isPresent());
+        Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
+        Assertions.assertFalse(sc.getSct().isPresent());
       } finally {
         if (fulcioServer != null) {
           fulcioServer.shutdown();
