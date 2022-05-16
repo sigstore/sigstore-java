@@ -22,6 +22,14 @@ tasks.withType<Test> {
     testLogging {
         events("passed", "skipped", "failed")
     }
+    // be very verbose in CI
+    if (environment.containsKey("CI")) {
+        testLogging {
+            showStandardStreams = true
+            showExceptions = true
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
+    }
 }
 
 dependencies {
