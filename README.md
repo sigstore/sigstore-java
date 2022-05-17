@@ -1,7 +1,7 @@
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
-Minimum Java 8
+Minimum Java 11
 
 This is a WIP, currently consists of
 
