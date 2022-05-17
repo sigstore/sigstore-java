@@ -51,7 +51,12 @@ class KeysTest {
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
-    assertEquals(result.getAlgorithm(), "EdDSA");
+    // BouncyCastle names the algorithm differently than the JDK
+    if (Keys.getJavaVersion() < 15) {
+      assertEquals(result.getAlgorithm(), "Ed25519");
+    } else {
+      assertEquals(result.getAlgorithm(), "EdDSA");
+    }
   }
 
   @Test
@@ -59,5 +64,16 @@ class KeysTest {
     Assertions.assertThrows(
         NoSuchAlgorithmException.class,
         () -> Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(DSA_PUB_PATH))));
+  }
+
+  @Test
+  void testGetJavaVersion() {
+    assertEquals(1, Keys.getJavaVersion("1.6.0_23"));
+    assertEquals(1, Keys.getJavaVersion("1.7.0"));
+    assertEquals(1, Keys.getJavaVersion("1.6.0_23"));
+    assertEquals(9, Keys.getJavaVersion("9.0.1"));
+    assertEquals(11, Keys.getJavaVersion("11.0.4"));
+    assertEquals(12, Keys.getJavaVersion("12.0.1"));
+    assertEquals(15, Keys.getJavaVersion("15.0.1"));
   }
 }

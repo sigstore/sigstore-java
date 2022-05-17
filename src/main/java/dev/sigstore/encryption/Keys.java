@@ -15,6 +15,7 @@
  */
 package dev.sigstore.encryption;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -43,10 +44,10 @@ public class Keys {
 
   static {
     // Added for EdDSA support for Java <15
-    String version = System.getProperty("java.version");
+
     // This should work as JDK version strings are of the form '1.x.x' up to Java 8, and '9.x..'
     // afterwards.
-    if (Integer.parseInt(version.substring(0, version.indexOf("."))) < 15) {
+    if (getJavaVersion() < 15) {
       try {
         log.info(
             "Adding BouncyCastleProvider to SecurityManager for EdDSA algorithm support on Java <15.");
@@ -59,6 +60,16 @@ public class Keys {
                 + "for your JVM");
       }
     }
+  }
+
+  @VisibleForTesting
+  protected static int getJavaVersion() {
+    return getJavaVersion(System.getProperty("java.version"));
+  }
+
+  @VisibleForTesting
+  protected static int getJavaVersion(String version) {
+    return Integer.parseInt(version.substring(0, version.indexOf(".")));
   }
 
   /**
