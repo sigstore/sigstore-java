@@ -15,15 +15,17 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        java-version: [11, 17]
 
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
-    - name: Set up JDK 11
+    - name: Set up JDK ${{ matrix.java-version }}
       uses: actions/setup-java@v2
       with:
-        java-version: '11'
+        java-version: ${{ matrix.java-version }}
         distribution: 'temurin'
     - name: Setup Go environment
       uses: actions/setup-go@v3.0.0
