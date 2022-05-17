@@ -49,7 +49,7 @@ public class FulcioValidatorTest {
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/fulcio.crt.pem"));
     ctfePub =
         Resources.toByteArray(
-            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/ctfe.pub"));
+            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/ctfe-ec.pub"));
   }
 
   @Test

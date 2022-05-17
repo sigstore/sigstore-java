@@ -27,6 +27,7 @@ dependencies {
     implementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2") {
         because("contains library code for all platforms")
     }
+    implementation("org.bouncycastle:bcutil-jdk18on:1.71")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.33.3"))
     implementation("com.google.oauth-client:google-oauth-client")

@@ -15,19 +15,14 @@
  */
 package dev.sigstore.fulcio.client;
 
-import com.google.api.client.util.PemReader;
+import dev.sigstore.encryption.Keys;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.*;
-import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Collections;
 import java.util.Date;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -41,26 +36,13 @@ public class FulcioValidator {
   private final TrustAnchor fulcioRoot;
 
   public static FulcioValidator newFulcioValidator(
-      byte[] fulcioRoot, @Nullable byte[] ctfePublicKey)
+      byte[] fulcioRoot, byte @Nullable [] ctfePublicKey)
       throws InvalidKeySpecException, NoSuchAlgorithmException, CertificateException, IOException,
           InvalidAlgorithmParameterException {
 
     CTLogInfo ctLogInfo = null;
     if (ctfePublicKey != null) {
-      // TODO: ctfePublicKey can be EC or RSA or EDDSA/ED25519
-      // (https://github.com/sigstore/sigstore-java/issues/4)
-      KeyFactory keyFactory = KeyFactory.getInstance("EC");
-      PemReader pemReader =
-          new PemReader(
-              new InputStreamReader(
-                  new ByteArrayInputStream(ctfePublicKey), StandardCharsets.UTF_8));
-      PemReader.Section section = pemReader.readNextSection();
-      if (pemReader.readNextSection() != null) {
-        throw new InvalidKeySpecException(
-            "ctfe public key must be only a single PEM encoded public key");
-      }
-      EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(section.getBase64DecodedBytes());
-      PublicKey ctfePublicKeyObj = keyFactory.generatePublic(publicKeySpec);
+      PublicKey ctfePublicKeyObj = Keys.parsePublicKey(ctfePublicKey);
       ctLogInfo = new CTLogInfo(ctfePublicKeyObj, "fulcio ct log", "unused-url");
     }
 
