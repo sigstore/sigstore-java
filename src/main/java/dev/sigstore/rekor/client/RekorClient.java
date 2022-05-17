@@ -15,12 +15,18 @@
  */
 package dev.sigstore.rekor.client;
 
+import com.google.api.client.http.ByteArrayContent;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpResponse;
 import dev.sigstore.http.HttpProvider;
+import java.io.IOException;
 import java.net.URI;
 
 /** A client to communicate with a rekor service instance. */
 public class RekorClient {
   public static final String PUBLIC_REKOR_SERVER = "https://rekor.sigstore.dev";
+  public static final String REKOR_ENTRIES_PATH = "/api/v1/log/entries";
 
   private final HttpProvider httpProvider;
   private final URI serverUrl;
@@ -59,8 +65,29 @@ public class RekorClient {
   }
 
   /** Put an entry on rekor. */
-  public void putEntry() {
-    throw new UnsupportedOperationException("I'm a worthless upload function");
+  public RekorResponse putEntry(HashedRekordRequest hashedRekordRequest) throws IOException {
+    URI rekorEndpoint = serverUrl.resolve(REKOR_ENTRIES_PATH);
+
+    HttpRequest req =
+        httpProvider
+            .getHttpTransport()
+            .createRequestFactory()
+            .buildPostRequest(
+                new GenericUrl(rekorEndpoint),
+                ByteArrayContent.fromString(
+                    "application/json", hashedRekordRequest.toJsonPayload()));
+    req.getHeaders().set("Accept", "application/json");
+    req.getHeaders().set("Content-Type", "application/json");
+
+    HttpResponse resp = req.execute();
+    if (resp.getStatusCode() != 201) {
+      throw new IOException(
+          String.format(
+              "bad response from rekor @ '%s' : %s", rekorEndpoint, resp.parseAsString()));
+    }
+
+    URI rekorEntryUri = serverUrl.resolve(resp.getHeaders().getLocation());
+    return new RekorResponse(rekorEntryUri);
   }
 
   /** Obtain an entry for an artifact from rekor. */

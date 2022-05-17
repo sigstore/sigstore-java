@@ -30,6 +30,9 @@ public interface Signer {
   /**
    * Sign the content. Implementations should use an algorithm that hashes with sha256 before
    * signing.
+   *
+   * @param content the full content to be signed (not a digest)
+   * @param charset the charset of the string {@code content}
    */
   byte[] sign(String content, Charset charset)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
@@ -37,6 +40,8 @@ public interface Signer {
   /**
    * Sign the content. Implementations should use an algorithm that hashes with sha256 before
    * signing.
+   *
+   * @param content the full content to be signed (not a digest)
    */
   byte[] sign(byte[] content)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
