@@ -1,6 +1,7 @@
 plugins {
     `java-library`
-    id("com.diffplug.spotless") version "6.3.0"
+    id("com.diffplug.spotless") version "6.4.2"
+    id("org.jsonschema2dataclass") version "4.2.0"
 }
 
 repositories {
@@ -10,6 +11,10 @@ repositories {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+}
+
+sourceSets["main"].java {
+    srcDirs("build/generated/sources/rekor-model/main")
 }
 
 tasks.withType<Test> {
@@ -41,7 +46,12 @@ dependencies {
 
     testImplementation("org.bouncycastle:bcutil-jdk15on:1.70")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.61.0")
+
+    implementation("javax.validation:validation-api:2.0.1.Final")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.13.3")
 }
+
+println("${project.buildDir}")
 
 spotless {
     kotlinGradle {
@@ -58,5 +68,12 @@ spotless {
     java {
         googleJavaFormat("1.6")
         licenseHeaderFile("config/licenseHeader")
+        targetExclude("build/**/*.java")
     }
+}
+
+jsonSchema2Pojo {
+    source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
+    targetDirectoryPrefix.set(file("${project.buildDir}/generated/sources/rekor-model/"))
+    targetPackage.set("dev.sigstore.rekor")
 }
