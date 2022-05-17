@@ -16,6 +16,15 @@
 package dev.sigstore.encryption;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.crypto.params.ECKeyParameters;
+import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
+import org.bouncycastle.crypto.params.RSAKeyParameters;
+import org.bouncycastle.crypto.util.PublicKeyFactory;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -28,14 +37,6 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.logging.Logger;
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
-import org.bouncycastle.crypto.params.ECKeyParameters;
-import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
-import org.bouncycastle.crypto.params.RSAKeyParameters;
-import org.bouncycastle.crypto.util.PublicKeyFactory;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemReader;
 
 /** For internal use. Key related utility functions. */
 public class Keys {
@@ -62,16 +63,6 @@ public class Keys {
     }
   }
 
-  @VisibleForTesting
-  protected static int getJavaVersion() {
-    return getJavaVersion(System.getProperty("java.version"));
-  }
-
-  @VisibleForTesting
-  protected static int getJavaVersion(String version) {
-    return Integer.parseInt(version.substring(0, version.indexOf(".")));
-  }
-
   /**
    * Takes a PEM formatted public key in bytes and constructs a {@code PublicKey} with it.
    *
@@ -80,9 +71,6 @@ public class Keys {
    * @throws InvalidKeySpecException if the PEM does not contain just one public key.
    * @throws NoSuchAlgorithmException if the public key is using an unsupported algorithm.
    */
-
-  // https://stackoverflow.com/questions/42911637/get-publickey-from-key-bytes-not-knowing-the-key-algorithm
-
   public static PublicKey parsePublicKey(byte[] keyBytes)
       throws InvalidKeySpecException, IOException, NoSuchAlgorithmException {
     PemReader pemReader =
@@ -103,6 +91,7 @@ public class Keys {
     return keyFactory.generatePublic(publicKeySpec);
   }
 
+  // https://stackoverflow.com/questions/42911637/get-publickey-from-key-bytes-not-knowing-the-key-algorithm
   private static String extractKeyAlgorithm(AsymmetricKeyParameter keyParameters)
       throws NoSuchAlgorithmException {
     if (keyParameters instanceof RSAKeyParameters) {
@@ -119,5 +108,15 @@ public class Keys {
       log.warning(error);
       throw new NoSuchAlgorithmException(error);
     }
+  }
+
+  @VisibleForTesting
+  protected static int getJavaVersion() {
+    return getJavaVersion(System.getProperty("java.version"));
+  }
+
+  @VisibleForTesting
+  protected static int getJavaVersion(String version) {
+    return Integer.parseInt(version.substring(0, version.indexOf(".")));
   }
 }
