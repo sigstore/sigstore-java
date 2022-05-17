@@ -25,6 +25,7 @@ import java.security.PublicKey;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.logging.Logger;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.ECKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
@@ -35,6 +36,8 @@ import org.bouncycastle.util.io.pem.PemReader;
 
 /** For internal use. Key related utility functions. */
 public class Keys {
+
+  private static final Logger log = Logger.getLogger(Keys.class.getName());
 
   /**
    * Takes a PEM formatted public key in bytes and constructs a {@code PublicKey} with it.
@@ -73,10 +76,12 @@ public class Keys {
     } else if (keyParameters instanceof ECKeyParameters) {
       return "EC";
     } else {
-      throw new NoSuchAlgorithmException(
+      String error =
           String.format(
               "The key provided was of type: %s. We only support RSA, EdDSA, and EC ",
-              keyParameters));
+              keyParameters);
+      log.severe(error);
+      throw new NoSuchAlgorithmException(error);
     }
   }
 }
