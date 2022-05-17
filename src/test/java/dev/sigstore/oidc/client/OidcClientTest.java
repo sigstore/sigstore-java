@@ -16,50 +16,25 @@
 package dev.sigstore.oidc.client;
 
 import com.gargoylesoftware.htmlunit.WebClient;
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
-import java.io.IOException;
-import no.nav.security.mock.oauth2.MockOAuth2Server;
-import no.nav.security.mock.oauth2.OAuth2Config;
-import org.junit.jupiter.api.AfterEach;
+import dev.sigstore.testing.MockOAuth2ServerExtension;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class OidcClientTest {
 
-  private MockOAuth2Server server;
-
-  @BeforeEach
-  public void setUpServer() throws IOException {
-    // TODO: Remove custom config key once (https://github.com/navikt/mock-oauth2-server/issues/247)
-    // is updated
-    String json =
-        Resources.toString(
-            Resources.getResource("dev/sigstore/oidc/server/config.json"), Charsets.UTF_8);
-    var cfg = OAuth2Config.Companion.fromJson(json);
-    server = new MockOAuth2Server(cfg);
-    server.start();
-  }
-
-  @AfterEach
-  public void shutdownServer() throws IOException {
-    server.shutdown();
-  }
+  @RegisterExtension
+  private static final MockOAuth2ServerExtension server = new MockOAuth2ServerExtension();
 
   @Test
   public void testAuthFlow() throws OidcException {
-    var issuerId = "test-default";
-
     try (var webClient = new WebClient()) {
       var oidcClient =
-          OidcClient.builder()
-              .setIssuer(server.issuerUrl(issuerId).toString())
-              .setBrowser(webClient::getPage)
-              .build();
+          OidcClient.builder().setIssuer(server.getIssuer()).setBrowser(webClient::getPage).build();
 
       var eid = oidcClient.getIDToken(null);
-      Assertions.assertEquals("test.person@test.com", eid.getEmailAddress());
+      Assertions.assertEquals(
+          MockOAuth2ServerExtension.DEFAULT_CONFIGURED_EMAIL, eid.getEmailAddress());
     }
   }
 }
