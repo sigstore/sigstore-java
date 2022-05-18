@@ -15,42 +15,32 @@
  */
 package dev.sigstore.testing;
 
-import com.nimbusds.jose.JOSEException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import dev.sigstore.json.GsonSupplier;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.extension.*;
 
-public class FakeCTLogServer implements AutoCloseable {
+/**
+ * A fake CT long instance to run per test. Will inject CTLOGURL into the test store so it can be
+ * picked up by a Fulcio fixture during initialization.
+ */
+public class FakeCTLogServer implements BeforeEachCallback, AfterEachCallback {
 
-  private final HttpServer server;
+  private HttpServer server;
 
-  public FakeCTLogServer(HttpServer server) {
-    this.server = server;
-  }
-
-  public URI getURI() {
+  public String getURL() {
     String address = server.getAddress().getHostString();
     int port = server.getAddress().getPort();
-    return URI.create("http://" + address + ":" + port);
-  }
-
-  public static FakeCTLogServer startNewServer() throws IOException, JOSEException {
-    HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
-    FakeCTLogServer testServer = new FakeCTLogServer(server);
-    server.createContext("/", testServer::handleSctRequest);
-    server.setExecutor(null); // creates a default executor
-    server.start();
-    return testServer;
+    return "http://" + address + ":" + port;
   }
 
   public void handleSctRequest(HttpExchange t) throws IOException {
@@ -79,7 +69,17 @@ public class FakeCTLogServer implements AutoCloseable {
   }
 
   @Override
-  public void close() {
+  public void beforeEach(ExtensionContext context) throws Exception {
+    server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+    server.createContext("/", this::handleSctRequest);
+    server.setExecutor(null); // creates a default executor
+    server.start();
+    var ns = ExtensionContext.Namespace.create(context.getTestMethod().orElseThrow().toString());
+    context.getStore(ns).put("CTLOGURL", getURL());
+  }
+
+  @Override
+  public void afterEach(ExtensionContext context) throws Exception {
     server.stop(0);
   }
 }

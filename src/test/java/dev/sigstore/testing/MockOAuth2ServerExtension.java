@@ -21,25 +21,24 @@ import com.google.common.io.Resources;
 import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.*;
 
-/** Junit5 extension that starts and stops an oauth server. Use with @RegisterExtension. */
-public class MockOAuth2ServerExtension implements BeforeAllCallback, AfterAllCallback {
+/**
+ * Junit5 extension that starts and stops an oauth server. Will write a per test storage item
+ * MOCK_OAUTH_ISSUER, for fulcio to use during initialization.
+ */
+public class MockOAuth2ServerExtension
+    implements BeforeEachCallback, AfterEachCallback, ParameterResolver {
   public static final String DEFAULT_CONFIGURED_EMAIL = "test.person@test.com";
 
   private static final String OAUTH_ISSUER_ID = "test-default";
   private MockOAuth2Server mockOAuthServer;
   private String issuer;
-  private Path fulcioConfig;
 
   @Override
-  public void beforeAll(ExtensionContext context) throws Exception {
+  public void beforeEach(ExtensionContext context) throws Exception {
     try {
       var oauthServerConfig =
           Resources.toString(
@@ -49,21 +48,16 @@ public class MockOAuth2ServerExtension implements BeforeAllCallback, AfterAllCal
       mockOAuthServer.start();
 
       issuer = mockOAuthServer.issuerUrl(OAUTH_ISSUER_ID).toString();
-      fulcioConfig = Files.createTempFile("fulcio-config", ".json");
-      Files.writeString(
-          fulcioConfig,
-          String.format(
-              "{\"OIDCIssuers\":{ \"%s\": { \"IssuerURL\": \"%s\", \"ClientID\": \"sigstore\", \"Type\": \"email\"}}}",
-              issuer, issuer));
+      var ns = ExtensionContext.Namespace.create(context.getTestMethod().orElseThrow().toString());
+      context.getStore(ns).put("MOCK_OAUTH_ISSUER", issuer);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
   }
 
   @Override
-  public void afterAll(ExtensionContext context) throws Exception {
+  public void afterEach(ExtensionContext context) throws Exception {
     mockOAuthServer.shutdown();
-    Files.deleteIfExists(fulcioConfig);
   }
 
   public OidcClient.EmailIdToken getOidcToken() throws OidcException {
@@ -83,7 +77,17 @@ public class MockOAuth2ServerExtension implements BeforeAllCallback, AfterAllCal
     return issuer;
   }
 
-  public Path getFulcioConfig() {
-    return fulcioConfig;
+  @Override
+  public boolean supportsParameter(
+      ParameterContext parameterContext, ExtensionContext extensionContext)
+      throws ParameterResolutionException {
+    return (parameterContext.getParameter().getType() == MockOAuth2ServerExtension.class);
+  }
+
+  @Override
+  public Object resolveParameter(
+      ParameterContext parameterContext, ExtensionContext extensionContext)
+      throws ParameterResolutionException {
+    return this;
   }
 }
