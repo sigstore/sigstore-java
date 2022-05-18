@@ -15,15 +15,18 @@
  */
 package dev.sigstore.encryption;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import com.google.common.io.Resources;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
+
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class KeysTest {
 
@@ -47,18 +50,22 @@ class KeysTest {
   }
 
   @Test
-  void parsePublicKey_ed25519()
+  @EnabledForJreRange(max = JRE.JAVA_14)
+  void parsePublicKey_ed25519_withBouncyCastle()
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
     // BouncyCastle names the algorithm differently than the JDK
-    if (Keys.getJavaVersion() < 15) {
-      assertEquals(result.getAlgorithm(), "Ed25519");
-    } else {
-      assertEquals(result.getAlgorithm(), "EdDSA");
-    }
+    assertEquals(result.getAlgorithm(), "Ed25519");
   }
 
+  @Test
+  @EnabledForJreRange(min = JRE.JAVA_15)
+  void parsePublicKey_ed25519_withStdLib() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+    PublicKey result =
+            Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
+    assertEquals(result.getAlgorithm(), "EdDSA");
+  }
   @Test
   void parsePublicKey_dsaShouldFail() {
     Assertions.assertThrows(
