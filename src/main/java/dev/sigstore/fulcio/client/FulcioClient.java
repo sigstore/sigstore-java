@@ -83,13 +83,12 @@ public class FulcioClient {
    * Request a signing certificate from fulcio.
    *
    * @param cr certificate request parameters
-   * @param bearerToken a oidc token from an oidc provider
    * @return a {@link SigningCertificate} from fulcio
    * @throws IOException if the http request fials
    * @throws CertificateException if returned certificates could not be decoded
    * @throws SerializationException if return sct could not be parsed
    */
-  public SigningCertificate SigningCert(CertificateRequest cr, String bearerToken)
+  public SigningCertificate SigningCert(CertificateRequest cr)
       throws IOException, CertificateException, SerializationException {
     URI fulcioEndpoint = serverUrl.resolve(SIGNING_CERT_PATH);
 
@@ -102,7 +101,7 @@ public class FulcioClient {
                 ByteArrayContent.fromString("application/json", cr.toJsonPayload()));
 
     req.getHeaders().setAccept("application/pem-certificate-chain");
-    req.getHeaders().setAuthorization("Bearer " + bearerToken);
+    req.getHeaders().setAuthorization("Bearer " + cr.getIdToken());
 
     HttpResponse resp = req.execute();
     if (resp.getStatusCode() != 201) {

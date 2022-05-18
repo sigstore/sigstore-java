@@ -24,32 +24,35 @@ import java.util.List;
 public class CertificateRequest {
   public static final List<String> SUPPORTED_ALGORITHMS = Collections.singletonList("EC");
   private final PublicKey publicKey;
-  private final byte[] signedEmailAddress;
+  private final String idToken;
+  private final byte[] proofOfPossession;
 
   /**
    * Create a certificate request
    *
    * @param publicKey An ECDSA public key
-   * @param signedEmailAddress A ECDSA SHA256 signed oidc email address in asn1 notation, this
-   *     should NOT be base64 encoded
+   * @param idToken An oidc token obtained from an oauth provider
+   * @param proofOfPossession The subject or email address from {@code idToken}, signed by the
+   *     private key counterpart of {@code publicKey} in asn1 notation
    * @throws UnsupportedAlgorithmException if key type is not in {@link
    *     CertificateRequest#SUPPORTED_ALGORITHMS}
    */
-  public CertificateRequest(PublicKey publicKey, byte[] signedEmailAddress)
+  public CertificateRequest(PublicKey publicKey, String idToken, byte[] proofOfPossession)
       throws UnsupportedAlgorithmException {
     if (!SUPPORTED_ALGORITHMS.contains(publicKey.getAlgorithm())) {
       throw new UnsupportedAlgorithmException(SUPPORTED_ALGORITHMS, publicKey.getAlgorithm());
     }
     this.publicKey = publicKey;
-    this.signedEmailAddress = signedEmailAddress;
+    this.idToken = idToken;
+    this.proofOfPossession = proofOfPossession;
   }
 
   public PublicKey getPublicKey() {
     return publicKey;
   }
 
-  public byte[] getSignedEmailAddress() {
-    return signedEmailAddress;
+  public byte[] getProofOfPossession() {
+    return proofOfPossession;
   }
 
   public String toJsonPayload() {
@@ -59,8 +62,12 @@ public class CertificateRequest {
 
     HashMap<String, Object> data = new HashMap<>();
     data.put("publicKey", key);
-    data.put("signedEmailAddress", getSignedEmailAddress());
+    data.put("signedEmailAddress", getProofOfPossession());
 
     return new GsonSupplier().get().toJson(data);
+  }
+
+  public String getIdToken() {
+    return idToken;
   }
 }
