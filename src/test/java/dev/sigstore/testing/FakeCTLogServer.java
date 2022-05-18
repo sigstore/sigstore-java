@@ -15,18 +15,18 @@
  */
 package dev.sigstore.testing;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
 import dev.sigstore.json.GsonSupplier;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.extension.*;
 
 /**
@@ -35,15 +35,16 @@ import org.junit.jupiter.api.extension.*;
  */
 public class FakeCTLogServer implements BeforeEachCallback, AfterEachCallback {
 
-  private HttpServer server;
+  // private HttpServer server;
+  private MockWebServer server;
 
   public String getURL() {
-    String address = server.getAddress().getHostString();
-    int port = server.getAddress().getPort();
+    String address = server.getHostName();
+    int port = server.getPort();
     return "http://" + address + ":" + port;
   }
 
-  public void handleSctRequest(HttpExchange t) throws IOException {
+  public MockResponse handleSctRequest() {
     // we dont really care about the input, we're are not testing fulcio, just the api
     Map<String, Object> content = new HashMap<>();
     content.put("sct_version", 0);
@@ -51,7 +52,7 @@ public class FakeCTLogServer implements BeforeEachCallback, AfterEachCallback {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       content.put("id", digest.digest("test_id".getBytes(StandardCharsets.UTF_8)));
     } catch (NoSuchAlgorithmException e) {
-      throw new IOException(e);
+      throw new RuntimeException(e);
     }
     // this is a signature stolen from a valid sct, but will not verify
     content.put(
@@ -62,17 +63,25 @@ public class FakeCTLogServer implements BeforeEachCallback, AfterEachCallback {
     content.put("timestamp", System.currentTimeMillis());
     String resp = new GsonSupplier().get().toJson(content);
 
-    t.sendResponseHeaders(200, resp.length());
-    OutputStream body = t.getResponseBody();
-    body.write(resp.getBytes());
-    body.close();
+    return new MockResponse().setResponseCode(200).setBody(resp);
   }
 
   @Override
   public void beforeEach(ExtensionContext context) throws Exception {
-    server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
-    server.createContext("/", this::handleSctRequest);
-    server.setExecutor(null); // creates a default executor
+    server = new MockWebServer();
+    server.setDispatcher(
+        new Dispatcher() {
+          @NotNull
+          @Override
+          public MockResponse dispatch(@NotNull RecordedRequest recordedRequest)
+              throws InterruptedException {
+            switch (recordedRequest.getPath()) {
+              case "/ct/v1/add-chain":
+                return handleSctRequest();
+            }
+            return new MockResponse().setResponseCode(404);
+          }
+        });
     server.start();
     var ns = ExtensionContext.Namespace.create(context.getTestMethod().orElseThrow().toString());
     context.getStore(ns).put("CTLOGURL", getURL());
@@ -80,6 +89,6 @@ public class FakeCTLogServer implements BeforeEachCallback, AfterEachCallback {
 
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
-    server.stop(0);
+    server.shutdown();
   }
 }
