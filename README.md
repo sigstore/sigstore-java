@@ -27,10 +27,10 @@ signature.update(subject.getBytes(StandardCharsets.UTF_8));
 byte[] signed = signature.sign();
 
 // create a certificate request with our public key and our signed "subject"
-CertificateRequest cReq = new CertificateRequest(keys.getPublic(), signed);
+CertificateRequest cReq = new CertificateRequest(keys.getPublic(), idtoken, signed);
 
 // ask fulcio for a signing cert chain for our public key
-SigningCertificate signingCert = fulcioClient.SigningCert(cReq, idToken);
+SigningCertificate signingCert = fulcioClient.SigningCert(cReq);
 
 // sign something with our private key, throw it away and save the cert with the artifact
 ```

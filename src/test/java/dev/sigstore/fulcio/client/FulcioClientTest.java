@@ -50,11 +50,11 @@ public class FulcioClientTest {
     signature.update(subject.getBytes(StandardCharsets.UTF_8));
     byte[] signed = signature.sign();
 
-    // create a certificate request with our public key and our signed "subject"
-    CertificateRequest cReq = new CertificateRequest(keys.getPublic(), signed);
+    // create a certificate request with our public key, oidc token and our signed "subject"
+    CertificateRequest cReq = new CertificateRequest(keys.getPublic(), token, signed);
 
     // ask fulcio for a signing cert
-    SigningCertificate sc = c.SigningCert(cReq, token);
+    SigningCertificate sc = c.SigningCert(cReq);
 
     // some pretty basic assertions
     Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
@@ -84,11 +84,11 @@ public class FulcioClientTest {
     signature.update(subject.getBytes(StandardCharsets.UTF_8));
     byte[] signed = signature.sign();
 
-    // create a certificate request with our public key and our signed "subject"
-    CertificateRequest cReq = new CertificateRequest(keys.getPublic(), signed);
+    // create a certificate request with our public key, oidc token and our signed "subject"
+    CertificateRequest cReq = new CertificateRequest(keys.getPublic(), token, signed);
 
     // ask fulcio for a signing cert
-    SigningCertificate sc = c.SigningCert(cReq, token);
+    SigningCertificate sc = c.SigningCert(cReq);
 
     // some pretty basic assertions
     Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
