@@ -15,18 +15,17 @@
  */
 package dev.sigstore.encryption;
 
-import com.google.common.io.Resources;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.io.Resources;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 class KeysTest {
 
@@ -61,11 +60,13 @@ class KeysTest {
 
   @Test
   @EnabledForJreRange(min = JRE.JAVA_15)
-  void parsePublicKey_ed25519_withStdLib() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+  void parsePublicKey_ed25519_withStdLib()
+      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
-            Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
+        Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
     assertEquals(result.getAlgorithm(), "EdDSA");
   }
+
   @Test
   void parsePublicKey_dsaShouldFail() {
     Assertions.assertThrows(
