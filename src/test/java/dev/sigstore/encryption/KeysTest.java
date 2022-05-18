@@ -21,7 +21,9 @@ import com.google.common.io.Resources;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -50,12 +52,36 @@ class KeysTest {
 
   @Test
   @EnabledForJreRange(max = JRE.JAVA_14)
+  void parsePublicKey_ed25519_unsupportedWithoutBouncyCastle() {
+    var reAddBC = false;
+    if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) != null) {
+      Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
+      reAddBC = true;
+    }
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH))));
+    if (reAddBC) {
+      Security.addProvider(new BouncyCastleProvider());
+    }
+  }
+
+  @Test
+  @EnabledForJreRange(max = JRE.JAVA_14)
   void parsePublicKey_ed25519_withBouncyCastle()
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+    var removeBC = false;
+    if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+      Security.addProvider(new BouncyCastleProvider());
+      removeBC = true;
+    }
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
     // BouncyCastle names the algorithm differently than the JDK
     assertEquals(result.getAlgorithm(), "Ed25519");
+    if (removeBC) {
+      Security.removeProvider("BC");
+    }
   }
 
   @Test
@@ -72,16 +98,5 @@ class KeysTest {
     Assertions.assertThrows(
         NoSuchAlgorithmException.class,
         () -> Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(DSA_PUB_PATH))));
-  }
-
-  @Test
-  void testGetJavaVersion() {
-    assertEquals(1, Keys.getJavaVersion("1.6.0_23"));
-    assertEquals(1, Keys.getJavaVersion("1.7.0"));
-    assertEquals(1, Keys.getJavaVersion("1.6.0_23"));
-    assertEquals(9, Keys.getJavaVersion("9.0.1"));
-    assertEquals(11, Keys.getJavaVersion("11.0.4"));
-    assertEquals(12, Keys.getJavaVersion("12.0.1"));
-    assertEquals(15, Keys.getJavaVersion("15.0.1"));
   }
 }

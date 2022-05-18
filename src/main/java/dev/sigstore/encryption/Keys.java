@@ -15,7 +15,6 @@
  */
 package dev.sigstore.encryption;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -23,7 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.security.Security;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
@@ -33,7 +31,6 @@ import org.bouncycastle.crypto.params.ECKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
@@ -41,26 +38,6 @@ import org.bouncycastle.util.io.pem.PemReader;
 public class Keys {
 
   private static final Logger log = Logger.getLogger(Keys.class.getName());
-
-  static {
-    // Added for EdDSA support for Java <15
-
-    // This should work as JDK version strings are of the form '1.x.x' up to Java 8, and '9.x..'
-    // afterwards.
-    if (getJavaVersion() < 15) {
-      try {
-        log.info(
-            "Adding BouncyCastleProvider to SecurityManager for EdDSA algorithm support on Java <15.");
-        Security.addProvider(new BouncyCastleProvider());
-      } catch (SecurityException e) {
-        log.warning(
-            "Could not configure BouncyCastleProvider due to SecurityManager restrictions."
-                + " EdDSA algorithms will not be supported. Refer to "
-                + "https://docs.oracle.com/cd/E19830-01/819-4712/ablsc/index.html to configure BouncyCastle "
-                + "for your JVM");
-      }
-    }
-  }
 
   /**
    * Takes a PEM formatted public key in bytes and constructs a {@code PublicKey} with it.
@@ -96,6 +73,7 @@ public class Keys {
     if (keyParameters instanceof RSAKeyParameters) {
       return "RSA";
     } else if (keyParameters instanceof Ed25519PublicKeyParameters) {
+      errorIfNoEdDSA();
       return "EdDSA";
     } else if (keyParameters instanceof ECKeyParameters) {
       return "EC";
@@ -109,13 +87,15 @@ public class Keys {
     }
   }
 
-  @VisibleForTesting
-  protected static int getJavaVersion() {
-    return getJavaVersion(System.getProperty("java.version"));
-  }
-
-  @VisibleForTesting
-  protected static int getJavaVersion(String version) {
-    return Integer.parseInt(version.substring(0, version.indexOf(".")));
+  private static void errorIfNoEdDSA() {
+    try {
+      KeyFactory.getInstance("EdDSA");
+    } catch (NoSuchAlgorithmException nsae) {
+      throw new RuntimeException(
+          "Could not process EdDSA key, if you are using a JRE older than Java15, refer to "
+              + "https://docs.oracle.com/cd/E19830-01/819-4712/ablsc/index.html to configure BouncyCastle "
+              + "for your JVM",
+          nsae);
+    }
   }
 }
