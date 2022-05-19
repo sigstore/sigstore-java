@@ -15,13 +15,11 @@
  */
 package dev.sigstore.fulcio.client;
 
+import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.Signature;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,19 +37,11 @@ public class FulcioClientTest {
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
     var subject = mockOAuthServerExtension.getOidcToken().getEmailAddress();
 
-    // create an ECDSA p-256 keypair, this is our key that we want to generate certs for
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
-    keyGen.initialize(256);
-    KeyPair keys = keyGen.generateKeyPair();
+    var signer = Signers.newEcdsaSigner();
+    var signed = signer.sign(subject, StandardCharsets.UTF_8);
 
-    // sign the "subject" with our key, this signer already generates asn1 notation
-    Signature signature = Signature.getInstance("SHA256withECDSA");
-    signature.initSign(keys.getPrivate());
-    signature.update(subject.getBytes(StandardCharsets.UTF_8));
-    byte[] signed = signature.sign();
-
-    // create a certificate request with our public key, oidc token and our signed "subject"
-    CertificateRequest cReq = new CertificateRequest(keys.getPublic(), token, signed);
+    // create a certificate request with our public key and our signed "subject"
+    CertificateRequest cReq = new CertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
     SigningCertificate sc = c.SigningCert(cReq);
@@ -73,19 +63,11 @@ public class FulcioClientTest {
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
     var subject = mockOAuthServerExtension.getOidcToken().getEmailAddress();
 
-    // create an ECDSA p-256 keypair, this is our key that we want to generate certs for
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
-    keyGen.initialize(256);
-    KeyPair keys = keyGen.generateKeyPair();
+    var signer = Signers.newEcdsaSigner();
+    var signed = signer.sign(subject, StandardCharsets.UTF_8);
 
-    // sign the "subject" with our key, this signer already generates asn1 notation
-    Signature signature = Signature.getInstance("SHA256withECDSA");
-    signature.initSign(keys.getPrivate());
-    signature.update(subject.getBytes(StandardCharsets.UTF_8));
-    byte[] signed = signature.sign();
-
-    // create a certificate request with our public key, oidc token and our signed "subject"
-    CertificateRequest cReq = new CertificateRequest(keys.getPublic(), token, signed);
+    // create a certificate request with our public key and our signed "subject"
+    CertificateRequest cReq = new CertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
     SigningCertificate sc = c.SigningCert(cReq);
