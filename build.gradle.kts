@@ -49,10 +49,9 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.8.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("com.nimbusds:oauth2-oidc-sdk:6.21.2")
-    testImplementation("com.nimbusds:nimbus-jose-jwt:9.18")
-    testImplementation("no.nav.security:mock-oauth2-server:0.4.4")
 
+    testImplementation("no.nav.security:mock-oauth2-server:0.4.4")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.9.3")
     testImplementation("org.bouncycastle:bcutil-jdk15on:1.70")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.61.0")
 
