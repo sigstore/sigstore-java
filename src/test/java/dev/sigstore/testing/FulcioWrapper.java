@@ -57,6 +57,8 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     System.out.println(Files.readString(fulcioLog));
     Files.deleteIfExists(fulcioLog);
     Files.deleteIfExists(fulcioConfig);
+    // For weirdness in OS X
+    Files.deleteIfExists(Path.of("@fulcio-legacy-grpc-socket"));
     Thread.sleep(1000); // give the server a chance to shutdown
   }
 
