@@ -15,12 +15,11 @@
  */
 package dev.sigstore.testing;
 
-import org.junit.jupiter.api.extension.*;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.junit.jupiter.api.extension.*;
 
 /**
  * A test fixture to start fulcio from an executable on the system path. This requires fulcio to be
