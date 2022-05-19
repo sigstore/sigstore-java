@@ -15,11 +15,12 @@
  */
 package dev.sigstore.testing;
 
+import org.junit.jupiter.api.extension.*;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.junit.jupiter.api.extension.*;
 
 /**
  * A test fixture to start fulcio from an executable on the system path. This requires fulcio to be
@@ -57,6 +58,8 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     System.out.println(Files.readString(fulcioLog));
     Files.deleteIfExists(fulcioLog);
     Files.deleteIfExists(fulcioConfig);
+    // For weirdness in OS X
+    Files.deleteIfExists(Path.of("@fulcio-legacy-grpc-socket"));
     Thread.sleep(1000); // give the server a chance to shutdown
   }
 
