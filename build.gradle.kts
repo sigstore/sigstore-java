@@ -41,6 +41,7 @@ dependencies {
         because("contains library code for all platforms")
     }
     implementation("org.bouncycastle:bcutil-jdk18on:1.71")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.71")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.33.3"))
     implementation("com.google.oauth-client:google-oauth-client")
@@ -52,7 +53,6 @@ dependencies {
 
     testImplementation("no.nav.security:mock-oauth2-server:0.4.4")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.9.3")
-    testImplementation("org.bouncycastle:bcutil-jdk15on:1.70")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.61.0")
 
     implementation("javax.validation:validation-api:2.0.1.Final")
@@ -84,4 +84,6 @@ jsonSchema2Pojo {
     source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
     targetDirectoryPrefix.set(file("${project.buildDir}/generated/sources/rekor-model/"))
     targetPackage.set("dev.sigstore.rekor")
+    generateBuilders.set(true)
+    annotationStyle.set("gson")
 }
