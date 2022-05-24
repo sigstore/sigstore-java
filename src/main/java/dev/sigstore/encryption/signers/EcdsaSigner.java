@@ -15,7 +15,8 @@
  */
 package dev.sigstore.encryption.signers;
 
-import java.nio.charset.Charset;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.*;
 
 /** ECDSA signer, use {@link Signers#newEcdsaSigner()} to instantiate}. */
@@ -33,17 +34,23 @@ public class EcdsaSigner implements Signer {
   }
 
   @Override
-  public byte[] sign(String content, Charset charset)
-      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    return sign(content.getBytes(charset));
-  }
-
-  @Override
-  public byte[] sign(byte[] content)
+  public byte[] sign(byte[] artifact)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
     Signature signature = Signature.getInstance("SHA256withECDSA");
     signature.initSign(keyPair.getPrivate());
-    signature.update(content);
+    signature.update(artifact);
+    return signature.sign();
+  }
+
+  @Override
+  public byte[] sign(InputStream artifact)
+      throws NoSuchAlgorithmException, InvalidKeyException, IOException, SignatureException {
+    Signature signature = Signature.getInstance("SHA256withECDSA");
+    signature.initSign(keyPair.getPrivate());
+    int b;
+    while ((b = artifact.read()) != -1) {
+      signature.update((byte) b);
+    }
     return signature.sign();
   }
 }

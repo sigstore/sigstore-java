@@ -15,7 +15,8 @@
  */
 package dev.sigstore.encryption.signers;
 
-import java.nio.charset.Charset;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -28,21 +29,18 @@ public interface Signer {
   PublicKey getPublicKey();
 
   /**
-   * Sign the content. Implementations should use an algorithm that hashes with sha256 before
-   * signing.
+   * Sign an artifact. Implementations will hash the artifact with sha256 before signing.
    *
-   * @param content the full content to be signed (not a digest)
-   * @param charset the charset of the string {@code content}
+   * @param artifact the bytes to be signed
    */
-  byte[] sign(String content, Charset charset)
+  byte[] sign(byte[] artifact)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 
   /**
-   * Sign the content. Implementations should use an algorithm that hashes with sha256 before
-   * signing.
+   * Sign an artifact. Implementations will hash the artifact with sha256 before signing.
    *
-   * @param content the full content to be signed (not a digest)
+   * @param artifact input stream to the artifact being signed
    */
-  byte[] sign(byte[] content)
-      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
+  byte[] sign(InputStream artifact)
+      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, IOException;
 }
