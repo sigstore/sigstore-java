@@ -38,7 +38,7 @@ public class FulcioClientTest {
     var subject = mockOAuthServerExtension.getOidcToken().getEmailAddress();
 
     var signer = Signers.newEcdsaSigner();
-    var signed = signer.sign(subject, StandardCharsets.UTF_8);
+    var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
     CertificateRequest cReq = new CertificateRequest(signer.getPublicKey(), token, signed);
@@ -64,7 +64,7 @@ public class FulcioClientTest {
     var subject = mockOAuthServerExtension.getOidcToken().getEmailAddress();
 
     var signer = Signers.newEcdsaSigner();
-    var signed = signer.sign(subject, StandardCharsets.UTF_8);
+    var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
     CertificateRequest cReq = new CertificateRequest(signer.getPublicKey(), token, signed);
