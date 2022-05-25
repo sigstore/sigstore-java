@@ -64,7 +64,12 @@ public class RekorClient {
     }
   }
 
-  /** Put an entry on rekor. */
+  /**
+   * Put a new hashedrekord entry on the Rekor log.
+   *
+   * @param hashedRekordRequest the request to send to rekor
+   * @return a {@link RekorResponse} with information about the log entry
+   */
   public RekorResponse putEntry(HashedRekordRequest hashedRekordRequest) throws IOException {
     URI rekorEndpoint = serverUrl.resolve(REKOR_ENTRIES_PATH);
 
@@ -87,7 +92,8 @@ public class RekorClient {
     }
 
     URI rekorEntryUri = serverUrl.resolve(resp.getHeaders().getLocation());
-    return new RekorResponse(rekorEntryUri);
+    String entry = resp.parseAsString();
+    return RekorResponse.newRekorResponse(rekorEntryUri, entry);
   }
 
   /** Obtain an entry for an artifact from rekor. */
