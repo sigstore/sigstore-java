@@ -41,7 +41,7 @@ public interface RekorEntry {
   public String getLogID();
 
   /** Returns the index in the log of this entry. */
-  public String getLogIndex();
+  public long getLogIndex();
 
   /** Returns the verification material for this entry. */
   public Verification getVerification();

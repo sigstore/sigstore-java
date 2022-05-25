@@ -20,9 +20,10 @@ import com.google.gson.GsonBuilder;
 import java.util.function.Supplier;
 
 /**
- * Supplies a Gson with custom byte to base64 serialization, and no html escaping, this instance of
- * GSON is NOT html/url safe. This should probably be used for any api call to sigstore that expects
- * JSON.
+ * Supplies a Gson with custom byte to base64 serialization, and no html escaping. This instance of
+ * GSON is NOT html/url safe, but makes more sense if you want to do things for the serialization of
+ * requests between sigstore and this client -- and should probably be used for any api call to
+ * sigstore that expects JSON.
  */
 public class GsonSupplier implements Supplier<Gson> {
   @Override
