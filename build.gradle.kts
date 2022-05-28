@@ -1,4 +1,5 @@
 plugins {
+    `maven-publish`
     `java-library`
     id("com.diffplug.spotless") version "6.4.2"
     id("org.jsonschema2dataclass") version "4.2.0"
@@ -87,3 +88,18 @@ jsonSchema2Pojo {
     generateBuilders.set(true)
     annotationStyle.set("gson")
 }
+
+
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "dev.sigstore"
+            artifactId = "sigstore-clients"
+            version = "0.1"
+
+            from(components["java"])
+        }
+    }
+}
+
