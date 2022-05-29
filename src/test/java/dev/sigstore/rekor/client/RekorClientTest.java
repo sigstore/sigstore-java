@@ -29,6 +29,7 @@ import java.security.cert.CertificateException;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class RekorClientTest {
@@ -62,5 +63,14 @@ public class RekorClientTest {
     MatcherAssert.assertThat(
         resp.getEntryLocation().toString(),
         CoreMatchers.startsWith("https://rekor.sigstage.dev/api/v1/log/entries/"));
+
+    Assertions.assertNotNull(resp.getUuid());
+    Assertions.assertNotNull(resp.getRaw());
+    var entry = resp.getEntry();
+    Assertions.assertNotNull(entry.getBody());
+    Assertions.assertTrue(entry.getIntegratedTime() > 1);
+    Assertions.assertNotNull(entry.getLogID());
+    Assertions.assertNotNull(entry.getLogIndex());
+    Assertions.assertNotNull(entry.getVerification().getSignedEntryTimestamp());
   }
 }
