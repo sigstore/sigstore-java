@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class FulcioValidatorTest {
+public class FulcioVerifierTest {
   private String sctBase64;
   private String certs;
   private byte[] fulcioRoot;
@@ -55,41 +55,42 @@ public class FulcioValidatorTest {
   @Test
   public void validSigningCertAndSct()
       throws IOException, SerializationException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, InvalidAlgorithmParameterException, FulcioValidationException {
+          NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+          FulcioVerificationException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
-    var fulcioValidator = FulcioValidator.newFulcioValidator(fulcioRoot, ctfePub);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, ctfePub);
 
-    fulcioValidator.validateCertChain(signingCertificate);
-    fulcioValidator.validateSct(signingCertificate);
+    fulcioVerifier.verifyCertChain(signingCertificate);
+    fulcioVerifier.verifySct(signingCertificate);
   }
 
   @Test
-  public void testValidateSct_nullCtLogKey()
+  public void testVerifySct_nullCtLogKey()
       throws IOException, SerializationException, CertificateException, InvalidKeySpecException,
           NoSuchAlgorithmException, InvalidAlgorithmParameterException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
-    var fulcioValidator = FulcioValidator.newFulcioValidator(fulcioRoot, null);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, null);
 
     try {
-      fulcioValidator.validateSct(signingCertificate);
+      fulcioVerifier.verifySct(signingCertificate);
       Assertions.fail();
-    } catch (FulcioValidationException fve) {
-      Assertions.assertEquals("No ct-log public key was provided to validator", fve.getMessage());
+    } catch (FulcioVerificationException fve) {
+      Assertions.assertEquals("No ct-log public key was provided to verifier", fve.getMessage());
     }
   }
 
   @Test
-  public void testValidateSct_noSct()
+  public void testVerifySct_noSct()
       throws SerializationException, CertificateException, IOException,
           InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchAlgorithmException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certs, null);
-    var fulcioValidator = FulcioValidator.newFulcioValidator(fulcioRoot, ctfePub);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, ctfePub);
 
     try {
-      fulcioValidator.validateSct(signingCertificate);
+      fulcioVerifier.verifySct(signingCertificate);
       Assertions.fail();
-    } catch (FulcioValidationException fve) {
-      Assertions.assertEquals("No SCT was found to validate", fve.getMessage());
+    } catch (FulcioVerificationException fve) {
+      Assertions.assertEquals("No SCT was found to verify", fve.getMessage());
     }
   }
 }
