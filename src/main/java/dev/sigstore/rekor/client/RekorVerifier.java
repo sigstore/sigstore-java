@@ -24,37 +24,37 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 
-/** Validator for rekor entries. */
-public class RekorValidator {
+/** Verifier for rekor entries. */
+public class RekorVerifier {
   private final PublicKey rekorPublicKey;
 
-  public static RekorValidator newRekorValidator(byte[] rekorPublicKey)
+  public static RekorVerifier newRekorVerifier(byte[] rekorPublicKey)
       throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
     // TODO: accept any keytime and appropriately initialize the signer below (currently only EC
     // compatible: https://github.com/sigstore/sigstore-java/issues/32)
     PublicKey publicKey = Keys.parsePublicKey(rekorPublicKey);
-    return new RekorValidator(publicKey);
+    return new RekorVerifier(publicKey);
   }
 
-  private RekorValidator(PublicKey rekorPublicKey) {
+  private RekorVerifier(PublicKey rekorPublicKey) {
     this.rekorPublicKey = rekorPublicKey;
   }
 
   /**
-   * Validate that a Rekor Entry is signed with the rekor public key loaded into this validator
+   * Verify that a Rekor Entry is signed with the rekor public key loaded into this verifier
    *
-   * @param entry the entry to validate
-   * @throws RekorValidationException if the entry cannot be validated
+   * @param entry the entry to verify
+   * @throws RekorVerificationException if the entry cannot be verified
    */
-  public void validateEntry(RekorEntry entry)
-      throws RekorValidationException, NoSuchAlgorithmException, InvalidKeyException,
+  public void verifyEntry(RekorEntry entry)
+      throws RekorVerificationException, NoSuchAlgorithmException, InvalidKeyException,
           SignatureException {
     if (entry.getVerification() == null) {
-      throw new RekorValidationException("No verification information in entry.");
+      throw new RekorVerificationException("No verification information in entry.");
     }
 
     if (entry.getVerification().getSignedEntryTimestamp() == null) {
-      throw new RekorValidationException("No signed entry timestamp found in entry.");
+      throw new RekorVerificationException("No signed entry timestamp found in entry.");
     }
 
     // use a LinkedHashMap to preserve order, json must be canonical
@@ -65,26 +65,30 @@ public class RekorValidator {
     signableContent.put("logID", entry.getLogID());
     signableContent.put("logIndex", entry.getLogIndex());
 
+    // TODO: I think we can verify the logID (sha256 of log public key) here too
+    // to provide the user with some useful information
+    // (https://github.com/sigstore/sigstore-java/issues/34)
+
     var signableJson = new GsonSupplier().get().toJson(signableContent);
 
-    // TODO: Validate more than just "ec" signed rekor entries
+    // TODO: Verify more than just "ec" signed rekor entries
     // (https://github.com/sigstore/sigstore-java/issues/32)
     var verifier = Signature.getInstance("SHA256withECDSA");
     verifier.initVerify(rekorPublicKey);
     verifier.update(signableJson.getBytes(StandardCharsets.UTF_8));
     if (!verifier.verify(
         Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
-      throw new RekorValidationException("Entry SET was not valid");
+      throw new RekorVerificationException("Entry SET was not valid");
     }
   }
 
   /**
-   * Validate that a Rekor Entry is in the log by checking inclusion proof.
+   * Verify that a Rekor Entry is in the log by checking inclusion proof.
    *
-   * @param entry the entry to validate
-   * @throws RekorValidationException if the entry cannot be validated
+   * @param entry the entry to verify
+   * @throws RekorVerificationException if the entry cannot be verified
    */
-  public void validateInclusionProof(RekorEntry entry) {
-    throw new UnsupportedOperationException("Validating inclusion proof is not yet supported");
+  public void verifyInclusionProof(RekorEntry entry) throws RekorVerificationException {
+    throw new UnsupportedOperationException("Verifying inclusion proof is not yet supported");
   }
 }

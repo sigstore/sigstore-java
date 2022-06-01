@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class RekorValidatorTest {
+public class RekorVerifierTest {
   public String rekorResponse;
   public byte[] rekorPub;
 
@@ -44,26 +44,26 @@ public class RekorValidatorTest {
   }
 
   @Test
-  public void validateEntry_valid()
+  public void verifyEntry_valid()
       throws URISyntaxException, InvalidKeySpecException, NoSuchAlgorithmException, IOException,
-          RekorValidationException, SignatureException, InvalidKeyException {
+          RekorVerificationException, SignatureException, InvalidKeyException {
     var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
-    var validator = RekorValidator.newRekorValidator(rekorPub);
+    var verifier = RekorVerifier.newRekorVerifier(rekorPub);
 
-    validator.validateEntry(response.getEntry());
+    verifier.verifyEntry(response.getEntry());
   }
 
   @Test
-  public void validateEntry_invalid()
+  public void verifyEntry_invalid()
       throws InvalidKeySpecException, NoSuchAlgorithmException, IOException, URISyntaxException {
     // change the logindex
     var invalidResponse = rekorResponse.replace("79", "80");
     var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), invalidResponse);
-    var validator = RekorValidator.newRekorValidator(rekorPub);
+    var verifier = RekorVerifier.newRekorVerifier(rekorPub);
 
     var thrown =
         Assertions.assertThrows(
-            RekorValidationException.class, () -> validator.validateEntry(response.getEntry()));
+            RekorVerificationException.class, () -> verifier.verifyEntry(response.getEntry()));
     Assertions.assertEquals("Entry SET was not valid", thrown.getMessage());
   }
 }

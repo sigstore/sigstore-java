@@ -31,12 +31,11 @@ import org.conscrypt.ct.CertificateEntry;
 import org.conscrypt.ct.SignedCertificateTimestamp;
 import org.conscrypt.ct.VerifiedSCT;
 
-public class FulcioValidator {
+public class FulcioVerifier {
   @Nullable private final CTLogInfo ctLogInfo;
   private final TrustAnchor fulcioRoot;
 
-  public static FulcioValidator newFulcioValidator(
-      byte[] fulcioRoot, byte @Nullable [] ctfePublicKey)
+  public static FulcioVerifier newFulcioVerifier(byte[] fulcioRoot, byte @Nullable [] ctfePublicKey)
       throws InvalidKeySpecException, NoSuchAlgorithmException, CertificateException, IOException,
           InvalidAlgorithmParameterException {
 
@@ -53,32 +52,31 @@ public class FulcioValidator {
 
     TrustAnchor fulcioRootTrustAnchor = new TrustAnchor(fulcioRootObj, null);
     // this should throw an InvalidAlgorithmException a bit earlier that would otherwise be
-    // encountered
-    // in validateCertPath
+    // encountered in verifyCertPath
     new PKIXParameters(Collections.singleton(fulcioRootTrustAnchor));
 
-    return new FulcioValidator(ctLogInfo, fulcioRootTrustAnchor);
+    return new FulcioVerifier(ctLogInfo, fulcioRootTrustAnchor);
   }
 
-  private FulcioValidator(@Nullable CTLogInfo ctLogInfo, TrustAnchor fulcioRoot) {
+  private FulcioVerifier(@Nullable CTLogInfo ctLogInfo, TrustAnchor fulcioRoot) {
     this.ctLogInfo = ctLogInfo;
     this.fulcioRoot = fulcioRoot;
   }
 
-  public void validateSct(SigningCertificate sc) throws FulcioValidationException {
+  public void verifySct(SigningCertificate sc) throws FulcioVerificationException {
 
     SignedCertificateTimestamp sct =
         sc.getSct()
-            .orElseThrow(() -> new FulcioValidationException("No SCT was found to validate"));
+            .orElseThrow(() -> new FulcioVerificationException("No SCT was found to verify"));
     if (ctLogInfo == null) {
-      throw new FulcioValidationException("No ct-log public key was provided to validator");
+      throw new FulcioVerificationException("No ct-log public key was provided to verifier");
     }
 
     // leaf certificate are guaranteed to be X509Certificates if they were built via
     // a client request.
     if (!(sc.getLeafCertificate() instanceof X509Certificate)) {
       throw new RuntimeException(
-          "Encountered non X509 Certificate when validating SCT. Leaf certificate is "
+          "Encountered non X509 Certificate when verifying SCT. Leaf certificate is "
               + sc.getLeafCertificate().getClass());
     }
     CertificateEntry ce;
@@ -86,16 +84,17 @@ public class FulcioValidator {
     try {
       ce = CertificateEntry.createForX509Certificate((X509Certificate) sc.getLeafCertificate());
     } catch (CertificateEncodingException cee) {
-      throw new FulcioValidationException("Leaf certificate could not be parsed", cee);
+      throw new FulcioVerificationException("Leaf certificate could not be parsed", cee);
     }
 
     VerifiedSCT.Status status = ctLogInfo.verifySingleSCT(sct, ce);
     if (status != VerifiedSCT.Status.VALID) {
-      throw new FulcioValidationException("SCT could not be verified because " + status.toString());
+      throw new FulcioVerificationException(
+          "SCT could not be verified because " + status.toString());
     }
   }
 
-  public void validateCertChain(SigningCertificate sc) throws FulcioValidationException {
+  public void verifyCertChain(SigningCertificate sc) throws FulcioVerificationException {
     CertPathValidator cpv;
     try {
       cpv = CertPathValidator.getInstance("PKIX");
@@ -111,7 +110,7 @@ public class FulcioValidator {
       pkixParams = new PKIXParameters(Collections.singleton(fulcioRoot));
     } catch (InvalidAlgorithmParameterException e) {
       throw new RuntimeException(
-          "Can't create PKIX parameters for fulcioRoot. This should have been checked when generating a validator instance",
+          "Can't create PKIX parameters for fulcioRoot. This should have been checked when generating a verifier instance",
           e);
     }
     pkixParams.setRevocationEnabled(false);
@@ -125,7 +124,7 @@ public class FulcioValidator {
       // a result is returned here, but I don't know what to do with it yet
       cpv.validate(sc.getCertPath(), pkixParams);
     } catch (CertPathValidatorException | InvalidAlgorithmParameterException ve) {
-      throw new FulcioValidationException(ve);
+      throw new FulcioVerificationException(ve);
     }
   }
 }

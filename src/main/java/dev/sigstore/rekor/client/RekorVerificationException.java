@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.fulcio.client;
+package dev.sigstore.rekor.client;
 
-public class FulcioValidationException extends Exception {
-  public FulcioValidationException(String message) {
+public class RekorVerificationException extends Exception {
+  public RekorVerificationException(String message) {
     super(message);
   }
 
-  public FulcioValidationException(String message, Throwable cause) {
+  public RekorVerificationException(String message, Throwable cause) {
     super(message, cause);
   }
 
-  public FulcioValidationException(Throwable cause) {
+  public RekorVerificationException(Throwable cause) {
     super(cause);
   }
 }
