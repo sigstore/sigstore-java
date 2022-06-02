@@ -25,14 +25,27 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.*;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import org.conscrypt.ct.DigitallySigned;
 import org.conscrypt.ct.SerializationException;
 import org.conscrypt.ct.SignedCertificateTimestamp;
 
-/** Response from Fulcio that includes a certPath and an SCT */
+/**
+ * Response from Fulcio that includes a Certificate Chain and a Signed Certificate Timestamp (SCT).
+ *
+ * <p>An SCT is not required for all instances of fulcio, however the public good instance of fulcio
+ * should probably always include one. SCT can be associated with a certificate in two modes:
+ *
+ * <p>In detached mode -- fulcio provides the SCT via a fulcio specific non-standard header in the
+ * response as base64 encoded json.
+ *
+ * <p>In embedded mode -- fulcio generates certificates with the SCT embedded as an extension in the
+ * x509 certificates (this is the most common form, and we should expect this moving forward)
+ */
 public class SigningCertificate {
+  private static final String SCT_X509_OID = "1.3.6.1.4.1.11129.2.4.2";
 
   private final CertPath certPath;
   @Nullable private final SignedCertificateTimestamp sct;
@@ -79,6 +92,11 @@ public class SigningCertificate {
         .toSct();
   }
 
+  /** Returns true if the signing certificate constains an SCT embedded in the X509 extensions. */
+  boolean hasEmbeddedSct() {
+    return getLeafCertificate().getExtensionValue(SCT_X509_OID) != null;
+  }
+
   private static class SctJson {
     private int sct_version;
     private byte[] id;
@@ -116,11 +134,16 @@ public class SigningCertificate {
     return certPath;
   }
 
-  public Certificate getLeafCertificate() {
-    return certPath.getCertificates().get(0);
+  @SuppressWarnings("unchecked")
+  public List<X509Certificate> getCertificates() {
+    return (List<X509Certificate>) certPath.getCertificates();
   }
 
-  Optional<SignedCertificateTimestamp> getSct() {
+  public X509Certificate getLeafCertificate() {
+    return (X509Certificate) certPath.getCertificates().get(0);
+  }
+
+  Optional<SignedCertificateTimestamp> getDetachedSct() {
     return Optional.ofNullable(sct);
   }
 }
