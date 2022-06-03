@@ -48,7 +48,7 @@ public class FulcioClientTest {
 
     // some pretty basic assertions
     Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-    Assertions.assertNotNull(sc.getSct());
+    Assertions.assertNotNull(sc.getDetachedSct());
   }
 
   @Test
@@ -74,6 +74,6 @@ public class FulcioClientTest {
 
     // some pretty basic assertions
     Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-    Assertions.assertFalse(sc.getSct().isPresent());
+    Assertions.assertFalse(sc.getDetachedSct().isPresent());
   }
 }

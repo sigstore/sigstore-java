@@ -111,14 +111,16 @@ public class FulcioClient {
     }
 
     String sctHeader = resp.getHeaders().getFirstHeaderStringValue("SCT");
-    if (sctHeader == null && requireSct) {
-      throw new IOException("no signed certificate timestamps were found in response from Fulcio");
-    }
-
     try (InputStream content = resp.getContent()) {
-      return SigningCertificate.newSigningCertificate(
-          CharStreams.toString(new InputStreamReader(content, resp.getContentCharset())),
-          sctHeader);
+      var signingCert =
+          SigningCertificate.newSigningCertificate(
+              CharStreams.toString(new InputStreamReader(content, resp.getContentCharset())),
+              sctHeader);
+      if (signingCert.getDetachedSct().isEmpty() && !signingCert.hasEmbeddedSct() && requireSct) {
+        throw new IOException(
+            "no signed certificate timestamps were found in response from Fulcio");
+      }
+      return signingCert;
     }
   }
 }
