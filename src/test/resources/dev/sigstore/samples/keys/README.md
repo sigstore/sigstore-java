@@ -4,12 +4,17 @@ These test keys were creating using the following commands:
 
 **test-rsa.pub**
 ```
-`step crypto keypair ctfe-rsa.pub tmp.key -kty RSA --no-password --insecure
+step crypto keypair ctfe-rsa.pub tmp.key -kty RSA --no-password --insecure
+```
+**test-rsa-pkcs1.pub**
+```
+ssh-keygen -t rsa -f test-rsa-tmp
+ssh-keygen -f test-rsa-tmp.pub -e -m pem > test-rsa.pub
 ```
 
 **test-ed25519.pub**
 ```
-`step crypto keypair ctfe-ed25519.pub tmp.key -kty OKP --curve Ed25519 --no-password --insecure
+step crypto keypair ctfe-ed25519.pub tmp.key -kty OKP --curve Ed25519 --no-password --insecure
 ```
 
 **test-dsa.pub**

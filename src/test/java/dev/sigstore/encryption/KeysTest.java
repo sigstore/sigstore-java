@@ -30,6 +30,7 @@ import org.junit.jupiter.api.condition.JRE;
 class KeysTest {
 
   static final String RSA_PUB_PATH = "dev/sigstore/samples/keys/test-rsa.pub";
+  static final String RSA_PUB_PKCS1_PATH = "dev/sigstore/samples/keys/test-rsa-pkcs1.pub";
   static final String EC_PUB_PATH = "dev/sigstore/samples/keys/test-ec.pub";
   static final String ED25519_PUB_PATH = "dev/sigstore/samples/keys/test-ed25519.pub";
   static final String DSA_PUB_PATH = "dev/sigstore/samples/keys/test-dsa.pub";
@@ -38,6 +39,14 @@ class KeysTest {
   void parsePublicKey_rsa() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(RSA_PUB_PATH)));
+    assertEquals(result.getAlgorithm(), "RSA");
+  }
+
+  @Test
+  void parsePublicKey_rsaPkcs1()
+      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+    PublicKey result =
+        Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(RSA_PUB_PKCS1_PATH)));
     assertEquals(result.getAlgorithm(), "RSA");
   }
 
