@@ -18,11 +18,13 @@ package dev.sigstore.rekor.client;
 import com.google.api.client.http.*;
 import dev.sigstore.http.HttpProvider;
 import dev.sigstore.json.GsonSupplier;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 /** A client to communicate with a rekor service instance. */
 public class RekorClient {
@@ -98,7 +100,7 @@ public class RekorClient {
     return RekorResponse.newRekorResponse(rekorEntryUri, entry);
   }
 
-  public RekorEntry getEntry(String UUID) throws IOException {
+  public Optional<RekorEntry> getEntry(String UUID) throws IOException {
     URI getEntryURI = serverUrl.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
     HttpRequest req =
         httpProvider
@@ -110,10 +112,10 @@ public class RekorClient {
     try {
       response = req.execute();
     } catch (HttpResponseException e) {
-      if (e.getStatusCode() == 404) return null;
+      if (e.getStatusCode() == 404) return Optional.ofNullable(null);
       throw e;
     }
-    return RekorResponse.newRekorResponse(getEntryURI, response.parseAsString()).getEntry();
+    return Optional.of(RekorResponse.newRekorResponse(getEntryURI, response.parseAsString()).getEntry());
   }
 
   /**

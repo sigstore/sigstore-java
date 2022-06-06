@@ -15,11 +15,15 @@
  */
 package dev.sigstore.rekor.client;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.google.common.collect.ImmutableList;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,11 +34,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.util.List;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RekorClientTest {
 
@@ -131,21 +133,21 @@ public class RekorClientTest {
 
   @Test
   public void getEntry_entryExists() throws IOException {
-    RekorEntry entry =
+    Optional<RekorEntry> entry =
         RekorClient.builder()
             .build()
             .getEntry("d9d2b213aa7efc1b2c9ccfa2fa647d00b34c63972e04e90276b5c31e0f317afd");
-    assertNotNull(entry);
+    assertTrue(entry.isPresent());
     assertEquals(
-        entry.getLogID(), "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d");
+        entry.get().getLogID(), "c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d");
   }
 
   @Test
   public void getEntry_entryDoesntExist() throws IOException {
-    RekorEntry entry =
+    Optional<RekorEntry> entry =
         RekorClient.builder()
             .build()
             .getEntry("c8d2b213aa7efc1b2c9ccfa2fa647d00b34c63972e04e90276b5c31e0f317afd");
-    assertNull(entry);
+    assertTrue(entry.isEmpty());
   }
 }
