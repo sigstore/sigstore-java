@@ -28,7 +28,6 @@ import java.util.List;
 public class RekorClient {
   public static final String PUBLIC_REKOR_SERVER = "https://rekor.sigstore.dev";
   public static final String REKOR_ENTRIES_PATH = "/api/v1/log/entries";
-  public static final String REKOR_ENTRIES_GET_PATH = "/api/v1/log/entries/";
   public static final String REKOR_INDEX_SEARCH_PATH = "/api/v1/index/retrieve";
 
   private final HttpProvider httpProvider;
@@ -100,7 +99,7 @@ public class RekorClient {
   }
 
   public RekorEntry getEntry(String UUID) throws IOException {
-    URI getEntryURI = serverUrl.resolve(REKOR_ENTRIES_GET_PATH + UUID);
+    URI getEntryURI = serverUrl.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
     HttpRequest req =
         httpProvider
             .getHttpTransport()
