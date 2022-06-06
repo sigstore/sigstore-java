@@ -24,7 +24,7 @@ import org.immutables.value.Value;
 public interface RekorEntry {
   /** A class representing verification information for a log entry. */
   @Value.Immutable
-  public interface Verification {
+  interface Verification {
     /** Return the signed entry timestamp. */
     String getSignedEntryTimestamp();
   }
@@ -33,16 +33,16 @@ public interface RekorEntry {
   String getBody();
 
   /** Returns the time the entry was integrated into the log. */
-  public long getIntegratedTime();
+  long getIntegratedTime();
 
   /**
    * Returns the sha256 of the log's public key. Should be the same for all entries into this log.
    */
-  public String getLogID();
+  String getLogID();
 
   /** Returns the index in the log of this entry. */
-  public long getLogIndex();
+  long getLogIndex();
 
   /** Returns the verification material for this entry. */
-  public Verification getVerification();
+  Verification getVerification();
 }
