@@ -18,7 +18,6 @@ package dev.sigstore.rekor.client;
 import com.google.api.client.http.*;
 import dev.sigstore.http.HttpProvider;
 import dev.sigstore.json.GsonSupplier;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -115,7 +114,8 @@ public class RekorClient {
       if (e.getStatusCode() == 404) return Optional.ofNullable(null);
       throw e;
     }
-    return Optional.of(RekorResponse.newRekorResponse(getEntryURI, response.parseAsString()).getEntry());
+    return Optional.of(
+        RekorResponse.newRekorResponse(getEntryURI, response.parseAsString()).getEntry());
   }
 
   /**
