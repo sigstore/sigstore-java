@@ -70,7 +70,7 @@ public class RekorClientTest {
     Assertions.assertNotNull(entry.getBody());
     Assertions.assertTrue(entry.getIntegratedTime() > 1);
     Assertions.assertNotNull(entry.getLogID());
-    Assertions.assertNotNull(entry.getLogIndex());
+    Assertions.assertTrue(entry.getLogIndex() > 0);
     Assertions.assertNotNull(entry.getVerification().getSignedEntryTimestamp());
   }
 }

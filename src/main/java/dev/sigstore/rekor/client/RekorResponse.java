@@ -69,14 +69,14 @@ public interface RekorResponse {
   }
 
   /** Path to the rekor entry on the log. */
-  public URI getEntryLocation();
+  URI getEntryLocation();
 
   /** Returns the {@link RekorEntry} representation of the entry on the log. */
-  public RekorEntry getEntry();
+  RekorEntry getEntry();
 
   /** Returns the log uuid of entry represented by {@link #getEntry()}. */
-  public String getUuid();
+  String getUuid();
 
   /** Returns the raw response from the rekor request. */
-  public String getRaw();
+  String getRaw();
 }
