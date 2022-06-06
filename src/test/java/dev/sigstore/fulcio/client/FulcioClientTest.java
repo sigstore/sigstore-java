@@ -41,7 +41,8 @@ public class FulcioClientTest {
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
-    CertificateRequest cReq = new CertificateRequest(signer.getPublicKey(), token, signed);
+    CertificateRequest cReq =
+        CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
     SigningCertificate sc = c.SigningCert(cReq);
@@ -67,7 +68,8 @@ public class FulcioClientTest {
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
-    CertificateRequest cReq = new CertificateRequest(signer.getPublicKey(), token, signed);
+    CertificateRequest cReq =
+        CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
     SigningCertificate sc = c.SigningCert(cReq);

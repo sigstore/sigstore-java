@@ -20,12 +20,17 @@ import java.security.PublicKey;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import org.immutables.value.Value;
 
-public class CertificateRequest {
+@Value.Immutable
+public abstract class CertificateRequest {
   public static final List<String> SUPPORTED_ALGORITHMS = Collections.singletonList("EC");
-  private final PublicKey publicKey;
-  private final String idToken;
-  private final byte[] proofOfPossession;
+
+  public abstract PublicKey getPublicKey();
+
+  public abstract byte[] getProofOfPossession();
+
+  public abstract String getIdToken();
 
   /**
    * Create a certificate request
@@ -37,22 +42,17 @@ public class CertificateRequest {
    * @throws UnsupportedAlgorithmException if key type is not in {@link
    *     CertificateRequest#SUPPORTED_ALGORITHMS}
    */
-  public CertificateRequest(PublicKey publicKey, String idToken, byte[] proofOfPossession)
+  static CertificateRequest newCertificateRequest(
+      PublicKey publicKey, String idToken, byte[] proofOfPossession)
       throws UnsupportedAlgorithmException {
     if (!SUPPORTED_ALGORITHMS.contains(publicKey.getAlgorithm())) {
       throw new UnsupportedAlgorithmException(SUPPORTED_ALGORITHMS, publicKey.getAlgorithm());
     }
-    this.publicKey = publicKey;
-    this.idToken = idToken;
-    this.proofOfPossession = proofOfPossession;
-  }
-
-  public PublicKey getPublicKey() {
-    return publicKey;
-  }
-
-  public byte[] getProofOfPossession() {
-    return proofOfPossession;
+    return ImmutableCertificateRequest.builder()
+        .publicKey(publicKey)
+        .idToken(idToken)
+        .proofOfPossession(proofOfPossession)
+        .build();
   }
 
   public String toJsonPayload() {
@@ -65,9 +65,5 @@ public class CertificateRequest {
     data.put("signedEmailAddress", getProofOfPossession());
 
     return new GsonSupplier().get().toJson(data);
-  }
-
-  public String getIdToken() {
-    return idToken;
   }
 }
