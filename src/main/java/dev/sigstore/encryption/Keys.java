@@ -26,8 +26,11 @@ import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.logging.Logger;
+import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.ECKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
@@ -80,6 +83,18 @@ public class Keys {
       throw new InvalidKeySpecException(
           "ctfe public key must be only a single PEM encoded public key");
     }
+    // special handling for PKCS1 (rsa) public key
+    if (section.getType().equals("RSA PUBLIC KEY")) {
+      ASN1Sequence sequence = ASN1Sequence.getInstance(section.getContent());
+      ASN1Integer modulus = ASN1Integer.getInstance(sequence.getObjectAt(0));
+      ASN1Integer exponent = ASN1Integer.getInstance(sequence.getObjectAt(1));
+      RSAPublicKeySpec keySpec =
+          new RSAPublicKeySpec(modulus.getPositiveValue(), exponent.getPositiveValue());
+      KeyFactory factory = KeyFactory.getInstance("RSA");
+      return factory.generatePublic(keySpec);
+    }
+
+    // otherwise, we are dealing with PKIX X509 encoded keys
     byte[] content = section.getContent();
     EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(content);
     AsymmetricKeyParameter keyParameters = PublicKeyFactory.createKey(content);
