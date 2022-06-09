@@ -17,6 +17,8 @@ package dev.sigstore.json;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import dev.sigstore.rekor.client.GsonAdaptersHashedRekordWrapper;
+import dev.sigstore.rekor.client.GsonAdaptersRekorEntry;
 import java.util.function.Supplier;
 
 /**
@@ -30,6 +32,8 @@ public class GsonSupplier implements Supplier<Gson> {
   public Gson get() {
     return new GsonBuilder()
         .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
+        .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
+        .registerTypeAdapterFactory(new GsonAdaptersHashedRekordWrapper())
         .disableHtmlEscaping()
         .create();
   }

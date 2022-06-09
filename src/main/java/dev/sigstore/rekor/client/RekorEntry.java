@@ -15,6 +15,11 @@
  */
 package dev.sigstore.rekor.client;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Base64.getDecoder;
+
+import dev.sigstore.json.GsonSupplier;
+import dev.sigstore.rekor.Hashedrekord;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
@@ -22,6 +27,9 @@ import org.immutables.value.Value;
 @Gson.TypeAdapters
 @Value.Immutable
 public interface RekorEntry {
+
+  com.google.gson.Gson GSON = new GsonSupplier().get();
+
   /** A class representing verification information for a log entry. */
   @Value.Immutable
   interface Verification {
@@ -31,6 +39,13 @@ public interface RekorEntry {
 
   /** Returns the content of the log entry. */
   String getBody();
+
+  @Value.Derived
+  default Hashedrekord getBodyAsHashedrekord() {
+    return GSON.fromJson(
+            new String(getDecoder().decode(getBody()), UTF_8), HashedRekordWrapper.class)
+        .getSpec();
+  }
 
   /** Returns the time the entry was integrated into the log. */
   long getIntegratedTime();
