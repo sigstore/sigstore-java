@@ -15,18 +15,21 @@
  */
 package dev.sigstore.rekor.client;
 
-import com.google.api.client.http.ByteArrayContent;
-import com.google.api.client.http.GenericUrl;
-import com.google.api.client.http.HttpRequest;
-import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.*;
 import dev.sigstore.http.HttpProvider;
+import dev.sigstore.json.GsonSupplier;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
 
 /** A client to communicate with a rekor service instance. */
 public class RekorClient {
   public static final String PUBLIC_REKOR_SERVER = "https://rekor.sigstore.dev";
   public static final String REKOR_ENTRIES_PATH = "/api/v1/log/entries";
+  public static final String REKOR_INDEX_SEARCH_PATH = "/api/v1/index/retrieve";
 
   private final HttpProvider httpProvider;
   private final URI serverUrl;
@@ -71,14 +74,14 @@ public class RekorClient {
    * @return a {@link RekorResponse} with information about the log entry
    */
   public RekorResponse putEntry(HashedRekordRequest hashedRekordRequest) throws IOException {
-    URI rekorEndpoint = serverUrl.resolve(REKOR_ENTRIES_PATH);
+    URI rekorPutEndpoint = serverUrl.resolve(REKOR_ENTRIES_PATH);
 
     HttpRequest req =
         httpProvider
             .getHttpTransport()
             .createRequestFactory()
             .buildPostRequest(
-                new GenericUrl(rekorEndpoint),
+                new GenericUrl(rekorPutEndpoint),
                 ByteArrayContent.fromString(
                     "application/json", hashedRekordRequest.toJsonPayload()));
     req.getHeaders().set("Accept", "application/json");
@@ -88,7 +91,7 @@ public class RekorClient {
     if (resp.getStatusCode() != 201) {
       throw new IOException(
           String.format(
-              "bad response from rekor @ '%s' : %s", rekorEndpoint, resp.parseAsString()));
+              "bad response from rekor @ '%s' : %s", rekorPutEndpoint, resp.parseAsString()));
     }
 
     URI rekorEntryUri = serverUrl.resolve(resp.getHeaders().getLocation());
@@ -96,8 +99,62 @@ public class RekorClient {
     return RekorResponse.newRekorResponse(rekorEntryUri, entry);
   }
 
-  /** Obtain an entry for an artifact from rekor. */
-  public void getEntry() {
-    throw new UnsupportedOperationException("I'm a worthless download function");
+  public Optional<RekorEntry> getEntry(String UUID) throws IOException {
+    URI getEntryURI = serverUrl.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
+    HttpRequest req =
+        httpProvider
+            .getHttpTransport()
+            .createRequestFactory()
+            .buildGetRequest(new GenericUrl(getEntryURI));
+    req.getHeaders().set("Accept", "application/json");
+    HttpResponse response;
+    try {
+      response = req.execute();
+    } catch (HttpResponseException e) {
+      if (e.getStatusCode() == 404) return Optional.ofNullable(null);
+      throw e;
+    }
+    return Optional.of(
+        RekorResponse.newRekorResponse(getEntryURI, response.parseAsString()).getEntry());
+  }
+
+  /**
+   * Returns a list of UUIDs for matching entries for the given search parameters.
+   *
+   * @param email the OIDC email subject
+   * @param hash sha256 hash of the artifact
+   * @param publicKeyFormat format of public key (one of 'pgp','x509','minisign', 'ssh', 'tuf')
+   * @param publicKeyContent public key base64 encoded content
+   */
+  public List<String> searchEntry(
+      String email, String hash, String publicKeyFormat, String publicKeyContent)
+      throws IOException {
+    URI rekorSearchEndpoint = serverUrl.resolve(REKOR_INDEX_SEARCH_PATH);
+
+    HashMap<String, Object> publicKeyParams = null;
+    if (publicKeyContent != null) {
+      publicKeyParams = new HashMap<>();
+      publicKeyParams.put("format", publicKeyFormat);
+      publicKeyParams.put("content", publicKeyContent);
+    }
+    var data = new HashMap<String, Object>();
+    data.put("email", email);
+    data.put("hash", hash);
+    data.put("publicKey", publicKeyParams);
+
+    GsonSupplier gsonSupplier = new GsonSupplier();
+    String contentString = gsonSupplier.get().toJson(data);
+    System.out.println(contentString);
+    HttpRequest req =
+        httpProvider
+            .getHttpTransport()
+            .createRequestFactory()
+            .buildPostRequest(
+                new GenericUrl(rekorSearchEndpoint),
+                ByteArrayContent.fromString("application/json", contentString));
+    req.getHeaders().set("Accept", "application/json");
+    req.getHeaders().set("Content-Type", "application/json");
+    var response = req.execute();
+    return Arrays.asList(gsonSupplier.get().fromJson(response.parseAsString(), String[].class));
   }
 }

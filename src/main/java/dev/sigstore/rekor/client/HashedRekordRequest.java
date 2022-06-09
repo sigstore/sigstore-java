@@ -76,4 +76,8 @@ public class HashedRekordRequest {
 
     return new GsonSupplier().get().toJson(data);
   }
+
+  public Hashedrekord getHashedrekord() {
+    return hashedrekord;
+  }
 }

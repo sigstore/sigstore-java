@@ -16,7 +16,7 @@
 package dev.sigstore.rekor.client;
 
 import com.google.common.reflect.TypeToken;
-import com.google.gson.GsonBuilder;
+import dev.sigstore.json.GsonSupplier;
 import java.net.URI;
 import java.util.Map;
 import org.immutables.value.Value;
@@ -52,9 +52,8 @@ public interface RekorResponse {
    * @return an immutable {@link RekorResponse} instance
    */
   static RekorResponse newRekorResponse(URI entryLocation, String rawResponse) {
-    var gson = new GsonBuilder().registerTypeAdapterFactory(new GsonAdaptersRekorEntry()).create();
     var type = new TypeToken<Map<String, RekorEntry>>() {}.getType();
-    Map<String, RekorEntry> entryMap = gson.fromJson(rawResponse, type);
+    Map<String, RekorEntry> entryMap = new GsonSupplier().get().fromJson(rawResponse, type);
     if (entryMap.size() != 1) {
       throw new IllegalArgumentException(
           "Expecting a single rekor entry in response but found: " + entryMap.size());
