@@ -15,13 +15,13 @@
  */
 package dev.sigstore.rekor.client;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Base64.getDecoder;
+
 import dev.sigstore.json.GsonSupplier;
 import dev.sigstore.rekor.Hashedrekord;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Base64.getDecoder;
 
 /** A local representation of a rekor entry in the log. */
 @Gson.TypeAdapters
@@ -40,8 +40,9 @@ public interface RekorEntry {
 
   @Value.Derived
   default Hashedrekord getBodyAsHashedrekord() {
-    return new GsonSupplier().get().fromJson(
-            new String(getDecoder().decode(getBody()), UTF_8), HashedRekordWrapper.class)
+    return new GsonSupplier()
+        .get()
+        .fromJson(new String(getDecoder().decode(getBody()), UTF_8), HashedRekordWrapper.class)
         .getSpec();
   }
 
