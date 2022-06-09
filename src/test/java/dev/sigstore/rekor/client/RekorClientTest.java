@@ -15,12 +15,17 @@
  */
 package dev.sigstore.rekor.client;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.google.common.collect.ImmutableList;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,13 +36,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.util.Optional;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RekorClientTest {
 
@@ -160,7 +162,7 @@ public class RekorClientTest {
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException,
           OperatorCreationException, CertificateException, IOException, URISyntaxException {
     // the data we want to sign
-    var data = "some data " + System.currentTimeMillis();
+    var data = "some data " + UUID.randomUUID();
 
     // get the digest
     var artifactDigest =
