@@ -7,3 +7,8 @@
 ```
 ./gradlew spotlessApply
 ```
+
+## install into local maven repo
+```
+./gradlew publishToMavenLocal
+```
