@@ -27,14 +27,19 @@ import java.util.function.Supplier;
  * requests between sigstore and this client -- and should probably be used for any api call to
  * sigstore that expects JSON.
  */
-public class GsonSupplier implements Supplier<Gson> {
+public enum GsonSupplier implements Supplier<Gson> {
+  GSON;
+
+  private final Gson gson =
+      new GsonBuilder()
+          .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
+          .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
+          .registerTypeAdapterFactory(new GsonAdaptersHashedRekordWrapper())
+          .disableHtmlEscaping()
+          .create();
+
   @Override
   public Gson get() {
-    return new GsonBuilder()
-        .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
-        .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
-        .registerTypeAdapterFactory(new GsonAdaptersHashedRekordWrapper())
-        .disableHtmlEscaping()
-        .create();
+    return gson;
   }
 }

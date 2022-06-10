@@ -15,7 +15,8 @@
  */
 package dev.sigstore.fulcio.client;
 
-import dev.sigstore.json.GsonSupplier;
+import static dev.sigstore.json.GsonSupplier.GSON;
+
 import java.security.PublicKey;
 import java.util.Collections;
 import java.util.HashMap;
@@ -64,6 +65,6 @@ public abstract class CertificateRequest {
     data.put("publicKey", key);
     data.put("signedEmailAddress", getProofOfPossession());
 
-    return new GsonSupplier().get().toJson(data);
+    return GSON.get().toJson(data);
   }
 }
