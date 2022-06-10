@@ -112,7 +112,7 @@ public class RekorClient {
     try {
       response = req.execute();
     } catch (HttpResponseException e) {
-      if (e.getStatusCode() == 404) return Optional.ofNullable(null);
+      if (e.getStatusCode() == 404) return Optional.empty();
       throw e;
     }
     return Optional.of(
