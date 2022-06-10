@@ -1,8 +1,16 @@
+import com.google.protobuf.gradle.generateProtoTasks
+import com.google.protobuf.gradle.id
+import com.google.protobuf.gradle.ofSourceSet
+import com.google.protobuf.gradle.plugins
+import com.google.protobuf.gradle.protobuf
+import com.google.protobuf.gradle.protoc
+
 plugins {
     `java-library`
     `maven-publish`
     id("com.diffplug.spotless") version "6.4.2"
     id("org.jsonschema2dataclass") version "4.2.0"
+    id("com.google.protobuf") version "0.8.17"
 }
 
 repositories {
@@ -33,6 +41,11 @@ tasks.withType<Test> {
     }
 }
 
+sourceSets["main"].java {
+    srcDirs("build/generated/source/proto/main/grpc")
+    srcDirs("build/generated/source/proto/main/java")
+}
+
 dependencies {
     compileOnly("org.immutables:gson:2.8.2")
     compileOnly("org.immutables:value-annotations:2.8.2")
@@ -41,6 +54,14 @@ dependencies {
     implementation(platform("com.google.cloud:libraries-bom:24.3.0"))
     implementation("com.google.http-client:google-http-client-apache-v2")
     implementation("com.google.http-client:google-http-client-gson")
+
+    // grpc deps
+    implementation(platform("io.grpc:grpc-bom:1.46.0"))
+    implementation("io.grpc:grpc-protobuf")
+    implementation("io.grpc:grpc-stub")
+    runtimeOnly("io.grpc:grpc-netty-shaded")
+    compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
+
     implementation("com.google.code.gson:gson:2.8.9")
     implementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2") {
         because("contains library code for all platforms")
@@ -62,6 +83,24 @@ dependencies {
 
     implementation("javax.validation:validation-api:2.0.1.Final")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.13.3")
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.19.2"
+    }
+    plugins {
+        id("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.45.1"
+        }
+    }
+    generateProtoTasks {
+        ofSourceSet("main").forEach() {
+            it.plugins {
+                id("grpc")
+            }
+        }
+    }
 }
 
 spotless {
