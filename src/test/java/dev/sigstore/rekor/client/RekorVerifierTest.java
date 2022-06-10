@@ -19,7 +19,7 @@ import com.google.common.io.Resources;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
@@ -37,7 +37,7 @@ public class RekorVerifierTest {
     rekorResponse =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/rekor-response/valid/response.json"),
-            Charset.defaultCharset());
+            StandardCharsets.UTF_8);
     rekorPub =
         Resources.toByteArray(
             Resources.getResource("dev/sigstore/samples/rekor-response/valid/rekor.pub"));

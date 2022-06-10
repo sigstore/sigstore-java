@@ -17,7 +17,7 @@ package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateParsingException;
 import org.conscrypt.ct.SerializationException;
@@ -30,11 +30,11 @@ public class SigningCertificateTest {
     String sctBase64 =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/sct.base64"),
-            Charset.defaultCharset());
+            StandardCharsets.UTF_8);
     String certs =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/cert.pem"),
-            Charset.defaultCharset());
+            StandardCharsets.UTF_8);
 
     SigningCertificate.newSigningCertificate(certs, sctBase64);
   }
@@ -43,7 +43,7 @@ public class SigningCertificateTest {
   public void TestDecode_DerCert() throws CertificateException, IOException {
     String certs =
         Resources.toString(
-            Resources.getResource("dev/sigstore/samples/certs/cert.der"), Charset.defaultCharset());
+            Resources.getResource("dev/sigstore/samples/certs/cert.der"), StandardCharsets.UTF_8);
     try {
       SigningCertificate.decodeCerts(certs);
       Assertions.fail("DER certificate was unexpectedly successfully parsed");
