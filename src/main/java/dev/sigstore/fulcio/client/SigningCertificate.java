@@ -19,8 +19,13 @@ import com.google.api.client.util.PemReader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+import dev.sigstore.fulcio.v2.CertificateChain;
+import dev.sigstore.fulcio.v2.SigningCertificateDetachedSCT;
+import dev.sigstore.fulcio.v2.SigningCertificateEmbeddedSCT;
 import dev.sigstore.json.GsonSupplier;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.*;
 import java.util.ArrayList;
@@ -54,10 +59,41 @@ public class SigningCertificate {
       throws CertificateException, IOException, SerializationException {
     CertPath certPath = decodeCerts(certs);
     if (sctHeader != null) {
-      SignedCertificateTimestamp sct = decodeSCT(sctHeader);
+      SignedCertificateTimestamp sct =
+          decodeSCT(new String(Base64.getDecoder().decode(sctHeader), StandardCharsets.UTF_8));
       return new SigningCertificate(certPath, sct);
     }
     return new SigningCertificate(certPath, null);
+  }
+
+  static SigningCertificate newSigningCertificate(SigningCertificateDetachedSCT signingCertificate)
+      throws SerializationException, CertificateException {
+    SignedCertificateTimestamp sct = null;
+    if (!signingCertificate.getSignedCertificateTimestamp().isEmpty()) {
+      sct = decodeSCT(signingCertificate.getSignedCertificateTimestamp().toStringUtf8());
+    }
+    return new SigningCertificate(decodeCerts(signingCertificate.getChain()), sct);
+  }
+
+  static SigningCertificate newSigningCertificate(SigningCertificateEmbeddedSCT signingCertificate)
+      throws CertificateException {
+    return new SigningCertificate(decodeCerts(signingCertificate.getChain()));
+  }
+
+  @VisibleForTesting
+  static CertPath decodeCerts(CertificateChain certChain) throws CertificateException {
+    var certificateFactory = CertificateFactory.getInstance("X.509");
+    var certs = new ArrayList<X509Certificate>();
+    if (certChain.getCertificatesCount() == 0) {
+      throw new CertificateParsingException(
+          "no valid PEM certificates were found in response from Fulcio");
+    }
+    for (var cert : certChain.getCertificatesList().asByteStringList()) {
+      certs.add(
+          (X509Certificate)
+              certificateFactory.generateCertificate(new ByteArrayInputStream(cert.toByteArray())));
+    }
+    return certificateFactory.generateCertPath(certs);
   }
 
   @VisibleForTesting
@@ -78,18 +114,13 @@ public class SigningCertificate {
       throw new CertificateParsingException(
           "no valid PEM certificates were found in response from Fulcio");
     }
-
     return cf.generateCertPath(certList);
   }
 
   @VisibleForTesting
-  static SignedCertificateTimestamp decodeSCT(String sctHeader) throws SerializationException {
-    byte[] sct = Base64.getDecoder().decode(sctHeader);
+  static SignedCertificateTimestamp decodeSCT(String sctJson) throws SerializationException {
     Gson gson = new GsonSupplier().get();
-    return gson.fromJson(
-            new InputStreamReader(new ByteArrayInputStream(sct), StandardCharsets.UTF_8),
-            SctJson.class)
-        .toSct();
+    return gson.fromJson(sctJson, SctJson.class).toSct();
   }
 
   /** Returns true if the signing certificate constains an SCT embedded in the X509 extensions. */
@@ -125,9 +156,14 @@ public class SigningCertificate {
     }
   }
 
-  private SigningCertificate(CertPath certPath, @Nullable SignedCertificateTimestamp sct) {
+  private SigningCertificate(CertPath certPath, SignedCertificateTimestamp sct) {
     this.certPath = certPath;
     this.sct = sct;
+  }
+
+  private SigningCertificate(CertPath certPath) {
+    this.certPath = certPath;
+    this.sct = null;
   }
 
   public CertPath getCertPath() {
