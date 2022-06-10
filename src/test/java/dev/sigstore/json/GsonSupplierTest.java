@@ -15,13 +15,15 @@
  */
 package dev.sigstore.json;
 
+import static dev.sigstore.json.GsonSupplier.GSON;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class GsonSupplierTest {
-  private final Gson gson = new GsonSupplier().get();
+  private final Gson gson = GSON.get();
 
   @Test
   public void testWrite() {

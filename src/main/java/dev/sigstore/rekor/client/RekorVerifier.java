@@ -15,8 +15,9 @@
  */
 package dev.sigstore.rekor.client;
 
+import static dev.sigstore.json.GsonSupplier.GSON;
+
 import dev.sigstore.encryption.Keys;
-import dev.sigstore.json.GsonSupplier;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -69,7 +70,7 @@ public class RekorVerifier {
     // to provide the user with some useful information
     // (https://github.com/sigstore/sigstore-java/issues/34)
 
-    var signableJson = new GsonSupplier().get().toJson(signableContent);
+    var signableJson = GSON.get().toJson(signableContent);
 
     // TODO: Verify more than just "ec" signed rekor entries
     // (https://github.com/sigstore/sigstore-java/issues/32)

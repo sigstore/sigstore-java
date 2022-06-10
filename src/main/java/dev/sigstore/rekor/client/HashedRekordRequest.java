@@ -15,7 +15,8 @@
  */
 package dev.sigstore.rekor.client;
 
-import dev.sigstore.json.GsonSupplier;
+import static dev.sigstore.json.GsonSupplier.GSON;
+
 import dev.sigstore.rekor.*;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -74,7 +75,7 @@ public class HashedRekordRequest {
     data.put("apiVersion", "0.0.1");
     data.put("spec", hashedrekord);
 
-    return new GsonSupplier().get().toJson(data);
+    return GSON.get().toJson(data);
   }
 
   public Hashedrekord getHashedrekord() {

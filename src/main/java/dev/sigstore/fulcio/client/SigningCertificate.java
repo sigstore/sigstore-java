@@ -15,17 +15,19 @@
  */
 package dev.sigstore.fulcio.client;
 
+import static dev.sigstore.json.GsonSupplier.GSON;
+
 import com.google.api.client.util.PemReader;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.StringReader;
 import dev.sigstore.fulcio.v2.CertificateChain;
 import dev.sigstore.fulcio.v2.SigningCertificateDetachedSCT;
 import dev.sigstore.fulcio.v2.SigningCertificateEmbeddedSCT;
 import dev.sigstore.json.GsonSupplier;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.*;
 import java.util.ArrayList;
@@ -118,6 +120,13 @@ public class SigningCertificate {
   }
 
   @VisibleForTesting
+  static SignedCertificateTimestamp decodeSCT(String sctHeader) throws SerializationException {
+    byte[] sct = Base64.getDecoder().decode(sctHeader);
+    return GSON.get()
+        .fromJson(
+            new InputStreamReader(new ByteArrayInputStream(sct), StandardCharsets.UTF_8),
+            SctJson.class)
+        .toSct();
   static SignedCertificateTimestamp decodeSCT(String sctJson) throws SerializationException {
     Gson gson = new GsonSupplier().get();
     return gson.fromJson(sctJson, SctJson.class).toSct();

@@ -15,7 +15,8 @@
  */
 package dev.sigstore.testing;
 
-import dev.sigstore.json.GsonSupplier;
+import static dev.sigstore.json.GsonSupplier.GSON;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -27,7 +28,9 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
  * A fake CT long instance to run per test. Will inject CTLOGURL into the test store so it can be
@@ -61,7 +64,7 @@ public class FakeCTLogServer implements BeforeEachCallback, AfterEachCallback {
             .decode(
                 "BAMARjBEAiBwHMgDtObhrT8wkWid01FXlqvXz1tsRei64siSuwZp7gIgdyRBYHatNaOezI/AW57lKkUffra4cKOGdO+oHKBJARI="));
     content.put("timestamp", System.currentTimeMillis());
-    String resp = new GsonSupplier().get().toJson(content);
+    String resp = GSON.get().toJson(content);
 
     return new MockResponse().setResponseCode(200).setBody(resp);
   }

@@ -15,9 +15,10 @@
  */
 package dev.sigstore.rekor.client;
 
+import static dev.sigstore.json.GsonSupplier.GSON;
+
 import com.google.api.client.http.*;
 import dev.sigstore.http.HttpProvider;
-import dev.sigstore.json.GsonSupplier;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -142,8 +143,7 @@ public class RekorClient {
     data.put("hash", hash);
     data.put("publicKey", publicKeyParams);
 
-    GsonSupplier gsonSupplier = new GsonSupplier();
-    String contentString = gsonSupplier.get().toJson(data);
+    String contentString = GSON.get().toJson(data);
     System.out.println(contentString);
     HttpRequest req =
         httpProvider
@@ -155,6 +155,6 @@ public class RekorClient {
     req.getHeaders().set("Accept", "application/json");
     req.getHeaders().set("Content-Type", "application/json");
     var response = req.execute();
-    return Arrays.asList(gsonSupplier.get().fromJson(response.parseAsString(), String[].class));
+    return Arrays.asList(GSON.get().fromJson(response.parseAsString(), String[].class));
   }
 }
