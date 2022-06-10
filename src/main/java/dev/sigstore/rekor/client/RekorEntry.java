@@ -21,7 +21,7 @@ import static java.util.Base64.getDecoder;
 import dev.sigstore.json.GsonSupplier;
 import dev.sigstore.rekor.Hashedrekord;
 import java.util.List;
-import javax.annotation.Nullable;
+import java.util.Optional;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
@@ -36,8 +36,7 @@ public interface RekorEntry {
     /** Return the signed entry timestamp. */
     String getSignedEntryTimestamp();
 
-    @Nullable
-    InclusionProof getInclusionProof();
+    Optional<InclusionProof> getInclusionProof();
   }
 
   /**

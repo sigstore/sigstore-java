@@ -85,6 +85,7 @@ public class RekorClientTest {
       throws IOException, CertificateException, NoSuchAlgorithmException, SignatureException,
           URISyntaxException, InvalidKeyException, OperatorCreationException {
     var newRekordRequest = createdRekorRequest();
+    client.putEntry(newRekordRequest);
     assertEquals(
         1,
         client
@@ -145,11 +146,11 @@ public class RekorClientTest {
     var entry = client.getEntry(resp.getUuid());
     assertTrue(entry.isPresent());
     assertEquals(resp.getEntry().getLogID(), entry.get().getLogID());
-    assertNotNull(entry.get().getVerification().getInclusionProof());
-    assertNotNull(entry.get().getVerification().getInclusionProof().getTreeSize());
-    assertNotNull(entry.get().getVerification().getInclusionProof().rootHash());
-    assertNotNull(entry.get().getVerification().getInclusionProof().getLogIndex());
-    assertTrue(entry.get().getVerification().getInclusionProof().getHashes().size() > 0);
+    assertTrue(entry.get().getVerification().getInclusionProof().isPresent());
+    assertNotNull(entry.get().getVerification().getInclusionProof().get().getTreeSize());
+    assertNotNull(entry.get().getVerification().getInclusionProof().get().rootHash());
+    assertNotNull(entry.get().getVerification().getInclusionProof().get().getLogIndex());
+    assertTrue(entry.get().getVerification().getInclusionProof().get().getHashes().size() > 0);
   }
 
   @Test
