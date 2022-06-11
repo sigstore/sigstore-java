@@ -15,8 +15,7 @@
  */
 package dev.sigstore.rekor.client;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.collect.ImmutableList;
 import dev.sigstore.encryption.signers.Signers;
@@ -63,14 +62,15 @@ public class RekorClientTest {
         resp.getEntryLocation().toString(),
         CoreMatchers.startsWith("https://rekor.sigstage.dev/api/v1/log/entries/"));
 
-    Assertions.assertNotNull(resp.getUuid());
-    Assertions.assertNotNull(resp.getRaw());
+    assertNotNull(resp.getUuid());
+    assertNotNull(resp.getRaw());
     var entry = resp.getEntry();
-    Assertions.assertNotNull(entry.getBody());
+    assertNotNull(entry.getBody());
     Assertions.assertTrue(entry.getIntegratedTime() > 1);
-    Assertions.assertNotNull(entry.getLogID());
+    assertNotNull(entry.getLogID());
     Assertions.assertTrue(entry.getLogIndex() > 0);
-    Assertions.assertNotNull(entry.getVerification().getSignedEntryTimestamp());
+    assertNotNull(entry.getVerification().getSignedEntryTimestamp());
+    //    Assertions.assertNotNull(entry.getVerification().getInclusionProof());
   }
 
   // TODO(patrick@chainguard.dev): don't use data from prod, create the data as part of the test
@@ -85,7 +85,7 @@ public class RekorClientTest {
       throws IOException, CertificateException, NoSuchAlgorithmException, SignatureException,
           URISyntaxException, InvalidKeyException, OperatorCreationException {
     var newRekordRequest = createdRekorRequest();
-    var resp = client.putEntry(newRekordRequest);
+    client.putEntry(newRekordRequest);
     assertEquals(
         1,
         client
@@ -146,6 +146,11 @@ public class RekorClientTest {
     var entry = client.getEntry(resp.getUuid());
     assertTrue(entry.isPresent());
     assertEquals(resp.getEntry().getLogID(), entry.get().getLogID());
+    assertTrue(entry.get().getVerification().getInclusionProof().isPresent());
+    assertNotNull(entry.get().getVerification().getInclusionProof().get().getTreeSize());
+    assertNotNull(entry.get().getVerification().getInclusionProof().get().rootHash());
+    assertNotNull(entry.get().getVerification().getInclusionProof().get().getLogIndex());
+    assertTrue(entry.get().getVerification().getInclusionProof().get().getHashes().size() > 0);
   }
 
   @Test

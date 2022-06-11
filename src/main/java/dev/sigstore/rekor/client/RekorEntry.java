@@ -20,6 +20,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Base64.getDecoder;
 
 import dev.sigstore.rekor.Hashedrekord;
+import java.util.List;
+import java.util.Optional;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
@@ -33,6 +35,35 @@ public interface RekorEntry {
   interface Verification {
     /** Return the signed entry timestamp. */
     String getSignedEntryTimestamp();
+
+    Optional<InclusionProof> getInclusionProof();
+  }
+
+  /**
+   * Inclusion proof to allow verification that the entry is truly part of the Rekor merkle tree.
+   */
+  @Value.Immutable
+  interface InclusionProof {
+
+    /**
+     * A list of hashes required to compute the inclusion proof, sorted in order from leaf to root.
+     *
+     * @return list of SHA256 hash values expressed in hexadecimal format
+     */
+    List<String> getHashes();
+
+    /** The index of the entry in the transparency log. */
+    Long getLogIndex();
+
+    /**
+     * The hash value stored at the root of the merkle tree at the time the proof was generated.
+     *
+     * @return SHA256 hash value expressed in hexadecimal format
+     */
+    String rootHash();
+
+    /** The size of the merkle tree at the time the inclusion proof was generated. */
+    Long getTreeSize();
   }
 
   /** Returns the content of the log entry. */
