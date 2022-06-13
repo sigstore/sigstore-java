@@ -53,6 +53,13 @@ task<Test>("testGithubOidc") {
     }
 }
 
+// manual test groups that are *not* run in CI, these should be run before
+task<Test>("testManual") {
+    useJUnitPlatform() {
+        includeTags("manual")
+    }
+}
+
 sourceSets["main"].java {
     srcDirs("build/generated/source/proto/main/grpc")
     srcDirs("build/generated/source/proto/main/java")
