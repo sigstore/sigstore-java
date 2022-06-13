@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class OidcClientTest {
+public class WebOidcClientTest {
 
   @RegisterExtension
   private static final MockOAuth2ServerExtension server = new MockOAuth2ServerExtension();
@@ -30,11 +30,14 @@ public class OidcClientTest {
   public void testAuthFlow() throws OidcException {
     try (var webClient = new WebClient()) {
       var oidcClient =
-          OidcClient.builder().setIssuer(server.getIssuer()).setBrowser(webClient::getPage).build();
+          WebOidcClient.builder()
+              .setIssuer(server.getIssuer())
+              .setBrowser(webClient::getPage)
+              .build();
 
-      var eid = oidcClient.getIDToken(null);
+      var eid = oidcClient.getIDToken();
       Assertions.assertEquals(
-          MockOAuth2ServerExtension.DEFAULT_CONFIGURED_EMAIL, eid.getEmailAddress());
+          MockOAuth2ServerExtension.DEFAULT_CONFIGURED_EMAIL, eid.getSubjectAlternativeName());
     }
   }
 }
