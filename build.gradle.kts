@@ -27,7 +27,6 @@ sourceSets["main"].java {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
     testLogging {
         events("passed", "skipped", "failed")
     }
@@ -38,6 +37,19 @@ tasks.withType<Test> {
             showExceptions = true
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
+    }
+}
+
+tasks.test {
+    useJUnitPlatform() {
+        includeTags("none()")
+    }
+}
+
+// a special test grouping for tests that require a valid gha oidc token
+task<Test>("testGithubOidc") {
+    useJUnitPlatform() {
+        includeTags("github_oidc")
     }
 }
 
