@@ -17,7 +17,9 @@ package dev.sigstore.fulcio.client;
 
 import com.google.api.client.http.*;
 import com.google.common.io.CharStreams;
-import dev.sigstore.http.HttpProvider;
+import dev.sigstore.http.HttpClients;
+import dev.sigstore.http.HttpParams;
+import dev.sigstore.http.ImmutableHttpParams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -31,7 +33,7 @@ public class FulcioClient {
   public static final String SIGNING_CERT_PATH = "/api/v1/signingCert";
   public static final boolean DEFAULT_REQUIRE_SCT = true;
 
-  private final HttpProvider httpProvider;
+  private final HttpParams httpParams;
   private final URI serverUrl;
   private final boolean requireSct;
 
@@ -39,22 +41,22 @@ public class FulcioClient {
     return new Builder();
   }
 
-  private FulcioClient(HttpProvider httpProvider, URI serverUrl, boolean requireSct) {
+  private FulcioClient(HttpParams httpParams, URI serverUrl, boolean requireSct) {
     this.serverUrl = serverUrl;
     this.requireSct = requireSct;
-    this.httpProvider = httpProvider;
+    this.httpParams = httpParams;
   }
 
   public static class Builder {
     private URI serverUrl = URI.create(PUBLIC_FULCIO_SERVER);
     private boolean requireSct = DEFAULT_REQUIRE_SCT;
-    private HttpProvider httpProvider;
+    private HttpParams httpParams = ImmutableHttpParams.builder().build();
 
     private Builder() {}
 
-    /** Configure the http properties, see {@link HttpProvider}. */
-    public Builder setHttpProvider(HttpProvider httpConfiguration) {
-      this.httpProvider = httpConfiguration;
+    /** Configure the http properties, see {@link HttpParams}, {@link ImmutableHttpParams}. */
+    public Builder setHttpProvider(HttpParams httpParams) {
+      this.httpParams = httpParams;
       return this;
     }
 
@@ -74,8 +76,7 @@ public class FulcioClient {
     }
 
     public FulcioClient build() {
-      HttpProvider hp = httpProvider != null ? httpProvider : HttpProvider.builder().build();
-      return new FulcioClient(hp, serverUrl, requireSct);
+      return new FulcioClient(httpParams, serverUrl, requireSct);
     }
   }
 
@@ -93,8 +94,7 @@ public class FulcioClient {
     URI fulcioEndpoint = serverUrl.resolve(SIGNING_CERT_PATH);
 
     HttpRequest req =
-        httpProvider
-            .getHttpTransport()
+        HttpClients.newHttpTransport(httpParams)
             .createRequestFactory()
             .buildPostRequest(
                 new GenericUrl(fulcioEndpoint),
