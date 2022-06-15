@@ -41,7 +41,7 @@ public class FulcioGrpcClientTest {
 
     // create a "subject" and sign it with the oidc server key (signed JWT)
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
-    var subject = mockOAuthServerExtension.getOidcToken().getEmailAddress();
+    var subject = mockOAuthServerExtension.getOidcToken().getSubjectAlternativeName();
 
     var signer = Signers.newEcdsaSigner();
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
@@ -71,7 +71,7 @@ public class FulcioGrpcClientTest {
 
     // create a "subject" and sign it with the oidc server key (signed JWT)
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
-    var subject = mockOAuthServerExtension.getOidcToken().getEmailAddress();
+    var subject = mockOAuthServerExtension.getOidcToken().getSubjectAlternativeName();
 
     var signer = Signers.newEcdsaSigner();
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));

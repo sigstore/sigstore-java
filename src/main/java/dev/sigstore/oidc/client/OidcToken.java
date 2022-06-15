@@ -15,6 +15,14 @@
  */
 package dev.sigstore.oidc.client;
 
-public interface OidcClient {
-  OidcToken getIDToken() throws OidcException;
+import org.immutables.value.Value;
+
+/** A token from a provider with both openid and email scope claims. */
+@Value.Immutable
+public interface OidcToken {
+  /** The subject or email claim from the token to include in the SAN on the certificate. */
+  String getSubjectAlternativeName();
+
+  /** The full oidc token obtained from the provider. */
+  String getIdToken();
 }

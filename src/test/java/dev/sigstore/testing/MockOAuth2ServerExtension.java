@@ -18,8 +18,9 @@ package dev.sigstore.testing;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcException;
+import dev.sigstore.oidc.client.OidcToken;
+import dev.sigstore.oidc.client.WebOidcClient;
 import java.io.IOException;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
@@ -60,16 +61,16 @@ public class MockOAuth2ServerExtension
     mockOAuthServer.shutdown();
   }
 
-  public OidcClient.EmailIdToken getOidcToken() throws OidcException {
+  public OidcToken getOidcToken() throws OidcException {
     // obtain oauth token
     try (var webClient = new WebClient()) {
       var oidcClient =
-          OidcClient.builder()
+          WebOidcClient.builder()
               .setIssuer(mockOAuthServer.issuerUrl(OAUTH_ISSUER_ID).toString())
               .setBrowser(webClient::getPage)
               .build();
 
-      return oidcClient.getIDToken(null);
+      return oidcClient.getIDToken();
     }
   }
 

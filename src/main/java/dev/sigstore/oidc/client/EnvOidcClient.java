@@ -15,6 +15,10 @@
  */
 package dev.sigstore.oidc.client;
 
-public interface OidcClient {
-  OidcToken getIDToken() throws OidcException;
+/** Obtain an oidc token from the execution environment. */
+public class EnvOidcClient implements OidcClient {
+  @Override
+  public OidcToken getIDToken() throws OidcException {
+    throw new UnsupportedOperationException("Env based oidc is not yet supported");
+  }
 }
