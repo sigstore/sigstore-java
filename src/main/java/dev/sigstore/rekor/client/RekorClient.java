@@ -18,7 +18,9 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.api.client.http.*;
-import dev.sigstore.http.HttpProvider;
+import dev.sigstore.http.HttpClients;
+import dev.sigstore.http.HttpParams;
+import dev.sigstore.http.ImmutableHttpParams;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -32,27 +34,27 @@ public class RekorClient {
   public static final String REKOR_ENTRIES_PATH = "/api/v1/log/entries";
   public static final String REKOR_INDEX_SEARCH_PATH = "/api/v1/index/retrieve";
 
-  private final HttpProvider httpProvider;
+  private final HttpParams httpParams;
   private final URI serverUrl;
 
   public static RekorClient.Builder builder() {
     return new RekorClient.Builder();
   }
 
-  private RekorClient(HttpProvider httpProvider, URI serverUrl) {
+  private RekorClient(HttpParams httpParams, URI serverUrl) {
     this.serverUrl = serverUrl;
-    this.httpProvider = httpProvider;
+    this.httpParams = httpParams;
   }
 
   public static class Builder {
     private URI serverUrl = URI.create(PUBLIC_REKOR_SERVER);
-    private HttpProvider httpProvider;
+    private HttpParams httpParams = ImmutableHttpParams.builder().build();
 
     private Builder() {}
 
-    /** Configure the http properties, see {@link HttpProvider}. */
-    public RekorClient.Builder setHttpProvider(HttpProvider httpConfiguration) {
-      this.httpProvider = httpConfiguration;
+    /** Configure the http properties, see {@link HttpParams}, {@link ImmutableHttpParams}. */
+    public RekorClient.Builder setHttpParams(HttpParams httpParams) {
+      this.httpParams = httpParams;
       return this;
     }
 
@@ -63,8 +65,7 @@ public class RekorClient {
     }
 
     public RekorClient build() {
-      HttpProvider hp = httpProvider != null ? httpProvider : HttpProvider.builder().build();
-      return new RekorClient(hp, serverUrl);
+      return new RekorClient(httpParams, serverUrl);
     }
   }
 
@@ -78,8 +79,7 @@ public class RekorClient {
     URI rekorPutEndpoint = serverUrl.resolve(REKOR_ENTRIES_PATH);
 
     HttpRequest req =
-        httpProvider
-            .getHttpTransport()
+        HttpClients.newHttpTransport(httpParams)
             .createRequestFactory()
             .buildPostRequest(
                 new GenericUrl(rekorPutEndpoint),
@@ -103,8 +103,7 @@ public class RekorClient {
   public Optional<RekorEntry> getEntry(String UUID) throws IOException {
     URI getEntryURI = serverUrl.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
     HttpRequest req =
-        httpProvider
-            .getHttpTransport()
+        HttpClients.newHttpTransport(httpParams)
             .createRequestFactory()
             .buildGetRequest(new GenericUrl(getEntryURI));
     req.getHeaders().set("Accept", "application/json");
@@ -144,10 +143,8 @@ public class RekorClient {
     data.put("publicKey", publicKeyParams);
 
     String contentString = GSON.get().toJson(data);
-    System.out.println(contentString);
     HttpRequest req =
-        httpProvider
-            .getHttpTransport()
+        HttpClients.newHttpTransport(httpParams)
             .createRequestFactory()
             .buildPostRequest(
                 new GenericUrl(rekorSearchEndpoint),

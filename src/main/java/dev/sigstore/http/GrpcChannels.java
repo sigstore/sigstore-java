@@ -21,6 +21,14 @@ import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 public class GrpcChannels {
+  /**
+   * Create a new managed channel, this may be reused across multiple requests to a host, and must
+   * be closed when finished.
+   *
+   * @param serverUrl the host to connect to
+   * @param httpParams the http configuration
+   * @return a reusable grpc channel
+   */
   public static ManagedChannel newManagedChannel(URI serverUrl, HttpParams httpParams) {
     var channelBuilder =
         ManagedChannelBuilder.forTarget(serverUrl.toString())

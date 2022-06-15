@@ -15,6 +15,7 @@
  */
 package dev.sigstore.http;
 
+import com.google.api.client.util.Preconditions;
 import org.immutables.value.Value;
 
 /**
@@ -39,10 +40,16 @@ public abstract class HttpParams {
 
   /**
    * You shouldn't be using this outside of testing or very specific environments, but allows grpc
-   * to connect without ssl/tls.
+   * or http clients to connect without ssl/tls.
    */
   @Value.Default
   public boolean getAllowInsecureConnections() {
     return DEFAULT_ALLOW_INSECURE_CONNECTIONS;
+  }
+
+  @Value.Check
+  protected void check() {
+    Preconditions.checkState(getTimeout() > 0, "'timeout' should be greater than zero");
+    Preconditions.checkState(!getUserAgent().isEmpty(), "'useragent' must not be empty");
   }
 }

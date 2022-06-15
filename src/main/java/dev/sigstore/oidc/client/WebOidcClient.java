@@ -32,7 +32,9 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.Key;
 import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.client.util.store.MemoryDataStoreFactory;
-import dev.sigstore.http.HttpProvider;
+import dev.sigstore.http.HttpClients;
+import dev.sigstore.http.HttpParams;
+import dev.sigstore.http.ImmutableHttpParams;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -47,14 +49,14 @@ public class WebOidcClient implements OidcClient {
   private static final String DEFAULT_CLIENT_ID = "sigstore";
   private static final String WELL_KNOWN_CONFIG = "/.well-known/openid-configuration";
 
-  private final HttpProvider httpProvider;
+  private final HttpParams httpParams;
   private final String clientId;
   private final String issuer;
   private final BrowserHandler browserHandler;
 
   private WebOidcClient(
-      HttpProvider httpProvider, String issuer, String clientId, BrowserHandler browserHandler) {
-    this.httpProvider = httpProvider;
+      HttpParams httpParams, String issuer, String clientId, BrowserHandler browserHandler) {
+    this.httpParams = httpParams;
     this.clientId = clientId;
     this.issuer = issuer;
     this.browserHandler = browserHandler;
@@ -65,16 +67,16 @@ public class WebOidcClient implements OidcClient {
   }
 
   public static class Builder {
-    private HttpProvider httpProvider;
+    private HttpParams httpParams = ImmutableHttpParams.builder().build();
     private String clientId = DEFAULT_CLIENT_ID;
     private String issuer = PUBLIC_DEX_ISSUER;
     private BrowserHandler browserHandler = null;
 
     private Builder() {}
 
-    /** Configure the http properties, see {@link HttpProvider} */
-    public Builder setHttpProvider(HttpProvider httpProvider) {
-      this.httpProvider = httpProvider;
+    /** Configure the http properties, see {@link HttpParams} */
+    public Builder setHttpParams(HttpParams httpParams) {
+      this.httpParams = httpParams;
       return this;
     }
 
@@ -100,12 +102,11 @@ public class WebOidcClient implements OidcClient {
     }
 
     public WebOidcClient build() {
-      HttpProvider hp = httpProvider != null ? httpProvider : HttpProvider.builder().build();
       BrowserHandler bh =
           browserHandler != null
               ? browserHandler
               : new AuthorizationCodeInstalledApp.DefaultBrowser()::browse;
-      return new WebOidcClient(hp, issuer, clientId, bh);
+      return new WebOidcClient(httpParams, issuer, clientId, bh);
     }
   }
 
@@ -117,7 +118,7 @@ public class WebOidcClient implements OidcClient {
    */
   public OidcToken getIDToken() throws OidcException {
     JsonFactory jsonFactory = new GsonFactory();
-    HttpTransport httpTransport = httpProvider.getHttpTransport();
+    HttpTransport httpTransport = HttpClients.newHttpTransport(httpParams);
     DataStoreFactory memStoreFactory = new MemoryDataStoreFactory();
     OIDCEndpoints endpoints;
     try {
