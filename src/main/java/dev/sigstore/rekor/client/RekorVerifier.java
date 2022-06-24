@@ -17,6 +17,7 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
+import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.Keys;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,7 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
 public class RekorVerifier {
@@ -90,6 +92,70 @@ public class RekorVerifier {
    * @throws RekorVerificationException if the entry cannot be verified
    */
   public void verifyInclusionProof(RekorEntry entry) throws RekorVerificationException {
-    throw new UnsupportedOperationException("Verifying inclusion proof is not yet supported");
+
+    var inclusionProof =
+        entry
+            .getVerification()
+            .getInclusionProof()
+            .orElseThrow(
+                () ->
+                    new RekorVerificationException(
+                        "No inclusion proof was found in the rekor entry"));
+
+    var leafHash =
+        Hashing.sha256()
+            .hashBytes(combineBytes(new byte[] {0x00}, Base64.getDecoder().decode(entry.getBody())))
+            .asBytes();
+
+    // see: https://datatracker.ietf.org/doc/rfc9162/ section 2.1.3.2
+
+    // nodeIndex and totalNodes represent values for a specific level in the tree
+    // starting at the leafs and moving up to the root.
+    var nodeIndex = inclusionProof.getLogIndex();
+    var totalNodes = inclusionProof.getTreeSize() - 1;
+
+    var currentHash = leafHash;
+    var hashes = inclusionProof.getHashes();
+
+    for (var hash : hashes) {
+      byte[] p = Hex.decode(hash);
+      if (totalNodes == 0) {
+        throw new RekorVerificationException("Inclusion proof failed, ended prematurely");
+      }
+      if (nodeIndex == totalNodes || nodeIndex % 2 == 1) {
+        currentHash = hashChildren(p, currentHash);
+        while (nodeIndex % 2 == 0) {
+          nodeIndex = nodeIndex >> 1;
+          totalNodes = totalNodes >> 1;
+        }
+      } else {
+        currentHash = hashChildren(currentHash, p);
+      }
+      nodeIndex = nodeIndex >> 1;
+      totalNodes = totalNodes >> 1;
+    }
+
+    var calcuatedRootHash = Hex.toHexString(currentHash);
+    if (!calcuatedRootHash.equals(inclusionProof.rootHash())) {
+      throw new RekorVerificationException(
+          "Calculated inclusion proof root hash does not match provided root hash\n"
+              + calcuatedRootHash
+              + "\n"
+              + inclusionProof.rootHash());
+    }
+  }
+
+  private static byte[] combineBytes(byte[] first, byte[] second) {
+    byte[] result = new byte[first.length + second.length];
+    System.arraycopy(first, 0, result, 0, first.length);
+    System.arraycopy(second, 0, result, first.length, second.length);
+    return result;
+  }
+
+  // hash the concatination of 0x01, left and right
+  private static byte[] hashChildren(byte[] left, byte[] right) {
+    return Hashing.sha256()
+        .hashBytes(combineBytes(new byte[] {0x01}, combineBytes(left, right)))
+        .asBytes();
   }
 }
