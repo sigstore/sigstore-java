@@ -78,9 +78,9 @@ public class FakeCTLogServer implements BeforeEachCallback, AfterEachCallback {
           @Override
           public MockResponse dispatch(@NotNull RecordedRequest recordedRequest)
               throws InterruptedException {
-            switch (recordedRequest.getPath()) {
-              case "/ct/v1/add-chain":
-                return handleSctRequest();
+            var path = recordedRequest.getPath();
+            if ("/ct/v1/add-chain".equals(path) || "/ct/v1/add-pre-chain".equals(path)) {
+              return handleSctRequest();
             }
             return new MockResponse().setResponseCode(404);
           }
