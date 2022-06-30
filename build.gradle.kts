@@ -40,6 +40,12 @@ tasks.withType<Test> {
     }
 }
 
+// Reproducible builds https://docs.gradle.org/current/userguide/working_with_files.html#sec:reproducible_archives
+tasks.withType<AbstractArchiveTask>() {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+}
+
 tasks.test {
     useJUnitPlatform() {
         includeTags("none()")
