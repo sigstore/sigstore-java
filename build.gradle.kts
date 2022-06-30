@@ -1,9 +1,5 @@
-import com.google.protobuf.gradle.generateProtoTasks
-import com.google.protobuf.gradle.id
-import com.google.protobuf.gradle.ofSourceSet
-import com.google.protobuf.gradle.plugins
-import com.google.protobuf.gradle.protobuf
-import com.google.protobuf.gradle.protoc
+
+import com.google.protobuf.gradle.*
 
 plugins {
     `java-library`
@@ -38,6 +34,12 @@ tasks.withType<Test> {
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
     }
+}
+
+// Reproducible builds https://docs.gradle.org/current/userguide/working_with_files.html#sec:reproducible_archives
+tasks.withType<AbstractArchiveTask>() {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
 }
 
 tasks.test {
