@@ -30,6 +30,7 @@ import org.conscrypt.ct.SerializationException;
 /** A client to communicate with a fulcio ca service instance. */
 public class FulcioClient {
   public static final String PUBLIC_FULCIO_SERVER = "https://fulcio.sigstore.dev";
+  public static final String STAGING_FULCIO_SERVER = "https://fulcio.sigstage.dev";
   public static final String SIGNING_CERT_PATH = "/api/v1/signingCert";
   public static final boolean DEFAULT_REQUIRE_SCT = true;
 

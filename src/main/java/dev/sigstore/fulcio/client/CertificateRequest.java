@@ -43,7 +43,7 @@ public abstract class CertificateRequest {
    * @throws UnsupportedAlgorithmException if key type is not in {@link
    *     CertificateRequest#SUPPORTED_ALGORITHMS}
    */
-  static CertificateRequest newCertificateRequest(
+  public static CertificateRequest newCertificateRequest(
       PublicKey publicKey, String idToken, byte[] proofOfPossession)
       throws UnsupportedAlgorithmException {
     if (!SUPPORTED_ALGORITHMS.contains(publicKey.getAlgorithm())) {

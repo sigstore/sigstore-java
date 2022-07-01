@@ -44,6 +44,7 @@ import java.util.Arrays;
  */
 public class WebOidcClient implements OidcClient {
   public static final String PUBLIC_DEX_ISSUER = "https://oauth2.sigstore.dev/auth";
+  public static final String STAGING_DEX_ISSUER = "https://oauth2.sigstage.dev/auth";
 
   private static final String ID_TOKEN_KEY = "id_token";
   private static final String DEFAULT_CLIENT_ID = "sigstore";

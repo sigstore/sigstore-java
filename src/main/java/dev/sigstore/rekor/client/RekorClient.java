@@ -31,6 +31,7 @@ import java.util.Optional;
 /** A client to communicate with a rekor service instance. */
 public class RekorClient {
   public static final String PUBLIC_REKOR_SERVER = "https://rekor.sigstore.dev";
+  public static final String STAGING_REKOR_SERVER = "https://rekor.sigstage.dev";
   public static final String REKOR_ENTRIES_PATH = "/api/v1/log/entries";
   public static final String REKOR_INDEX_SEARCH_PATH = "/api/v1/index/retrieve";
 
