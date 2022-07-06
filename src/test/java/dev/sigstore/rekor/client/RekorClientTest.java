@@ -159,7 +159,7 @@ public class RekorClientTest {
   public void getEntry_entryDoesntExist() throws IOException {
     Optional<RekorEntry> entry =
         client.getEntry(
-            "c8d2b213aa7efc1b2c9ccfa2fa647d00b34c63972e04e90276b5c31e0f317afd"); // I made this up
+            "aaaaaaaaaaaaaaaac8d2b213aa7efc1b2c9ccfa2fa647d00b34c63972e04e90276b5c31e0f317afd"); // I made this up
     assertTrue(entry.isEmpty());
   }
 

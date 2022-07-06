@@ -15,12 +15,15 @@
  */
 package dev.sigstore;
 
+import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.UUID;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -43,14 +46,16 @@ public class KeylessSignerTest {
   @Tag("manual")
   public void sign_production() throws Exception {
     var signer = KeylessSigner.builderForProd().build();
-    signer.sign(testArtifact);
+    var result = signer.sign(testArtifact);
+    verifyResult(result);
   }
 
   @Test
   @Tag("manual")
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builderForStaging().build();
-    signer.sign(testArtifact);
+    var result = signer.sign(testArtifact);
+    verifyResult(result);
   }
 
   @Test
@@ -60,7 +65,8 @@ public class KeylessSignerTest {
         KeylessSigner.builderForProd()
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
-    signer.sign(testArtifact);
+    var result = signer.sign(testArtifact);
+    verifyResult(result);
   }
 
   @Test
@@ -70,6 +76,22 @@ public class KeylessSignerTest {
         KeylessSigner.builderForStaging()
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
-    signer.sign(testArtifact);
+    var result = signer.sign(testArtifact);
+    verifyResult(result);
+  }
+
+  private void verifyResult(KeylessSigningResult result) throws IOException {
+    Assertions.assertNotNull(result.getCertPath());
+    Assertions.assertNotNull(result.getEntry());
+    Assertions.assertNotNull(result.getSignature());
+
+    var hr = result.getEntry().getBodyAsHashedrekord();
+    // check if the rekor entry has the signature we sent
+    Assertions.assertArrayEquals(
+        Base64.getDecoder().decode(hr.getSignature().getContent()), result.getSignature());
+    // check if the rekor entry has the certificate we sent
+    Assertions.assertArrayEquals(
+        Base64.getDecoder().decode(hr.getSignature().getPublicKey().getContent()),
+        Certificates.toPemBytes(result.getCertPath().getCertificates().get(0)));
   }
 }
