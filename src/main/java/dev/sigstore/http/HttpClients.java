@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
 
-/** HttpProvider defines http connection behaviour for sigstore clients. */
+/** HttpClients generates HttpTransport objects from configuration. */
 public class HttpClients {
   public static HttpTransport newHttpTransport(HttpParams httpParams) {
     HttpClientBuilder hcb =
