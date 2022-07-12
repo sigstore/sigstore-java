@@ -56,7 +56,7 @@ public class FulcioClient {
     private Builder() {}
 
     /** Configure the http properties, see {@link HttpParams}, {@link ImmutableHttpParams}. */
-    public Builder setHttpProvider(HttpParams httpParams) {
+    public Builder setHttpParams(HttpParams httpParams) {
       this.httpParams = httpParams;
       return this;
     }
