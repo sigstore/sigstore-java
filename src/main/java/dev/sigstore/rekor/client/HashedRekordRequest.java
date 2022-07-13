@@ -17,14 +17,12 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
+import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.rekor.*;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.Certificate;
 import java.util.Base64;
 import java.util.HashMap;
-import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.util.encoders.Hex;
 
 public class HashedRekordRequest {
@@ -46,13 +44,7 @@ public class HashedRekordRequest {
   public static HashedRekordRequest newHashedRekordRequest(
       byte[] artifactDigest, Certificate leafCert, byte[] signature) throws IOException {
 
-    var certWriter = new StringWriter();
-    try (JcaPEMWriter pemWriter = new JcaPEMWriter(certWriter)) {
-      pemWriter.writeObject(leafCert);
-      pemWriter.flush();
-    }
-
-    var certPem = certWriter.toString().getBytes(StandardCharsets.UTF_8);
+    var certPem = Certificates.toPemBytes(leafCert);
     var hashedrekord =
         new Hashedrekord()
             .withData(

@@ -16,6 +16,7 @@
 package dev.sigstore;
 
 import com.google.api.client.util.Preconditions;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -30,13 +31,13 @@ import dev.sigstore.rekor.client.RekorVerifier;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import org.conscrypt.ct.SerializationException;
 
+/** A full sigstore keyless signing flow. */
 public class KeylessSigner {
   private final FulcioClient fulcioClient;
   private final FulcioVerifier fulcioVerifier;
@@ -153,7 +154,7 @@ public class KeylessSigner {
     }
   }
 
-  public void sign(Path artifact)
+  public KeylessSigningResult sign(Path artifact)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, SerializationException, CertificateException, IOException,
           FulcioVerificationException, RekorVerificationException {
@@ -170,16 +171,22 @@ public class KeylessSigner {
     // allow that to be known
     fulcioVerifier.verifySct(signingCert);
 
-    // TODO: this reads the whole artifact which is probably expensive for large files, the signer
-    // interface should probably just sign non-digest artifacts instead of always applying sha256
-    // before signing. Then we can just apply the input stream to the sha256 calculator
-    // and send that digest to the signer
-    var artifactBytes = Files.readAllBytes(artifact);
-    var artifactDigest = MessageDigest.getInstance("SHA-256").digest(artifactBytes);
+    var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
+    var artifactDigest = artifactByteSource.hash(Hashing.sha256()).asBytes();
+    byte[] signature;
+    try (var stream = artifactByteSource.openStream()) {
+      signature = signer.sign(stream);
+    }
     var rekorRequest =
         HashedRekordRequest.newHashedRekordRequest(
-            artifactDigest, signingCert.getLeafCertificate(), signer.sign(artifactBytes));
+            artifactDigest, signingCert.getLeafCertificate(), signature);
     var rekorResponse = rekorClient.putEntry(rekorRequest);
     rekorVerifier.verifyEntry(rekorResponse.getEntry());
+
+    return ImmutableKeylessSigningResult.builder()
+        .certPath(signingCert.getCertPath())
+        .signature(signature)
+        .entry(rekorResponse.getEntry())
+        .build();
   }
 }
