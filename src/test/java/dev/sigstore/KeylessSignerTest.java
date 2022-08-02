@@ -15,6 +15,7 @@
  */
 package dev.sigstore;
 
+import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.UUID;
+import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -33,6 +35,7 @@ public class KeylessSignerTest {
 
   @TempDir public static Path testRoot;
   public static Path testArtifact;
+  public static String testArtifactDigest;
 
   @BeforeAll
   public static void setupArtifact() throws IOException {
@@ -40,6 +43,9 @@ public class KeylessSignerTest {
     Files.createFile(testArtifact);
     Files.write(
         testArtifact, ("some test data " + UUID.randomUUID()).getBytes(StandardCharsets.UTF_8));
+    var artifactByteSource = com.google.common.io.Files.asByteSource(testArtifact.toFile());
+    var artifactDigest = artifactByteSource.hash(Hashing.sha256()).asBytes();
+    testArtifactDigest = Hex.toHexString(artifactDigest);
   }
 
   @Test
@@ -81,11 +87,13 @@ public class KeylessSignerTest {
   }
 
   private void verifyResult(KeylessSigningResult result) throws IOException {
+    Assertions.assertNotNull(result.getDigest());
     Assertions.assertNotNull(result.getCertPath());
     Assertions.assertNotNull(result.getEntry());
     Assertions.assertNotNull(result.getSignature());
 
     var hr = result.getEntry().getBodyAsHashedrekord();
+    Assertions.assertEquals(testArtifactDigest, result.getDigest());
     // check if the rekor entry has the signature we sent
     Assertions.assertArrayEquals(
         Base64.getDecoder().decode(hr.getSignature().getContent()), result.getSignature());

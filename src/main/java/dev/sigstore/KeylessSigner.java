@@ -35,7 +35,7 @@ import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import org.conscrypt.ct.SerializationException;
+import org.bouncycastle.util.encoders.Hex;
 
 /** A full sigstore keyless signing flow. */
 public class KeylessSigner {
@@ -156,7 +156,7 @@ public class KeylessSigner {
 
   public KeylessSigningResult sign(Path artifact)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
-          UnsupportedAlgorithmException, SerializationException, CertificateException, IOException,
+          UnsupportedAlgorithmException, CertificateException, IOException,
           FulcioVerificationException, RekorVerificationException {
     var tokenInfo = oidcClient.getIDToken();
     var signingCert =
@@ -184,6 +184,7 @@ public class KeylessSigner {
     rekorVerifier.verifyEntry(rekorResponse.getEntry());
 
     return ImmutableKeylessSigningResult.builder()
+        .digest(Hex.toHexString(artifactDigest))
         .certPath(signingCert.getCertPath())
         .signature(signature)
         .entry(rekorResponse.getEntry())

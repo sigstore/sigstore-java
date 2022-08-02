@@ -21,6 +21,9 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public interface KeylessSigningResult {
+  /** The hex encoded sha256 hash digest of the artifact */
+  String getDigest();
+
   /** The full certificate chain provided by fulcio for the public key used to sign the artifact */
   CertPath getCertPath();
 

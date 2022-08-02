@@ -88,10 +88,9 @@ public class FulcioClient {
    * @return a {@link SigningCertificate} from fulcio
    * @throws IOException if the http request fials
    * @throws CertificateException if returned certificates could not be decoded
-   * @throws SerializationException if return sct could not be parsed
    */
   public SigningCertificate SigningCert(CertificateRequest cr)
-      throws IOException, CertificateException, SerializationException {
+      throws IOException, CertificateException {
     URI fulcioEndpoint = serverUrl.resolve(SIGNING_CERT_PATH);
 
     HttpRequest req =
@@ -122,6 +121,8 @@ public class FulcioClient {
             "no signed certificate timestamps were found in response from Fulcio");
       }
       return signingCert;
+    } catch (SerializationException se) {
+      throw new CertificateException("SCT could not be parsed", se);
     }
   }
 }
