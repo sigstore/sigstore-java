@@ -80,6 +80,8 @@ dependencies {
     implementation("com.google.http-client:google-http-client-apache-v2")
     implementation("com.google.http-client:google-http-client-gson")
 
+    implementation("io.github.erdtman:java-json-canonicalization:1.1")
+
     // grpc deps
     implementation(platform("io.grpc:grpc-bom:1.46.0"))
     implementation("io.grpc:grpc-protobuf")

@@ -17,35 +17,36 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
-import dev.sigstore.encryption.certificates.Certificates;
+import com.google.common.hash.Hashing;
+import com.google.common.primitives.Bytes;
 import dev.sigstore.rekor.*;
 import java.io.IOException;
-import java.security.cert.Certificate;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import org.bouncycastle.util.encoders.Hex;
+import org.erdtman.jcs.JsonCanonicalizer;
 
 public class HashedRekordRequest {
 
-  private final HashedRekord hashedrekord;
+  private final HashedRekord hashedRekord;
 
-  private HashedRekordRequest(HashedRekord hashedrekord) {
-    this.hashedrekord = hashedrekord;
+  private HashedRekordRequest(HashedRekord hashedRekord) {
+    this.hashedRekord = hashedRekord;
   }
 
   /**
    * Create a new HashedRekorRequest.
    *
    * @param artifactDigest the sha256 digest of the artifact (not hex/base64 encoded)
-   * @param leafCert the leaf certificate used to verify {@code signature}, usually obtained from
-   *     fulcio
+   * @param publicKey the pem encoded public key or public key certificate used to verify {@code
+   *     signature}. Certificates in keyless signing are typically obtained from fulcio.
    * @param signature the signature over the {@code artifactDigest} (not hex/base64 encoded)
    */
   public static HashedRekordRequest newHashedRekordRequest(
-      byte[] artifactDigest, Certificate leafCert, byte[] signature) throws IOException {
+      byte[] artifactDigest, byte[] publicKey, byte[] signature) {
 
-    var certPem = Certificates.toPemBytes(leafCert);
-    var hashedrekord =
+    return new HashedRekordRequest(
         new HashedRekord()
             .withData(
                 new Data()
@@ -57,20 +58,35 @@ public class HashedRekordRequest {
                 new Signature()
                     .withContent(Base64.getEncoder().encodeToString(signature))
                     .withPublicKey(
-                        new PublicKey().withContent(Base64.getEncoder().encodeToString(certPem))));
-    return new HashedRekordRequest(hashedrekord);
+                        new PublicKey()
+                            .withContent(Base64.getEncoder().encodeToString(publicKey)))));
   }
 
+  /** Returned a canonicalized json payload. */
   public String toJsonPayload() {
+    // TODO: use RekorEntryBody type here
     var data = new HashMap<String, Object>();
     data.put("kind", "hashedrekord");
     data.put("apiVersion", "0.0.1");
-    data.put("spec", hashedrekord);
+    data.put("spec", hashedRekord);
 
-    return GSON.get().toJson(data);
+    try {
+      return new JsonCanonicalizer(GSON.get().toJson(data)).getEncodedString();
+    } catch (IOException ioe) {
+      // we shouldn't be here
+      throw new RuntimeException(
+          "GSON generated invalid json when serializing HashedRekordRequest");
+    }
   }
 
   public HashedRekord getHashedRekord() {
-    return hashedrekord;
+    return hashedRekord;
+  }
+
+  /** Computes the expected rekor uuid of an entry based on the content of the hashedRekord. */
+  public String computeUUID() {
+    var merkleContent =
+        Bytes.concat(new byte[] {0x00}, toJsonPayload().getBytes(StandardCharsets.UTF_8));
+    return Hashing.sha256().hashBytes(merkleContent).toString();
   }
 }

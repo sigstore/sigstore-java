@@ -23,10 +23,7 @@ import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /** A client to communicate with a rekor service instance. */
 public class RekorClient {
@@ -99,6 +96,10 @@ public class RekorClient {
     URI rekorEntryUri = serverUrl.resolve(resp.getHeaders().getLocation());
     String entry = resp.parseAsString();
     return RekorResponse.newRekorResponse(rekorEntryUri, entry);
+  }
+
+  public Optional<RekorEntry> getEntry(HashedRekordRequest hashedRekordRequest) throws IOException {
+    return getEntry(hashedRekordRequest.computeUUID());
   }
 
   public Optional<RekorEntry> getEntry(String UUID) throws IOException {
