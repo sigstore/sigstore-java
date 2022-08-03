@@ -27,9 +27,9 @@ import org.bouncycastle.util.encoders.Hex;
 
 public class HashedRekordRequest {
 
-  private final Hashedrekord hashedrekord;
+  private final HashedRekord hashedrekord;
 
-  private HashedRekordRequest(Hashedrekord hashedrekord) {
+  private HashedRekordRequest(HashedRekord hashedrekord) {
     this.hashedrekord = hashedrekord;
   }
 
@@ -46,7 +46,7 @@ public class HashedRekordRequest {
 
     var certPem = Certificates.toPemBytes(leafCert);
     var hashedrekord =
-        new Hashedrekord()
+        new HashedRekord()
             .withData(
                 new Data()
                     .withHash(
@@ -70,7 +70,7 @@ public class HashedRekordRequest {
     return GSON.get().toJson(data);
   }
 
-  public Hashedrekord getHashedrekord() {
+  public HashedRekord getHashedRekord() {
     return hashedrekord;
   }
 }
