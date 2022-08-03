@@ -15,7 +15,7 @@
  */
 package dev.sigstore.rekor.client;
 
-import dev.sigstore.rekor.Hashedrekord;
+import dev.sigstore.rekor.HashedRekord;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
@@ -48,5 +48,5 @@ import org.immutables.value.Value;
 @Value.Immutable
 public interface HashedRekordWrapper {
 
-  Hashedrekord getSpec();
+  HashedRekord getSpec();
 }

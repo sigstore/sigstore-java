@@ -91,7 +91,7 @@ public class RekorClientTest {
         1,
         client
             .searchEntry(
-                null, newRekordRequest.getHashedrekord().getData().getHash().getValue(), null, null)
+                null, newRekordRequest.getHashedRekord().getData().getHash().getValue(), null, null)
             .size());
   }
 

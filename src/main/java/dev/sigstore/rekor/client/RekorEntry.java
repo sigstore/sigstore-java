@@ -19,7 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Base64.getDecoder;
 
-import dev.sigstore.rekor.Hashedrekord;
+import dev.sigstore.rekor.HashedRekord;
 import java.util.List;
 import java.util.Optional;
 import org.immutables.gson.Gson;
@@ -70,7 +70,7 @@ public interface RekorEntry {
   String getBody();
 
   @Value.Derived
-  default Hashedrekord getBodyAsHashedrekord() {
+  default HashedRekord getBodyAsHashedrekord() {
     return GSON.get()
         .fromJson(new String(getDecoder().decode(getBody()), UTF_8), HashedRekordWrapper.class)
         .getSpec();
