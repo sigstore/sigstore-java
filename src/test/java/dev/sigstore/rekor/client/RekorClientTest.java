@@ -98,7 +98,7 @@ public class RekorClientTest {
   @Test
   public void searchEntries_oneResult_publicKey()
       throws IOException, CertificateException, NoSuchAlgorithmException, SignatureException,
-          URISyntaxException, InvalidKeyException, OperatorCreationException {
+          URISyntaxException, InvalidKeyException, OperatorCreationException, RekorTypeException {
     var newRekordRequest = createdRekorRequest();
     var resp = client.putEntry(newRekordRequest);
     assertEquals(
@@ -108,7 +108,10 @@ public class RekorClientTest {
                 null,
                 null,
                 "x509",
-                resp.getEntry().getBodyAsHashedrekord().getSignature().getPublicKey().getContent())
+                RekorTypes.getHashedRekord(resp.getEntry())
+                    .getSignature()
+                    .getPublicKey()
+                    .getContent())
             .size());
   }
 

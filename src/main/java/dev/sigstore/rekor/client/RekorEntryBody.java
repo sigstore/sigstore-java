@@ -15,13 +15,13 @@
  */
 package dev.sigstore.rekor.client;
 
-import dev.sigstore.rekor.HashedRekord;
+import com.google.gson.JsonElement;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
 /**
- * Used go get GSON to deserialize {@code Hashedrekor} correctly since Rekor returns it wrapped in
- * resource def format. e.g.
+ * A representation of the body of a {@link RekorEntry}. The "spec" remains unparsed and should be
+ * parsed into specific types after inspecting kind and apiVersion. Format example. e.g.
  *
  * <pre>
  * {
@@ -46,7 +46,15 @@ import org.immutables.value.Value;
  */
 @Gson.TypeAdapters
 @Value.Immutable
-public interface HashedRekordWrapper {
+public interface RekorEntryBody {
 
-  HashedRekord getSpec();
+  String getApiVersion();
+
+  String getKind();
+
+  /**
+   * Returns spec as an unparsed JsonElement. It should parsed after verifying kind and apiVersion.
+   * See {@link RekorTypes}.
+   */
+  JsonElement getSpec();
 }
