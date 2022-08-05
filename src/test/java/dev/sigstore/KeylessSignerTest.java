@@ -18,6 +18,8 @@ package dev.sigstore;
 import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
+import dev.sigstore.rekor.client.RekorTypeException;
+import dev.sigstore.rekor.client.RekorTypes;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -86,13 +88,13 @@ public class KeylessSignerTest {
     verifyResult(result);
   }
 
-  private void verifyResult(KeylessSigningResult result) throws IOException {
+  private void verifyResult(KeylessSigningResult result) throws IOException, RekorTypeException {
     Assertions.assertNotNull(result.getDigest());
     Assertions.assertNotNull(result.getCertPath());
     Assertions.assertNotNull(result.getEntry());
     Assertions.assertNotNull(result.getSignature());
 
-    var hr = result.getEntry().getBodyAsHashedrekord();
+    var hr = RekorTypes.getHashedRekord(result.getEntry());
     Assertions.assertEquals(testArtifactDigest, result.getDigest());
     // check if the rekor entry has the signature we sent
     Assertions.assertArrayEquals(

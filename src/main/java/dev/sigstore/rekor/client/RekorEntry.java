@@ -17,9 +17,8 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Base64.getDecoder;
 
-import dev.sigstore.rekor.HashedRekord;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import org.immutables.gson.Gson;
@@ -69,11 +68,14 @@ public interface RekorEntry {
   /** Returns the content of the log entry. */
   String getBody();
 
+  /**
+   * Returns a decoded {@link RekorEntryBody} of the log entry. Use {@link RekorTypes} to further
+   * process.
+   */
   @Value.Derived
-  default HashedRekord getBodyAsHashedrekord() {
+  default RekorEntryBody getBodyDecoded() {
     return GSON.get()
-        .fromJson(new String(getDecoder().decode(getBody()), UTF_8), HashedRekordWrapper.class)
-        .getSpec();
+        .fromJson(new String(Base64.getDecoder().decode(getBody()), UTF_8), RekorEntryBody.class);
   }
 
   /** Returns the time the entry was integrated into the log. */
