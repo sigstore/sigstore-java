@@ -52,9 +52,7 @@ public class RekorVerifier {
    * @param entry the entry to verify
    * @throws RekorVerificationException if the entry cannot be verified
    */
-  public void verifyEntry(RekorEntry entry)
-      throws RekorVerificationException, NoSuchAlgorithmException, InvalidKeyException,
-          SignatureException {
+  public void verifyEntry(RekorEntry entry) throws RekorVerificationException {
     if (entry.getVerification() == null) {
       throw new RekorVerificationException("No verification information in entry.");
     }
@@ -77,12 +75,20 @@ public class RekorVerifier {
 
     var signableJson = GSON.get().toJson(signableContent);
 
-    var verifier = Signature.getInstance(verifierAlgorithm);
-    verifier.initVerify(rekorPublicKey);
-    verifier.update(signableJson.getBytes(StandardCharsets.UTF_8));
-    if (!verifier.verify(
-        Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
-      throw new RekorVerificationException("Entry SET was not valid");
+    try {
+      var verifier = Signature.getInstance(verifierAlgorithm);
+      verifier.initVerify(rekorPublicKey);
+      verifier.update(signableJson.getBytes(StandardCharsets.UTF_8));
+      if (!verifier.verify(
+          Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
+        throw new RekorVerificationException("Entry SET was not valid");
+      }
+    } catch (InvalidKeyException ike) {
+      throw new RekorVerificationException("Public Key was invalid", ike);
+    } catch (SignatureException se) {
+      throw new RekorVerificationException("Signature was invalid", se);
+    } catch (NoSuchAlgorithmException nsae) {
+      throw new AssertionError("Required verification algorithm 'SHA256withECDSA' not found.");
     }
   }
 

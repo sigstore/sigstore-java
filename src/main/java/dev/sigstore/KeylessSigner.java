@@ -18,6 +18,7 @@ package dev.sigstore;
 import com.google.api.client.util.Preconditions;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
+import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.fulcio.client.*;
@@ -173,7 +174,7 @@ public class KeylessSigner {
     }
     var rekorRequest =
         HashedRekordRequest.newHashedRekordRequest(
-            artifactDigest, signingCert.getLeafCertificate(), signature);
+            artifactDigest, Certificates.toPemBytes(signingCert.getLeafCertificate()), signature);
     var rekorResponse = rekorClient.putEntry(rekorRequest);
     rekorVerifier.verifyEntry(rekorResponse.getEntry());
 

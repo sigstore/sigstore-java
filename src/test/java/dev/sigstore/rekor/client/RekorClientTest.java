@@ -18,6 +18,7 @@ package dev.sigstore.rekor.client;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.collect.ImmutableList;
+import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
 import java.io.IOException;
@@ -52,9 +53,7 @@ public class RekorClientTest {
   }
 
   @Test
-  public void putEntry_toStaging()
-      throws CertificateException, IOException, NoSuchAlgorithmException, OperatorCreationException,
-          SignatureException, InvalidKeyException, URISyntaxException {
+  public void putEntry_toStaging() throws Exception {
     HashedRekordRequest req = createdRekorRequest();
     var resp = client.putEntry(req);
 
@@ -82,9 +81,7 @@ public class RekorClientTest {
   }
 
   @Test
-  public void searchEntries_oneResult_hash()
-      throws IOException, CertificateException, NoSuchAlgorithmException, SignatureException,
-          URISyntaxException, InvalidKeyException, OperatorCreationException {
+  public void searchEntries_oneResult_hash() throws Exception {
     var newRekordRequest = createdRekorRequest();
     client.putEntry(newRekordRequest);
     assertEquals(
@@ -96,9 +93,7 @@ public class RekorClientTest {
   }
 
   @Test
-  public void searchEntries_oneResult_publicKey()
-      throws IOException, CertificateException, NoSuchAlgorithmException, SignatureException,
-          URISyntaxException, InvalidKeyException, OperatorCreationException, RekorTypeException {
+  public void searchEntries_oneResult_publicKey() throws Exception {
     var newRekordRequest = createdRekorRequest();
     var resp = client.putEntry(newRekordRequest);
     assertEquals(
@@ -142,12 +137,24 @@ public class RekorClientTest {
   }
 
   @Test
-  public void getEntry_entryExists()
-      throws IOException, CertificateException, NoSuchAlgorithmException, SignatureException,
-          URISyntaxException, InvalidKeyException, OperatorCreationException {
+  public void getEntry_entryExists() throws Exception {
     var newRekordRequest = createdRekorRequest();
     var resp = client.putEntry(newRekordRequest);
     var entry = client.getEntry(resp.getUuid());
+    assertEntry(resp, entry);
+  }
+
+  @Test
+  public void getEntry_hashedRekordRequest_byCalculatedUuid() throws Exception {
+    var hashedRekordRequest = createdRekorRequest();
+    var resp = client.putEntry(hashedRekordRequest);
+    // getting an entry by hashedrekordrequest should implicitly calculate uuid
+    // from the contents of the hashedrekord
+    var entry = client.getEntry(hashedRekordRequest);
+    assertEntry(resp, entry);
+  }
+
+  private void assertEntry(RekorResponse resp, Optional<RekorEntry> entry) {
     assertTrue(entry.isPresent());
     assertEquals(resp.getEntry().getLogID(), entry.get().getLogID());
     assertTrue(entry.get().getVerification().getInclusionProof().isPresent());
@@ -169,7 +176,7 @@ public class RekorClientTest {
   @NotNull
   private HashedRekordRequest createdRekorRequest()
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException,
-          OperatorCreationException, CertificateException, IOException, URISyntaxException {
+          OperatorCreationException, CertificateException, IOException {
     // the data we want to sign
     var data = "some data " + UUID.randomUUID();
 
@@ -182,13 +189,8 @@ public class RekorClientTest {
     var signature = signer.sign(data.getBytes(StandardCharsets.UTF_8));
 
     // create a fake signing cert (not fulcio/dex)
-    var cert = CertGenerator.newCert(signer.getPublicKey());
+    var cert = Certificates.toPemBytes(CertGenerator.newCert(signer.getPublicKey()));
 
-    var req = HashedRekordRequest.newHashedRekordRequest(artifactDigest, cert, signature);
-
-    // this tests directly against rekor in staging, it's a bit hard to bring up a rekor instance
-    // without docker compose.
-    client = RekorClient.builder().setServerUrl(new URI("https://rekor.sigstage.dev")).build();
-    return req;
+    return HashedRekordRequest.newHashedRekordRequest(artifactDigest, cert, signature);
   }
 }
