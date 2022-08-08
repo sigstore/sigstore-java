@@ -17,6 +17,7 @@ package dev.sigstore.rekor.client;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.Keys;
+import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
 import java.io.IOException;
 import java.security.*;
@@ -26,8 +27,7 @@ import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
 public class RekorVerifier {
-  private final PublicKey rekorPublicKey;
-  private final String verifierAlgorithm;
+  private final Verifier verifier;
 
   // A calculated logId from the transparency log (rekor) public key
   private final String calculatedLogId;
@@ -35,15 +35,15 @@ public class RekorVerifier {
   public static RekorVerifier newRekorVerifier(byte[] rekorPublicKey)
       throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
     var publicKey = Keys.parsePublicKey(rekorPublicKey);
-    var verifierAlgorithm = Verifiers.signatureAlgorithm(publicKey);
+    var verifier = Verifiers.newVerifier(publicKey);
 
-    return new RekorVerifier(publicKey, verifierAlgorithm);
+    return new RekorVerifier(verifier);
   }
 
-  private RekorVerifier(PublicKey rekorPublicKey, String verifierAlgorithm) {
-    this.rekorPublicKey = rekorPublicKey;
-    this.verifierAlgorithm = verifierAlgorithm;
-    this.calculatedLogId = Hashing.sha256().hashBytes(rekorPublicKey.getEncoded()).toString();
+  private RekorVerifier(Verifier verifier) {
+    this.calculatedLogId =
+        Hashing.sha256().hashBytes(verifier.getPublicKey().getEncoded()).toString();
+    this.verifier = verifier;
   }
 
   /**
@@ -66,10 +66,8 @@ public class RekorVerifier {
     }
 
     try {
-      var verifier = Signature.getInstance(verifierAlgorithm);
-      verifier.initVerify(rekorPublicKey);
-      verifier.update(entry.getSignableContent());
       if (!verifier.verify(
+          entry.getSignableContent(),
           Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
         throw new RekorVerificationException("Entry SET was not valid");
       }

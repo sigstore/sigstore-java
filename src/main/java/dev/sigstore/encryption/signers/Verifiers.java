@@ -21,13 +21,13 @@ import java.security.PublicKey;
 /** Autodetection for verification algorithms based on public keys used. */
 public class Verifiers {
 
-  /** Returns a signature algorithm to use during verificaiton. */
-  public static String signatureAlgorithm(PublicKey publicKey) throws NoSuchAlgorithmException {
+  /** Returns a new verifier for the provided public key to use during verificaiton. */
+  public static Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException {
     if (publicKey.getAlgorithm().equals("RSA")) {
-      return "SHA256withRSA";
+      return new RsaVerifier(publicKey);
     }
     if (publicKey.getAlgorithm().equals("EC")) {
-      return "SHA256withECDSA";
+      return new EcdsaVerifier(publicKey);
     }
     throw new NoSuchAlgorithmException(
         "Cannot verify signatures for key type '"

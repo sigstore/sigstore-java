@@ -55,6 +55,10 @@ public class SigningCertificate {
   private final CertPath certPath;
   @Nullable private final SignedCertificateTimestamp sct;
 
+  public static SigningCertificate from(CertPath certPath) {
+    return new SigningCertificate(certPath);
+  }
+
   static SigningCertificate newSigningCertificate(String certs, @Nullable String sctHeader)
       throws CertificateException, IOException, SerializationException {
     CertPath certPath = decodeCerts(certs);

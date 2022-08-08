@@ -17,25 +17,30 @@ package dev.sigstore.encryption.signers;
 
 import java.security.*;
 
-/** A signing helper that wraps common signing operations for use within this library. */
-public interface Signer {
+/** A verifier helper that wraps common verification operations for use within this library. */
+public interface Verifier {
 
-  /** Return the public key associated with this signer. */
+  /** Return the public key associated with this verifier. */
   PublicKey getPublicKey();
 
   /**
-   * Sign an artifact. Implementations will hash the artifact with sha256 before signing.
+   * Verify an artifact. Implementations will hash the artifact with sha256 before verifying.
    *
-   * @param artifact the bytes to be signed
+   * @param artifact the artifact that was signed
+   * @param signature the signature associated with the artifact
+   * @return true if the signature is valid, false otherwise
    */
-  byte[] sign(byte[] artifact)
+  boolean verify(byte[] artifact, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 
   /**
-   * Sign an artifact digest. Implementations will not further hash the inputs.
+   * Verify an artifact using the artifact's sha256 digest. Implementations do not further hash the
+   * input.
    *
-   * @param artifactDigest the sha256 digest of the artifact to be signed
+   * @param artifactDigest the sha256 digest of the artifact that was signed
+   * @param signature the signature associated with the artifact
+   * @return true if the signature is valid, false otherwise
    */
-  byte[] signDigest(byte[] artifactDigest)
+  boolean verifyDigest(byte[] artifactDigest, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 }

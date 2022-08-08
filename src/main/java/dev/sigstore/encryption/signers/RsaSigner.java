@@ -15,12 +15,14 @@
  */
 package dev.sigstore.encryption.signers;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.security.*;
+import org.bouncycastle.util.encoders.Hex;
 
 /** RSA signer, use {@link Signers#newRsaSigner()} to instantiate}. */
 public class RsaSigner implements Signer {
+
+  // digest padding: https://www.rfc-editor.org/rfc/rfc3447#section-9.2
+  static final byte[] PKCS1_SHA256_PADDING = Hex.decode("3031300d060960864801650304020105000420");
 
   private final KeyPair keyPair;
 
@@ -43,14 +45,12 @@ public class RsaSigner implements Signer {
   }
 
   @Override
-  public byte[] sign(InputStream artifact)
-      throws NoSuchAlgorithmException, InvalidKeyException, IOException, SignatureException {
-    Signature signature = Signature.getInstance("SHA256withRSA");
+  public byte[] signDigest(byte[] artifactDigest)
+      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    Signature signature = Signature.getInstance("NONEwithRSA");
     signature.initSign(keyPair.getPrivate());
-    int b;
-    while ((b = artifact.read()) != -1) {
-      signature.update((byte) b);
-    }
+    signature.update(PKCS1_SHA256_PADDING);
+    signature.update(artifactDigest);
     return signature.sign();
   }
 }
