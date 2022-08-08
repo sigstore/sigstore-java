@@ -18,9 +18,9 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
+import java.io.IOException;
+import java.util.*;
+import org.erdtman.jcs.JsonCanonicalizer;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
@@ -76,6 +76,21 @@ public interface RekorEntry {
   default RekorEntryBody getBodyDecoded() {
     return GSON.get()
         .fromJson(new String(Base64.getDecoder().decode(getBody()), UTF_8), RekorEntryBody.class);
+  }
+
+  /** Returns canonicalized json representing the signable contents of a rekor entry. */
+  default byte[] getSignableContent() {
+    var signableContent = new HashMap<String, Object>();
+    signableContent.put("body", getBody());
+    signableContent.put("integratedTime", getIntegratedTime());
+    signableContent.put("logID", getLogID());
+    signableContent.put("logIndex", getLogIndex());
+
+    try {
+      return new JsonCanonicalizer(GSON.get().toJson(signableContent)).getEncodedUTF8();
+    } catch (IOException e) {
+      throw new RuntimeException("GSON generated invalid json when serializing RekorEntry");
+    }
   }
 
   /** Returns the time the entry was integrated into the log. */

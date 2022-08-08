@@ -18,12 +18,7 @@ package dev.sigstore.rekor.client;
 import com.google.common.io.Resources;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
@@ -51,9 +46,7 @@ public class RekorVerifierTest {
   }
 
   @Test
-  public void verifyEntry_valid()
-      throws URISyntaxException, InvalidKeySpecException, NoSuchAlgorithmException, IOException,
-          RekorVerificationException, SignatureException, InvalidKeyException {
+  public void verifyEntry_valid() throws Exception {
     var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
     var verifier = RekorVerifier.newRekorVerifier(rekorPub);
 
@@ -61,8 +54,7 @@ public class RekorVerifierTest {
   }
 
   @Test
-  public void verifyEntry_invalid()
-      throws InvalidKeySpecException, NoSuchAlgorithmException, IOException, URISyntaxException {
+  public void verifyEntry_invalid() throws Exception {
     // change the logindex
     var invalidResponse = rekorResponse.replace("79", "80");
     var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), invalidResponse);
@@ -75,9 +67,7 @@ public class RekorVerifierTest {
   }
 
   @Test
-  public void verifyEntry_withInclusionProof()
-      throws InvalidKeySpecException, NoSuchAlgorithmException, IOException,
-          RekorVerificationException, SignatureException, InvalidKeyException, URISyntaxException {
+  public void verifyEntry_withInclusionProof() throws Exception {
     var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorQueryResponse);
     var verifier = RekorVerifier.newRekorVerifier(rekorPub);
 
@@ -87,9 +77,7 @@ public class RekorVerifierTest {
   }
 
   @Test
-  public void verifyEntry_withInvalidInclusionProof()
-      throws InvalidKeySpecException, NoSuchAlgorithmException, IOException,
-          RekorVerificationException, SignatureException, InvalidKeyException, URISyntaxException {
+  public void verifyEntry_withInvalidInclusionProof() throws Exception {
     // replace a hash in the inclusion proof to make it bad
     var invalidResponse = rekorQueryResponse.replace("b4439e", "aaaaaa");
 
@@ -106,5 +94,18 @@ public class RekorVerifierTest {
         thrown.getMessage(),
         CoreMatchers.startsWith(
             "Calculated inclusion proof root hash does not match provided root hash"));
+  }
+
+  public void verifyEntry_logIdMismatch() throws Exception {
+    var garbageKey =
+        Resources.toByteArray(Resources.getResource("dev/sigstore/samples/keys/test-rsa.pub"));
+
+    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
+    var verifier = RekorVerifier.newRekorVerifier(garbageKey);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(response.getEntry()));
+    Assertions.assertEquals("LogId does not match supplied rekor public key.", thrown.getMessage());
   }
 }
