@@ -15,7 +15,7 @@
  */
 package dev.sigstore.encryption.signers;
 
-import static dev.sigstore.encryption.signers.Signers.newEcdsaSigner;
+import static dev.sigstore.encryption.signers.Signers.newRsaSigner;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -27,14 +27,14 @@ import java.security.SignatureException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class EcdsaSignerTest {
+class RsaSignerTest {
 
   private static final byte[] CONTENT = "abcdef".getBytes(StandardCharsets.UTF_8);
 
   @Test
   public void testSign_inputStream()
       throws NoSuchAlgorithmException, IOException, SignatureException, InvalidKeyException {
-    var signer = newEcdsaSigner();
+    var signer = newRsaSigner();
 
     var sig = signer.sign(new ByteArrayInputStream(CONTENT));
     Assertions.assertTrue(verify(signer, sig));
@@ -43,7 +43,7 @@ class EcdsaSignerTest {
   @Test
   public void testSign_bytes()
       throws NoSuchAlgorithmException, SignatureException, InvalidKeyException {
-    var signer = newEcdsaSigner();
+    var signer = newRsaSigner();
 
     var sig = signer.sign(CONTENT);
     Assertions.assertTrue(verify(signer, sig));

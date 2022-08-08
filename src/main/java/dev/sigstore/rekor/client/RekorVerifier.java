@@ -18,6 +18,7 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import dev.sigstore.encryption.Keys;
+import dev.sigstore.encryption.signers.Verifiers;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -28,17 +29,19 @@ import java.util.LinkedHashMap;
 /** Verifier for rekor entries. */
 public class RekorVerifier {
   private final PublicKey rekorPublicKey;
+  private final String verifierAlgorithm;
 
   public static RekorVerifier newRekorVerifier(byte[] rekorPublicKey)
       throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
-    // TODO: accept any keytime and appropriately initialize the signer below (currently only EC
-    // compatible: https://github.com/sigstore/sigstore-java/issues/32)
-    PublicKey publicKey = Keys.parsePublicKey(rekorPublicKey);
-    return new RekorVerifier(publicKey);
+    var publicKey = Keys.parsePublicKey(rekorPublicKey);
+    var verifierAlgorithm = Verifiers.signatureAlgorithm(publicKey);
+
+    return new RekorVerifier(publicKey, verifierAlgorithm);
   }
 
-  private RekorVerifier(PublicKey rekorPublicKey) {
+  private RekorVerifier(PublicKey rekorPublicKey, String verifierAlgorithm) {
     this.rekorPublicKey = rekorPublicKey;
+    this.verifierAlgorithm = verifierAlgorithm;
   }
 
   /**
@@ -72,9 +75,7 @@ public class RekorVerifier {
 
     var signableJson = GSON.get().toJson(signableContent);
 
-    // TODO: Verify more than just "ec" signed rekor entries
-    // (https://github.com/sigstore/sigstore-java/issues/32)
-    var verifier = Signature.getInstance("SHA256withECDSA");
+    var verifier = Signature.getInstance(verifierAlgorithm);
     verifier.initVerify(rekorPublicKey);
     verifier.update(signableJson.getBytes(StandardCharsets.UTF_8));
     if (!verifier.verify(
