@@ -17,21 +17,19 @@ package dev.sigstore.encryption.signers;
 
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-/** Factory class for creation of signers. */
-public class Signers {
+public class VerifiersTest {
 
-  /** Create a new ECDSA signer with 256 bit keysize. */
-  public static EcdsaSigner newEcdsaSigner() throws NoSuchAlgorithmException {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
-    keyGen.initialize(256);
-    return new EcdsaSigner(keyGen.generateKeyPair());
-  }
-
-  /** Create a new RSA signer with 2048 bit keysize. */
-  public static RsaSigner newRsaSigner() throws NoSuchAlgorithmException {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-    keyGen.initialize(2048);
-    return new RsaSigner(keyGen.generateKeyPair());
+  @Test
+  public void signatureAlgorithm_unknown() throws Exception {
+    var kp = KeyPairGenerator.getInstance("DSA").generateKeyPair();
+    var exception =
+        Assertions.assertThrows(
+            NoSuchAlgorithmException.class, () -> Verifiers.signatureAlgorithm(kp.getPublic()));
+    Assertions.assertEquals(
+        exception.getMessage(),
+        "Cannot verify signatures for key type 'DSA', this client only supports RSA and ECDSA verification");
   }
 }

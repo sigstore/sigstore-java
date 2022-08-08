@@ -15,23 +15,23 @@
  */
 package dev.sigstore.encryption.signers;
 
-import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 
-/** Factory class for creation of signers. */
-public class Signers {
+/** Autodetection for verification algorithms based on public keys used. */
+public class Verifiers {
 
-  /** Create a new ECDSA signer with 256 bit keysize. */
-  public static EcdsaSigner newEcdsaSigner() throws NoSuchAlgorithmException {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
-    keyGen.initialize(256);
-    return new EcdsaSigner(keyGen.generateKeyPair());
-  }
-
-  /** Create a new RSA signer with 2048 bit keysize. */
-  public static RsaSigner newRsaSigner() throws NoSuchAlgorithmException {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-    keyGen.initialize(2048);
-    return new RsaSigner(keyGen.generateKeyPair());
+  /** Returns a signature algorithm to use during verificaiton. */
+  public static String signatureAlgorithm(PublicKey publicKey) throws NoSuchAlgorithmException {
+    if (publicKey.getAlgorithm().equals("RSA")) {
+      return "SHA256withRSA";
+    }
+    if (publicKey.getAlgorithm().equals("EC")) {
+      return "SHA256withECDSA";
+    }
+    throw new NoSuchAlgorithmException(
+        "Cannot verify signatures for key type '"
+            + publicKey.getAlgorithm()
+            + "', this client only supports RSA and ECDSA verification");
   }
 }
