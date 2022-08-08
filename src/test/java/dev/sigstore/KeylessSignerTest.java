@@ -53,7 +53,7 @@ public class KeylessSignerTest {
   @Test
   @Tag("manual")
   public void sign_production() throws Exception {
-    var signer = KeylessSigner.builderForProd().build();
+    var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var result = signer.sign(testArtifact);
     verifyResult(result);
   }
@@ -61,7 +61,7 @@ public class KeylessSignerTest {
   @Test
   @Tag("manual")
   public void sign_staging() throws Exception {
-    var signer = KeylessSigner.builderForStaging().build();
+    var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
     var result = signer.sign(testArtifact);
     verifyResult(result);
   }
@@ -70,7 +70,8 @@ public class KeylessSignerTest {
   @Tag("github_oidc")
   public void sign_productionWithGithubOidc() throws Exception {
     var signer =
-        KeylessSigner.builderForProd()
+        KeylessSigner.builder()
+            .sigstorePublicDefaults()
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
     var result = signer.sign(testArtifact);
@@ -81,7 +82,8 @@ public class KeylessSignerTest {
   @Tag("github_oidc")
   public void sign_stagingWithGithubOidc() throws Exception {
     var signer =
-        KeylessSigner.builderForStaging()
+        KeylessSigner.builder()
+            .sigstoreStagingDefaults()
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
     var result = signer.sign(testArtifact);

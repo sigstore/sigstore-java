@@ -61,53 +61,6 @@ public class KeylessSigner {
     this.signer = signer;
   }
 
-  public static Builder builderForProd()
-      throws IOException, InvalidAlgorithmParameterException, CertificateException,
-          InvalidKeySpecException, NoSuchAlgorithmException {
-    var builder = new Builder();
-    var fulcioCert =
-        Resources.toByteArray(
-            Resources.getResource("dev/sigstore/tuf/production/fulcio_v1.crt.pem"));
-    var ctfePublicKey =
-        Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/ctfe.pub"));
-    var rekorPublicKey =
-        Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/rekor.pub"));
-    builder
-        .fulcioClient(
-            FulcioClient.builder().build(),
-            FulcioVerifier.newFulcioVerifier(fulcioCert, ctfePublicKey))
-        .rekorClient(RekorClient.builder().build(), RekorVerifier.newRekorVerifier(rekorPublicKey))
-        .oidcClient(WebOidcClient.builder().build())
-        .signer(Signers.newEcdsaSigner());
-    return builder;
-  }
-
-  public static Builder builderForStaging()
-      throws IOException, InvalidAlgorithmParameterException, CertificateException,
-          InvalidKeySpecException, NoSuchAlgorithmException {
-    var builder = new Builder();
-    var fulcioCert =
-        Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/fulcio.crt.pem"));
-    var ctfePublicKey =
-        Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/ctfe.pub"));
-    var rekorPublicKey =
-        Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/rekor.pub"));
-    builder
-        .fulcioClient(
-            FulcioClient.builder()
-                .setServerUrl(URI.create(FulcioClient.STAGING_FULCIO_SERVER))
-                .build(),
-            FulcioVerifier.newFulcioVerifier(fulcioCert, ctfePublicKey))
-        .rekorClient(
-            RekorClient.builder()
-                .setServerUrl(URI.create(RekorClient.STAGING_REKOR_SERVER))
-                .build(),
-            RekorVerifier.newRekorVerifier(rekorPublicKey))
-        .oidcClient(WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build())
-        .signer(Signers.newEcdsaSigner());
-    return builder;
-  }
-
   public static Builder builder() {
     return new Builder();
   }
@@ -151,6 +104,47 @@ public class KeylessSigner {
       Preconditions.checkNotNull(signer);
       return new KeylessSigner(
           fulcioClient, fulcioVerifier, rekorClient, rekorVerifier, oidcClient, signer);
+    }
+
+    public Builder sigstorePublicDefaults()
+        throws IOException, InvalidAlgorithmParameterException, CertificateException,
+            InvalidKeySpecException, NoSuchAlgorithmException {
+      var fulcioCert =
+          Resources.toByteArray(
+              Resources.getResource("dev/sigstore/tuf/production/fulcio_v1.crt.pem"));
+      var ctfePublicKey =
+          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/ctfe.pub"));
+      var rekorPublicKey =
+          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/rekor.pub"));
+      fulcioClient(
+          FulcioClient.builder().build(),
+          FulcioVerifier.newFulcioVerifier(fulcioCert, ctfePublicKey));
+      rekorClient(RekorClient.builder().build(), RekorVerifier.newRekorVerifier(rekorPublicKey));
+      oidcClient(WebOidcClient.builder().build());
+      signer(Signers.newEcdsaSigner());
+      return this;
+    }
+
+    public Builder sigstoreStagingDefaults()
+        throws IOException, InvalidAlgorithmParameterException, CertificateException,
+            InvalidKeySpecException, NoSuchAlgorithmException {
+      var fulcioCert =
+          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/fulcio.crt.pem"));
+      var ctfePublicKey =
+          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/ctfe.pub"));
+      var rekorPublicKey =
+          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/rekor.pub"));
+      fulcioClient(
+          FulcioClient.builder()
+              .setServerUrl(URI.create(FulcioClient.STAGING_FULCIO_SERVER))
+              .build(),
+          FulcioVerifier.newFulcioVerifier(fulcioCert, ctfePublicKey));
+      rekorClient(
+          RekorClient.builder().setServerUrl(URI.create(RekorClient.STAGING_REKOR_SERVER)).build(),
+          RekorVerifier.newRekorVerifier(rekorPublicKey));
+      oidcClient(WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build());
+      signer(Signers.newEcdsaSigner());
+      return this;
     }
   }
 
