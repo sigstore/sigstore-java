@@ -20,6 +20,7 @@ import java.security.NoSuchAlgorithmException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+/** VerifiersTest for failure cases, passing cases are handled in {@link SignerTest}. */
 public class VerifiersTest {
 
   @Test
@@ -27,7 +28,18 @@ public class VerifiersTest {
     var kp = KeyPairGenerator.getInstance("DSA").generateKeyPair();
     var exception =
         Assertions.assertThrows(
-            NoSuchAlgorithmException.class, () -> Verifiers.signatureAlgorithm(kp.getPublic()));
+            NoSuchAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
+    Assertions.assertEquals(
+        exception.getMessage(),
+        "Cannot verify signatures for key type 'DSA', this client only supports RSA and ECDSA verification");
+  }
+
+  @Test
+  public void signatureAlgorithmForDigests_unknown() throws Exception {
+    var kp = KeyPairGenerator.getInstance("DSA").generateKeyPair();
+    var exception =
+        Assertions.assertThrows(
+            NoSuchAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
     Assertions.assertEquals(
         exception.getMessage(),
         "Cannot verify signatures for key type 'DSA', this client only supports RSA and ECDSA verification");

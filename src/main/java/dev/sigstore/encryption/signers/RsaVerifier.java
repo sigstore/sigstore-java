@@ -17,35 +17,36 @@ package dev.sigstore.encryption.signers;
 
 import java.security.*;
 
-/** ECDSA signer, use {@link Signers#newEcdsaSigner()} to instantiate}. */
-public class EcdsaSigner implements Signer {
+/** RSA verifier, instantiated by {@link Verifiers#newVerifier(PublicKey)}. */
+public class RsaVerifier implements Verifier {
 
-  private final KeyPair keyPair;
+  private final PublicKey publicKey;
 
-  EcdsaSigner(KeyPair keyPair) {
-    this.keyPair = keyPair;
+  RsaVerifier(PublicKey publicKey) {
+    this.publicKey = publicKey;
   }
 
   @Override
   public PublicKey getPublicKey() {
-    return keyPair.getPublic();
+    return publicKey;
   }
 
   @Override
-  public byte[] sign(byte[] artifact)
+  public boolean verify(byte[] artifact, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    Signature signature = Signature.getInstance("SHA256withECDSA");
-    signature.initSign(keyPair.getPrivate());
-    signature.update(artifact);
-    return signature.sign();
+    var verifier = Signature.getInstance("SHA256withRSA");
+    verifier.initVerify(publicKey);
+    verifier.update(artifact);
+    return verifier.verify(signature);
   }
 
   @Override
-  public byte[] signDigest(byte[] artifactDigest)
+  public boolean verifyDigest(byte[] digest, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    Signature signature = Signature.getInstance("NONEwithECDSA");
-    signature.initSign(keyPair.getPrivate());
-    signature.update(artifactDigest);
-    return signature.sign();
+    var verifier = Signature.getInstance("NONEwithRSA");
+    verifier.initVerify(publicKey);
+    verifier.update(RsaSigner.PKCS1_SHA256_PADDING);
+    verifier.update(digest);
+    return verifier.verify(signature);
   }
 }

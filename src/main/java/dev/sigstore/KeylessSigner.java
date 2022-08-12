@@ -33,7 +33,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.security.*;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import org.bouncycastle.util.encoders.Hex;
@@ -168,10 +171,8 @@ public class KeylessSigner {
 
     var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
     var artifactDigest = artifactByteSource.hash(Hashing.sha256()).asBytes();
-    byte[] signature;
-    try (var stream = artifactByteSource.openStream()) {
-      signature = signer.sign(stream);
-    }
+    var signature = signer.signDigest(artifactDigest);
+
     var rekorRequest =
         HashedRekordRequest.newHashedRekordRequest(
             artifactDigest, Certificates.toPemBytes(signingCert.getLeafCertificate()), signature);
