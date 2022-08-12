@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-public class KeylessSignerTest {
+public class KeylessTest {
 
   @TempDir public static Path testRoot;
   public static Path testArtifact;
@@ -55,7 +55,14 @@ public class KeylessSignerTest {
   public void sign_production() throws Exception {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var result = signer.sign(testArtifact);
-    verifyResult(result);
+
+    verifySigningResult(result);
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    verifier.verifyOnline(
+        Hex.decode(result.getDigest()),
+        Certificates.toPemBytes(result.getCertPath()),
+        result.getSignature());
   }
 
   @Test
@@ -63,7 +70,13 @@ public class KeylessSignerTest {
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
     var result = signer.sign(testArtifact);
-    verifyResult(result);
+    verifySigningResult(result);
+
+    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    verifier.verifyOnline(
+        Hex.decode(result.getDigest()),
+        Certificates.toPemBytes(result.getCertPath()),
+        result.getSignature());
   }
 
   @Test
@@ -75,7 +88,13 @@ public class KeylessSignerTest {
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
     var result = signer.sign(testArtifact);
-    verifyResult(result);
+    verifySigningResult(result);
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    verifier.verifyOnline(
+        Hex.decode(result.getDigest()),
+        Certificates.toPemBytes(result.getCertPath()),
+        result.getSignature());
   }
 
   @Test
@@ -87,16 +106,24 @@ public class KeylessSignerTest {
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
     var result = signer.sign(testArtifact);
-    verifyResult(result);
+    verifySigningResult(result);
+
+    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    verifier.verifyOnline(
+        Hex.decode(result.getDigest()),
+        Certificates.toPemBytes(result.getCertPath()),
+        result.getSignature());
   }
 
-  private void verifyResult(KeylessSigningResult result) throws IOException, RekorTypeException {
+  private void verifySigningResult(KeylessSigningResult result)
+      throws IOException, RekorTypeException {
     Assertions.assertNotNull(result.getDigest());
     Assertions.assertNotNull(result.getCertPath());
     Assertions.assertNotNull(result.getEntry());
     Assertions.assertNotNull(result.getSignature());
 
     var hr = RekorTypes.getHashedRekord(result.getEntry());
+    // check if ht rekor entry has the digest we sent
     Assertions.assertEquals(testArtifactDigest, result.getDigest());
     // check if the rekor entry has the signature we sent
     Assertions.assertArrayEquals(
