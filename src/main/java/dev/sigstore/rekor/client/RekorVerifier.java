@@ -15,23 +15,22 @@
  */
 package dev.sigstore.rekor.client;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
-
 import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
-import java.util.LinkedHashMap;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
 public class RekorVerifier {
   private final PublicKey rekorPublicKey;
   private final String verifierAlgorithm;
+
+  // A calculated logId from the transparency log (rekor) public key
+  private final String calculatedLogId;
 
   public static RekorVerifier newRekorVerifier(byte[] rekorPublicKey)
       throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
@@ -44,6 +43,7 @@ public class RekorVerifier {
   private RekorVerifier(PublicKey rekorPublicKey, String verifierAlgorithm) {
     this.rekorPublicKey = rekorPublicKey;
     this.verifierAlgorithm = verifierAlgorithm;
+    this.calculatedLogId = Hashing.sha256().hashBytes(rekorPublicKey.getEncoded()).toString();
   }
 
   /**
@@ -61,24 +61,14 @@ public class RekorVerifier {
       throw new RekorVerificationException("No signed entry timestamp found in entry.");
     }
 
-    // use a LinkedHashMap to preserve order, json must be canonical
-    // (https://datatracker.ietf.org/doc/html/rfc8785)
-    var signableContent = new LinkedHashMap<String, Object>();
-    signableContent.put("body", entry.getBody());
-    signableContent.put("integratedTime", entry.getIntegratedTime());
-    signableContent.put("logID", entry.getLogID());
-    signableContent.put("logIndex", entry.getLogIndex());
-
-    // TODO: I think we can verify the logID (sha256 of log public key) here too
-    // to provide the user with some useful information
-    // (https://github.com/sigstore/sigstore-java/issues/34)
-
-    var signableJson = GSON.get().toJson(signableContent);
+    if (!entry.getLogID().equals(calculatedLogId)) {
+      throw new RekorVerificationException("LogId does not match supplied rekor public key.");
+    }
 
     try {
       var verifier = Signature.getInstance(verifierAlgorithm);
       verifier.initVerify(rekorPublicKey);
-      verifier.update(signableJson.getBytes(StandardCharsets.UTF_8));
+      verifier.update(entry.getSignableContent());
       if (!verifier.verify(
           Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
         throw new RekorVerificationException("Entry SET was not valid");

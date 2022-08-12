@@ -81,7 +81,7 @@ public class Keys {
     PemObject section = pemReader.readPemObject();
     if (pemReader.readPemObject() != null) {
       throw new InvalidKeySpecException(
-          "ctfe public key must be only a single PEM encoded public key");
+          "sigstore public keys must be only a single PEM encoded public key");
     }
     // special handling for PKCS1 (rsa) public key
     if (section.getType().equals("RSA PUBLIC KEY")) {
