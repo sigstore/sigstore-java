@@ -15,10 +15,10 @@
  */
 package dev.sigstore.json;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import dev.sigstore.rekor.client.GsonAdaptersRekorEntry;
-import dev.sigstore.rekor.client.GsonAdaptersRekorEntryBody;
+import com.google.gson.*;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.util.ServiceLoader;
 import java.util.function.Supplier;
 
 /**
@@ -30,13 +30,23 @@ import java.util.function.Supplier;
 public enum GsonSupplier implements Supplier<Gson> {
   GSON;
 
-  private final Gson gson =
-      new GsonBuilder()
-          .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
-          .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
-          .registerTypeAdapterFactory(new GsonAdaptersRekorEntryBody())
-          .disableHtmlEscaping()
-          .create();
+  private final Gson gson;
+
+  GsonSupplier() {
+    GsonBuilder gsonBuilder = new GsonBuilder();
+    for (TypeAdapterFactory factory : ServiceLoader.load(TypeAdapterFactory.class)) {
+      gsonBuilder.registerTypeAdapterFactory(factory);
+    }
+    gsonBuilder
+        .registerTypeAdapter(
+            LocalDateTime.class,
+            (JsonDeserializer<LocalDateTime>)
+                (json, type, jsonDeserializationContext) ->
+                    ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString()).toLocalDateTime())
+        .create();
+    gsonBuilder.registerTypeAdapter(byte[].class, new GsonByteArrayAdapter());
+    gson = gsonBuilder.create();
+  }
 
   @Override
   public Gson get() {
