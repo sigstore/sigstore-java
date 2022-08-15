@@ -43,6 +43,7 @@ public enum GsonSupplier implements Supplier<Gson> {
             (JsonDeserializer<LocalDateTime>)
                 (json, type, jsonDeserializationContext) ->
                     ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString()).toLocalDateTime())
+        .disableHtmlEscaping()
         .create();
     gsonBuilder.registerTypeAdapter(byte[].class, new GsonByteArrayAdapter());
     gson = gsonBuilder.create();
