@@ -96,6 +96,7 @@ public class RekorVerifierTest {
             "Calculated inclusion proof root hash does not match provided root hash"));
   }
 
+  @Test
   public void verifyEntry_logIdMismatch() throws Exception {
     var garbageKey =
         Resources.toByteArray(Resources.getResource("dev/sigstore/samples/keys/test-rsa.pub"));

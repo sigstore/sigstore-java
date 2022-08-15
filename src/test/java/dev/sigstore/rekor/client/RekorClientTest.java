@@ -38,7 +38,6 @@ import org.hamcrest.MatcherAssert;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class RekorClientTest {
@@ -165,11 +164,10 @@ public class RekorClientTest {
   }
 
   @Test
-  @Disabled("https://github.com/sigstore/sigstore-java/issues/62")
   public void getEntry_entryDoesntExist() throws IOException {
     Optional<RekorEntry> entry =
         client.getEntry(
-            "aaaaaaaaaaaaaaaac8d2b213aa7efc1b2c9ccfa2fa647d00b34c63972e04e90276b5c31e0f317afd"); // I made this up
+            "a8d2b213aa7efc1b2c9ccfa2fa647d00b34c63972e04e90276b5c31e0f317afd"); // I made this up
     assertTrue(entry.isEmpty());
   }
 
