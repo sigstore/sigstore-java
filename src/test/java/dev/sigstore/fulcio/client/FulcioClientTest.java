@@ -16,11 +16,13 @@
 package dev.sigstore.fulcio.client;
 
 import dev.sigstore.encryption.signers.Signers;
+import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -31,7 +33,11 @@ public class FulcioClientTest {
   public void testSigningCert(
       MockOAuth2ServerExtension mockOAuthServerExtension, FulcioWrapper fulcioWrapper)
       throws Exception {
-    FulcioClient c = FulcioClient.builder().setServerUrl(fulcioWrapper.getURI()).build();
+    var c =
+        FulcioClient.builder()
+            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
+            .setServerUrl(fulcioWrapper.getGrpcURI())
+            .build();
 
     // create a "subject" and sign it with the oidc server key (signed JWT)
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
@@ -41,15 +47,15 @@ public class FulcioClientTest {
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
-    CertificateRequest cReq =
-        CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
+    var cReq = CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
-    SigningCertificate sc = c.SigningCert(cReq);
+    var sc = c.signingCertificate(cReq);
 
     // some pretty basic assertions
     Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-    Assertions.assertNotNull(sc.getDetachedSct());
+    Assertions.assertTrue(sc.getDetachedSct().isEmpty());
+    Assertions.assertTrue(sc.hasEmbeddedSct());
   }
 
   @Test
@@ -57,25 +63,33 @@ public class FulcioClientTest {
   public void testSigningCert_NoSct(
       MockOAuth2ServerExtension mockOAuthServerExtension, FulcioWrapper fulcioWrapper)
       throws Exception {
-    FulcioClient c =
-        FulcioClient.builder().setServerUrl(fulcioWrapper.getURI()).requireSct(false).build();
+    var c =
+        FulcioClient.builder()
+            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
+            .setServerUrl(fulcioWrapper.getGrpcURI())
+            .requireSct(false)
+            .build();
 
     // create a "subject" and sign it with the oidc server key (signed JWT)
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
     var subject = mockOAuthServerExtension.getOidcToken().getSubjectAlternativeName();
 
-    var signer = Signers.newEcdsaSigner();
+    var signer = Signers.newRsaSigner();
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
-    CertificateRequest cReq =
-        CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
+    var cReq = CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
-    SigningCertificate sc = c.SigningCert(cReq);
+    var sc = c.signingCertificate(cReq);
 
     // some pretty basic assertions
     Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
     Assertions.assertFalse(sc.getDetachedSct().isPresent());
+    Assertions.assertFalse(sc.hasEmbeddedSct());
   }
+
+  @Test
+  @Disabled("TODO: until we can hit a fulcio instance that generates detached SCTs")
+  public void testSigningCert_detachedSCT() {}
 }

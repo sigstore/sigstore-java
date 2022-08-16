@@ -155,10 +155,10 @@ public class KeylessSigner {
   public KeylessSigningResult sign(Path artifact)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, CertificateException, IOException,
-          FulcioVerificationException, RekorVerificationException {
+          FulcioVerificationException, RekorVerificationException, InterruptedException {
     var tokenInfo = oidcClient.getIDToken();
     var signingCert =
-        fulcioClient.SigningCert(
+        fulcioClient.signingCertificate(
             CertificateRequest.newCertificateRequest(
                 signer.getPublicKey(),
                 tokenInfo.getIdToken(),

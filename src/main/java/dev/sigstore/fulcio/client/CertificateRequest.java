@@ -15,23 +15,24 @@
  */
 package dev.sigstore.fulcio.client;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
-
+import com.google.common.collect.ImmutableMap;
+import dev.sigstore.fulcio.v2.PublicKeyAlgorithm;
 import java.security.PublicKey;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public abstract class CertificateRequest {
-  public static final List<String> SUPPORTED_ALGORITHMS = Collections.singletonList("EC");
+public interface CertificateRequest {
+  Map<String, PublicKeyAlgorithm> SUPPORTED_ALGORITHMS =
+      ImmutableMap.of("EC", PublicKeyAlgorithm.ECDSA, "RSA", PublicKeyAlgorithm.RSA_PSS);
 
-  public abstract PublicKey getPublicKey();
+  PublicKey getPublicKey();
 
-  public abstract byte[] getProofOfPossession();
+  PublicKeyAlgorithm getPublicKeyAlgorithm();
 
-  public abstract String getIdToken();
+  byte[] getProofOfPossession();
+
+  String getIdToken();
 
   /**
    * Create a certificate request
@@ -43,28 +44,18 @@ public abstract class CertificateRequest {
    * @throws UnsupportedAlgorithmException if key type is not in {@link
    *     CertificateRequest#SUPPORTED_ALGORITHMS}
    */
-  public static CertificateRequest newCertificateRequest(
+  static CertificateRequest newCertificateRequest(
       PublicKey publicKey, String idToken, byte[] proofOfPossession)
       throws UnsupportedAlgorithmException {
-    if (!SUPPORTED_ALGORITHMS.contains(publicKey.getAlgorithm())) {
-      throw new UnsupportedAlgorithmException(SUPPORTED_ALGORITHMS, publicKey.getAlgorithm());
+    if (!SUPPORTED_ALGORITHMS.containsKey(publicKey.getAlgorithm())) {
+      throw new UnsupportedAlgorithmException(
+          SUPPORTED_ALGORITHMS.keySet(), publicKey.getAlgorithm());
     }
     return ImmutableCertificateRequest.builder()
         .publicKey(publicKey)
+        .publicKeyAlgorithm(SUPPORTED_ALGORITHMS.get(publicKey.getAlgorithm()))
         .idToken(idToken)
         .proofOfPossession(proofOfPossession)
         .build();
-  }
-
-  public String toJsonPayload() {
-    HashMap<String, Object> key = new HashMap<>();
-    key.put("content", getPublicKey().getEncoded());
-    key.put("algorithm", getPublicKey().getAlgorithm());
-
-    HashMap<String, Object> data = new HashMap<>();
-    data.put("publicKey", key);
-    data.put("signedEmailAddress", getProofOfPossession());
-
-    return GSON.get().toJson(data);
   }
 }
