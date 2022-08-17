@@ -16,10 +16,10 @@
 package dev.sigstore.fulcio.client;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 
 public class UnsupportedAlgorithmException extends Exception {
-  public UnsupportedAlgorithmException(List<String> allowedAlgorithms, String algorithm) {
+  public UnsupportedAlgorithmException(Set<String> allowedAlgorithms, String algorithm) {
     super(
         algorithm
             + " is not from supported list of "
