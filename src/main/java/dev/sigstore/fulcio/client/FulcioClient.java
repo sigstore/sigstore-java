@@ -18,6 +18,7 @@ package dev.sigstore.fulcio.client;
 import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.*;
 
 import com.google.protobuf.ByteString;
+import dev.sigstore.encryption.certificates.transparency.SerializationException;
 import dev.sigstore.fulcio.v2.*;
 import dev.sigstore.http.GrpcChannels;
 import dev.sigstore.http.HttpParams;
@@ -27,7 +28,6 @@ import java.net.URI;
 import java.security.cert.CertificateException;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
-import org.conscrypt.ct.SerializationException;
 
 /** A client to communicate with a fulcio service instance over gRPC. */
 public class FulcioClient {

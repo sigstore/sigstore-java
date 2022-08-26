@@ -16,6 +16,7 @@
 package dev.sigstore.fulcio.client;
 
 import dev.sigstore.encryption.Keys;
+import dev.sigstore.encryption.certificates.transparency.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -27,12 +28,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.conscrypt.ct.*;
 
 /** Verifier for fulcio {@link dev.sigstore.fulcio.client.SigningCertificate}. */
 public class FulcioVerifier {
   @Nullable private final CTVerifier ctVerifier;
-  @Nullable private final CTLogInfo ctLogInfo;
   private final TrustAnchor fulcioRoot;
 
   /**
@@ -45,10 +44,9 @@ public class FulcioVerifier {
       throws InvalidKeySpecException, NoSuchAlgorithmException, CertificateException, IOException,
           InvalidAlgorithmParameterException {
 
-    CTLogInfo ctLogInfo = null;
+    PublicKey ctfePublicKeyObj = null;
     if (ctfePublicKey != null) {
-      PublicKey ctfePublicKeyObj = Keys.parsePublicKey(ctfePublicKey);
-      ctLogInfo = new CTLogInfo(ctfePublicKeyObj, "fulcio ct log", "unused-url");
+      ctfePublicKeyObj = Keys.parsePublicKey(ctfePublicKey);
     }
 
     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
@@ -61,26 +59,18 @@ public class FulcioVerifier {
     // encountered in verifyCertPath
     new PKIXParameters(Collections.singleton(fulcioRootTrustAnchor));
 
-    return new FulcioVerifier(ctLogInfo, fulcioRootTrustAnchor);
+    return new FulcioVerifier(fulcioRootTrustAnchor, ctfePublicKeyObj);
   }
 
-  private FulcioVerifier(@Nullable CTLogInfo ctLogInfo, TrustAnchor fulcioRoot) {
+  private FulcioVerifier(TrustAnchor fulcioRoot, @Nullable PublicKey ctfePublicKey) {
     this.fulcioRoot = fulcioRoot;
-    this.ctLogInfo = ctLogInfo;
-    // we are exploiting some internal objects here. A CTVerifier needs to lookup which logs
-    // apply to which scts. Since we only have a single sct (the fulcio sct), we initialize
-    // the "CTVerifier" with a very simple implementation of CTLogStore with a single matcher
-    // for our ctLogInfo (i.e. if the sct is signed with the ctfe public key, we can verify it).
-    this.ctVerifier =
-        (ctLogInfo == null)
-            ? null
-            : new CTVerifier(
-                new CTLogStore() {
-                  @Override
-                  public CTLogInfo getKnownLog(byte[] logId) {
-                    return Arrays.equals(logId, ctLogInfo.getID()) ? ctLogInfo : null;
-                  }
-                });
+    if (ctfePublicKey != null) {
+      var ctLogInfo = new CTLogInfo(ctfePublicKey, "fulcio ct log", "unused-url");
+      this.ctVerifier =
+          new CTVerifier(logId -> Arrays.equals(logId, ctLogInfo.getID()) ? ctLogInfo : null);
+    } else {
+      ctVerifier = null;
+    }
   }
 
   /**
@@ -91,7 +81,7 @@ public class FulcioVerifier {
    * @throws FulcioVerificationException if verification fails for any reason
    */
   public void verifySct(SigningCertificate signingCertificate) throws FulcioVerificationException {
-    if (ctLogInfo == null || ctVerifier == null) {
+    if (ctVerifier == null) {
       throw new FulcioVerificationException("No ct-log public key was provided to verifier");
     }
 
@@ -103,7 +93,7 @@ public class FulcioVerifier {
         throw new FulcioVerificationException("Leaf certificate could not be parsed", cee);
       }
 
-      var status = ctLogInfo.verifySingleSCT(signingCertificate.getDetachedSct().get(), ce);
+      var status = ctVerifier.verifySingleSCT(signingCertificate.getDetachedSct().get(), ce);
       if (status != VerifiedSCT.Status.VALID) {
         throw new FulcioVerificationException(
             "SCT could not be verified because " + status.toString());

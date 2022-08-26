@@ -17,6 +17,7 @@ package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
 import com.google.protobuf.ByteString;
+import dev.sigstore.encryption.certificates.transparency.SerializationException;
 import dev.sigstore.fulcio.v2.SigningCertificateDetachedSCT;
 import dev.sigstore.fulcio.v2.SigningCertificateEmbeddedSCT;
 import dev.sigstore.testing.grpc.GrpcTypes;
@@ -25,7 +26,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateParsingException;
 import java.util.Base64;
-import org.conscrypt.ct.SerializationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
