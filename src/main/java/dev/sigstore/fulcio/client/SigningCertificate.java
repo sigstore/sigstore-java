@@ -20,6 +20,9 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 import com.google.api.client.util.PemReader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.JsonParseException;
+import dev.sigstore.encryption.certificates.transparency.DigitallySigned;
+import dev.sigstore.encryption.certificates.transparency.SerializationException;
+import dev.sigstore.encryption.certificates.transparency.SignedCertificateTimestamp;
 import dev.sigstore.fulcio.v2.CertificateChain;
 import dev.sigstore.fulcio.v2.SigningCertificateDetachedSCT;
 import dev.sigstore.fulcio.v2.SigningCertificateEmbeddedSCT;
@@ -33,9 +36,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
-import org.conscrypt.ct.DigitallySigned;
-import org.conscrypt.ct.SerializationException;
-import org.conscrypt.ct.SignedCertificateTimestamp;
 
 /**
  * Response from Fulcio that includes a Certificate Chain and a Signed Certificate Timestamp (SCT).
@@ -71,7 +71,7 @@ public class SigningCertificate {
   }
 
   static SigningCertificate newSigningCertificate(SigningCertificateDetachedSCT signingCertificate)
-      throws SerializationException, CertificateException {
+      throws CertificateException, SerializationException {
     SignedCertificateTimestamp sct = null;
     if (!signingCertificate.getSignedCertificateTimestamp().isEmpty()) {
       sct = decodeSCT(signingCertificate.getSignedCertificateTimestamp().toStringUtf8());

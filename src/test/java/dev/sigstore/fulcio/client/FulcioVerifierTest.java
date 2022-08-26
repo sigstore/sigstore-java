@@ -16,13 +16,13 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
+import dev.sigstore.encryption.certificates.transparency.SerializationException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import org.conscrypt.ct.SerializationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

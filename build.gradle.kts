@@ -90,9 +90,6 @@ dependencies {
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
 
     implementation("com.google.code.gson:gson:2.8.9")
-    implementation("org.conscrypt:conscrypt-openjdk-uber:2.5.2") {
-        because("contains library code for all platforms")
-    }
     implementation("org.bouncycastle:bcutil-jdk18on:1.71")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.71")
 
@@ -145,7 +142,12 @@ spotless {
     java {
         googleJavaFormat("1.6")
         licenseHeaderFile("config/licenseHeader")
-        targetExclude("build/**/*.java")
+        targetExclude("build/**/*.java", "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
+    }
+    format("conscrypt", com.diffplug.gradle.spotless.JavaExtension::class.java) {
+        googleJavaFormat("1.6")
+        licenseHeaderFile("config/conscryptLicenseHeader")
+        target("src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
     }
 }
 
