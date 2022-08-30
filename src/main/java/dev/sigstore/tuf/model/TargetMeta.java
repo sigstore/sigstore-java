@@ -21,8 +21,8 @@ import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
 /**
- * Metadata about a TUF target. {@see
- * https://theupdateframework.github.io/specification/latest/#targets}
+ * Metadata about a TUF target. @see <a
+ * href="https://theupdateframework.github.io/specification/latest/#targets">targets</a>
  */
 @Gson.TypeAdapters
 @Value.Immutable
