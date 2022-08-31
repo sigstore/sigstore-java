@@ -81,6 +81,7 @@ jobs:
       contents: write # To add assets to a release.
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.0
     with:
+      attestation-name: "sigstore-java-${{ github.event.inputs.release_version }}.attestation.intoto.jsonl"
       base64-subjects: "${{ needs.build.outputs.hashes }}"
 
   create-release:
@@ -105,4 +106,3 @@ jobs:
           tag_name: v${{ github.event.inputs.release_version }}
           body: See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/CHANGELOG.md) for more details.
           files: ./release/*
-          draft: true

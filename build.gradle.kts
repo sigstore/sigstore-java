@@ -225,6 +225,7 @@ tasks.register("createReleaseBundle") {
             from((publishing.publications["mavenJava"] as DefaultMavenPublication).publishableArtifacts.files)
             into(releaseDir)
             rename("pom-default.xml", "${project.name}-${project.version}.pom")
+            rename("module.json", "${project.name}-${project.version}.module")
         }
     }
 }
