@@ -20,10 +20,20 @@ repositories {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+    withJavadocJar()
+    withSourcesJar()
 }
 
-sourceSets["main"].java {
-    srcDirs("build/generated/sources/rekor-model/main")
+tasks.withType<Javadoc> {
+    (options as StandardJavadocDocletOptions).addBooleanOption("Xwerror", true)
+    (options as StandardJavadocDocletOptions).addStringOption("sourcepath", "src/main/java")
+    // intentionally ignore missing errors for now
+    (options as StandardJavadocDocletOptions).addBooleanOption("Xdoclint:all,-missing", true)
+}
+
+// TODO: keep until these code gen plugins explicitly declare dependencies
+tasks.named("sourcesJar") {
+    dependsOn(":generateProto", "::generateJsonSchema2DataClass0")
 }
 
 tasks.withType<Test> {

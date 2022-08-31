@@ -21,9 +21,9 @@ import org.immutables.value.Value;
 /**
  * Represents the {@link Role} type as contained in the Root list of Roles.
  *
- * <p>This concrete class exists for GSON serialization reasons. GSON won't allow {@code
- * DelegationRole} and {@code Role} to both be JSON serializable since {@code DelegationRole}
- * extends {@Role}.
+ * <p>This concrete class exists for GSON serialization reasons. GSON won't allow {@link
+ * DelegationRole} and {@link Role} to both be JSON serializable since {@link DelegationRole}
+ * extends {@link Role}.
  */
 @Gson.TypeAdapters
 @Value.Immutable
