@@ -4,6 +4,7 @@ import com.google.protobuf.gradle.ofSourceSet
 import com.google.protobuf.gradle.plugins
 import com.google.protobuf.gradle.protobuf
 import com.google.protobuf.gradle.protoc
+import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
 
 plugins {
     `java-library`
@@ -11,6 +12,7 @@ plugins {
     id("com.diffplug.spotless") version "6.4.2"
     id("org.jsonschema2dataclass") version "4.2.0"
     id("com.google.protobuf") version "0.8.17"
+    id("net.researchgate.release") version "3.0.0"
 }
 
 repositories {
@@ -143,7 +145,7 @@ spotless {
         ktlint()
     }
     format("misc") {
-        target("*.md", ".gitignore")
+        target("*.md", ".gitignore", "**/*.yaml")
 
         trimTrailingWhitespace()
         indentWithSpaces()
@@ -209,5 +211,22 @@ publishing {
                 }
             }
         }
+    }
+}
+
+// this task should be used by github actions to create release artifacts along with a slsa
+// attestation.
+tasks.register("createReleaseBundle") {
+    val releaseDir = layout.buildDirectory.dir("release")
+    outputs.dir(releaseDir)
+    dependsOn((publishing.publications["mavenJava"] as DefaultMavenPublication).publishableArtifacts)
+    doLast {
+        (publishing.publications["mavenJava"] as DefaultMavenPublication).publishableArtifacts.files
+            .forEach {
+                project.copy {
+                    from(it.absolutePath)
+                    into(releaseDir)
+                }
+            }
     }
 }
