@@ -1,57 +1,53 @@
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
-Minimum Java 11
+This project requires a minimum of Java 11 and is current in pre-release,
+apis and dependnecies are likely to change
 
-This is a WIP, currently consists of
+You can files issues directly on this project or if you have any questions
+message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL92) slack channel
 
-### fulcio client
+### Keyless Signing And Verification
 
+#### Signing
 ```java
-// pre-requisites
-String subject // email of signer
-String idToken // idtoken from OIDC server for email
+Path testArtifact = Paths.get("path/to/my/file.jar")
 
-// create a new client
-Client fulcioClient = Client.Builder().setServerUrl("my fulcio url").build();
+var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
+var result = signer.sign(testArtifact);
 
-// create an ECDSA p-256 keypair, this is our key that we want to generate certs for
-KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
-keyGen.initialize(256);
-KeyPair keys = keyGen.generateKeyPair();
+// resulting signature information
+String digest = result.getDigest(); // hex encoded sha256 digest
+byte[] digestBytes = Hex.decode(result.getDigest()); // converted to byte array
 
-// sign the "subject" with our key, this signer already generates asn1 notation
-Signature signature = Signature.getInstance("SHA256withECDSA");
-signature.initSign(keys.getPrivate());
-signature.update(subject.getBytes(StandardCharsets.UTF_8));
-byte[] signed = signature.sign();
+CertPath certs = result.getCertPath() // java representation of a certificate path
+byte[] certsBytes = Certificates.toPemBytes(result.getCertPath()) // converted to PEM encoded byte array
 
-// create a certificate request with our public key and our signed "subject"
-CertificateRequest cReq = new CertificateRequest(keys.getPublic(), idtoken, signed);
-
-// ask fulcio for a signing cert chain for our public key
-SigningCertificate signingCert = fulcioClient.SigningCert(cReq);
-
-// sign something with our private key, throw it away and save the cert with the artifact
+byte[] sig = result.getSignature() // artifact signature
 ```
 
-### oidc client
+#### Verification
+```java
+byte[] digest = // byte array sha256 artifact digest
+byte[] certificateChain = // byte array of PEM encoded cert chain
+byte[] signature = // byte array of artifact signature
+
+try {
+  var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+  verifier.verifyOnline(digest, certificateChain, signature)
+} catch (KeylessVerificationException) {
+  // verification failed
+}
+
+// verification passed!
+```
+
+### Exploring the API
+
+We do not have a process yet for publishing javadocs, but you can checkout the code
+at master (or a tagged version) and run
 
 ```
-OidcClient oidcClient = OidcClient.builder().build();
-
-EmailIdToken eid = oidcClient.getIDToken(null);
-
-// email address, to sign and use when creating a CertificateRequest for fulcio
-eid.getEmailAddress();
-// idToken, to use when making a call to FulcioClient#SigningCert
-eid.getIdToken();
-
+$ ./gradlew javadoc
+$ "my-favorite-browser" ./build/docs/javadoc/index.html
 ```
-
-To be added
-- rekor client
-
-Maybe to be added here or somewhere else
-- signer
-- java tuf client (might be useful outside of the sigstore ecosystem)
