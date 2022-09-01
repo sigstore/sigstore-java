@@ -3,7 +3,5 @@
   "extends": [
     "config:base"
   ],
-  {
-    "schedule": ["every weekend"]
-  }
+  "schedule": ["every weekend"]
 }
