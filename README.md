@@ -1,11 +1,15 @@
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
+⚠️ This project is not ready for general-purpose use! ⚠️
+
 This project requires a minimum of Java 11 and is current in pre-release,
-apis and dependnecies are likely to change
+apis and dependencies are likely to change
 
 You can files issues directly on this project or if you have any questions
 message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL92) slack channel
+
+## Usage
 
 ### Keyless Signing And Verification
 
