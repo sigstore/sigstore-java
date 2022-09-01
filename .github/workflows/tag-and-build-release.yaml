@@ -18,6 +18,8 @@ jobs:
             exit 1
           fi
   ci:
+    permissions:
+      id-token: write # To run github oidc tests
     uses: ./.github/workflows/ci.yaml
 
   create-tag:
