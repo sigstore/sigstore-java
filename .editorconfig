@@ -1,0 +1,20 @@
+root = true
+
+[*]
+trim_trailing_whitespace = true
+insert_final_newline = true
+charset = utf-8
+indent_style = space
+
+[*.md]
+# Trailing whitespace is significant for Markdown
+trim_trailing_whitespace = false
+
+[{*.sh,gradlew}]
+end_of_line = lf
+
+[{*.bat,*.cmd}]
+end_of_line = crlf
+
+[*.java]
+indent_size = 2
