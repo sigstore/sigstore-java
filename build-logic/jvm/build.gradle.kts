@@ -12,4 +12,6 @@ dependencies {
     implementation(embeddedKotlinDsl())
     implementation("com.github.vlsi.gradle-extensions:com.github.vlsi.gradle-extensions.gradle.plugin:1.82")
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin")
+    implementation("org.jetbrains.dokka:org.jetbrains.dokka.gradle.plugin:1.4.32")
+    implementation("com.github.autostyle:com.github.autostyle.gradle.plugin:3.2")
 }
