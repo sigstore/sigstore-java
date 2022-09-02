@@ -1,6 +1,10 @@
 .gradle
-build
+/build
+/*/build
 /http
+
+# For occasional use of https://github.com/melix/includegit-gradle-plugin
+/checkouts
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar

@@ -4,84 +4,15 @@ import com.google.protobuf.gradle.ofSourceSet
 import com.google.protobuf.gradle.plugins
 import com.google.protobuf.gradle.protobuf
 import com.google.protobuf.gradle.protoc
-import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
 
 plugins {
-    `java-library`
-    `maven-publish`
+    id("build-logic.java-published-library")
     id("com.diffplug.spotless") version "6.4.2"
-    id("org.jsonschema2dataclass") version "4.2.0"
+    id("org.jsonschema2dataclass") version "4.3.1"
     id("com.google.protobuf") version "0.8.17"
-    id("net.researchgate.release") version "3.0.0"
 }
 
-repositories {
-    mavenCentral()
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-    withJavadocJar()
-    withSourcesJar()
-}
-
-tasks.withType<Javadoc> {
-    (options as StandardJavadocDocletOptions).addBooleanOption("Xwerror", true)
-    (options as StandardJavadocDocletOptions).addStringOption("sourcepath", "src/main/java")
-    // intentionally ignore missing errors for now
-    (options as StandardJavadocDocletOptions).addBooleanOption("Xdoclint:all,-missing", true)
-}
-
-// TODO: keep until these code gen plugins explicitly declare dependencies
-tasks.named("sourcesJar") {
-    dependsOn(":generateProto", "::generateJsonSchema2DataClass0")
-}
-
-tasks.withType<Test> {
-    testLogging {
-        events("passed", "skipped", "failed")
-    }
-    // be very verbose in CI
-    if (environment.containsKey("CI")) {
-        testLogging {
-            showStandardStreams = true
-            showExceptions = true
-            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
-        }
-    }
-}
-
-// Reproducible builds https://docs.gradle.org/current/userguide/working_with_files.html#sec:reproducible_archives
-tasks.withType<AbstractArchiveTask>() {
-    isPreserveFileTimestamps = false
-    isReproducibleFileOrder = true
-}
-
-tasks.test {
-    useJUnitPlatform() {
-        includeTags("none()")
-    }
-}
-
-// a special test grouping for tests that require a valid gha oidc token
-task<Test>("testGithubOidc") {
-    useJUnitPlatform() {
-        includeTags("github_oidc")
-    }
-}
-
-// manual test groups that are *not* run in CI, these should be run before
-task<Test>("testManual") {
-    useJUnitPlatform() {
-        includeTags("manual")
-    }
-}
-
-sourceSets["main"].java {
-    srcDirs("build/generated/source/proto/main/grpc")
-    srcDirs("build/generated/source/proto/main/java")
-}
+description = "A Java client for signing and verifying using Sigstore"
 
 dependencies {
     compileOnly("org.immutables:gson:2.8.2")
@@ -110,7 +41,7 @@ dependencies {
     implementation("com.google.oauth-client:google-oauth-client-jetty")
     implementation("com.google.oauth-client:google-oauth-client-java6")
 
-    testImplementation(platform("org.junit:junit-bom:5.8.2"))
+    testImplementation(platform("org.junit:junit-bom:5.9.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     testImplementation("no.nav.security:mock-oauth2-server:0.4.4")
@@ -153,14 +84,19 @@ spotless {
     }
     java {
         googleJavaFormat("1.6")
-        licenseHeaderFile("config/licenseHeader")
+        licenseHeaderFile("$rootDir/config/licenseHeader")
         targetExclude("build/**/*.java", "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
     }
     format("conscrypt", com.diffplug.gradle.spotless.JavaExtension::class.java) {
         googleJavaFormat("1.6")
-        licenseHeaderFile("config/conscryptLicenseHeader")
+        licenseHeaderFile("$rootDir/config/conscryptLicenseHeader")
         target("src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
     }
+}
+
+sourceSets["main"].java {
+    srcDirs("build/generated/source/proto/main/grpc")
+    srcDirs("build/generated/source/proto/main/java")
 }
 
 jsonSchema2Pojo {
@@ -171,61 +107,27 @@ jsonSchema2Pojo {
     annotationStyle.set("gson")
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifactId = rootProject.name
-            from(components["java"])
+// TODO: keep until these code gen plugins explicitly declare dependencies
+tasks.named("sourcesJar") {
+    dependsOn("generateProto", "generateJsonSchema2DataClass0")
+}
 
-            pom {
-                name.set(rootProject.name)
-                description.set("A java client for signing and verifying using sigstore")
-                url.set("https://github.com/sigstore/sigstore-java")
-
-                // https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven:resolved_dependencies
-                versionMapping {
-                    usage("java-api") {
-                        fromResolutionOf("runtimeClasspath")
-                    }
-                    usage("java-runtime") {
-                        fromResolutionResult()
-                    }
-                }
-
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        organization.set("sigstore authors")
-                        organizationUrl.set("https://sigstore.dev")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com/sigstore/sigstore-java.git")
-                    developerConnection.set("scm:git:ssh://github.com/sigstore/sigstore-java.git")
-                    url.set("https://github.com/sigstore/sigstore-java")
-                }
-            }
-        }
+tasks.test {
+    useJUnitPlatform {
+        includeTags("none()")
     }
 }
 
-// this task should be used by github actions to create release artifacts along with a slsa
-// attestation.
-tasks.register("createReleaseBundle") {
-    val releaseDir = layout.buildDirectory.dir("release")
-    outputs.dir(releaseDir)
-    dependsOn((publishing.publications["mavenJava"] as DefaultMavenPublication).publishableArtifacts)
-    doLast {
-        project.copy {
-            from((publishing.publications["mavenJava"] as DefaultMavenPublication).publishableArtifacts.files)
-            into(releaseDir)
-            rename("pom-default.xml", "${project.name}-${project.version}.pom")
-            rename("module.json", "${project.name}-${project.version}.module")
-        }
+// a special test grouping for tests that require a valid gha oidc token
+val testGithubOidc by tasks.registering(Test::class) {
+    useJUnitPlatform {
+        includeTags("github_oidc")
+    }
+}
+
+// manual test groups that are *not* run in CI, these should be run before
+val testManual by tasks.registering(Test::class) {
+    useJUnitPlatform {
+        includeTags("manual")
     }
 }
