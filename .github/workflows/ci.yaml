@@ -49,6 +49,8 @@ jobs:
     strategy:
       matrix:
         java-version: [11, 17]
+    # Pull requests from different repositories have no access to `id-token: write`
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     permissions:
       id-token: write
     runs-on: ubuntu-latest
