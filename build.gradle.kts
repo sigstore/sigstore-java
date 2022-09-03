@@ -12,7 +12,7 @@ plugins {
     id("com.diffplug.spotless") version "6.4.2"
     id("org.jsonschema2dataclass") version "4.2.0"
     id("com.google.protobuf") version "0.8.17"
-    id("net.researchgate.release") version "3.0.0"
+    id("net.researchgate.release") version "3.0.1"
 }
 
 repositories {
