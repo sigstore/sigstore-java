@@ -7,21 +7,20 @@
 # cache/restore any dependencies to improve the workflow execution time
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
 
-name: Java CI with Gradle
+name: Test OIDC
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: '*'
   workflow_call: # allow this workflow to be called by other workflows
 
 jobs:
-  build:
+  gha-oidc-tests:
     strategy:
       matrix:
         java-version: [11, 17]
-
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -30,17 +29,8 @@ jobs:
       with:
         java-version: ${{ matrix.java-version }}
         distribution: 'temurin'
-    - name: Setup Go environment
-      uses: actions/setup-go@v3.0.0
-      with:
-        go-version: '1.17.x'
 
-    # at some point this should just be replaced with something that can bring up a sigstore test env
-    - name: Install Fulcio
-      run: |
-          go install github.com/sigstore/fulcio@main
-
-    - name: Build with Gradle
+    - name: Run Github Actions OIDC tests
       uses: gradle/gradle-build-action@937999e9cc2425eddc7fd62d1053baf041147db7
       with:
-        arguments: build
+        arguments: testGithubOidc
