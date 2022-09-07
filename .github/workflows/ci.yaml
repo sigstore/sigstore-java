@@ -41,6 +41,6 @@ jobs:
           go install github.com/sigstore/fulcio@main
 
     - name: Build with Gradle
-      uses: gradle/gradle-build-action@937999e9cc2425eddc7fd62d1053baf041147db7
+      uses: gradle/gradle-build-action@8d2472536ed5e12cd8403b043e871b649399a208
       with:
         arguments: build
