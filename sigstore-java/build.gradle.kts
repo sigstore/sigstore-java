@@ -9,7 +9,7 @@ plugins {
     id("build-logic.java-published-library")
     id("com.diffplug.spotless") version "6.4.2"
     id("org.jsonschema2dataclass") version "4.3.1"
-    id("com.google.protobuf") version "0.8.17"
+    id("com.google.protobuf") version "0.8.19"
 }
 
 description = "A Java client for signing and verifying using Sigstore"
