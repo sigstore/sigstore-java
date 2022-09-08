@@ -1,3 +1,7 @@
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/dev.sigstore/sigstore-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/dev.sigstore/sigstore-java)
+[![javadoc](https://javadoc.io/badge2/dev.sigstore/sigstore-java/javadoc.svg)](https://javadoc.io/doc/dev.sigstore/sigstore-java)
+[![CI](https://github.com/sigstore/sigstore-java/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/sigstore/sigstore-java/actions/workflows/ci.yaml)
+
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
@@ -48,10 +52,11 @@ try {
 
 ### Exploring the API
 
-We do not have a process yet for publishing javadocs, but you can checkout the code
-at master (or a tagged version) and run
+You could browse Javadoc at https://javadoc.io/doc/dev.sigstore/sigstore-java.
 
-```
+To build javadoc from the sources, use the following command:
+
+```sh
 $ ./gradlew javadoc
-$ "my-favorite-browser" ./build/docs/javadoc/index.html
+$ "my-favorite-browser" ./sigstore-java/build/docs/javadoc/index.html
 ```
