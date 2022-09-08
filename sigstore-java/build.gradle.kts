@@ -34,7 +34,7 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.8.9")
     implementation("org.bouncycastle:bcutil-jdk18on:1.71")
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.71")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.71.1")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.33.3"))
     implementation("com.google.oauth-client:google-oauth-client")
