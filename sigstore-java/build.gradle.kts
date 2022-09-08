@@ -33,7 +33,7 @@ dependencies {
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
 
     implementation("com.google.code.gson:gson:2.9.1")
-    implementation("org.bouncycastle:bcutil-jdk18on:1.71")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.71.1")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.71.1")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.33.3"))
