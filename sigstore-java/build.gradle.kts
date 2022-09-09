@@ -31,7 +31,7 @@ dependencies {
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
-
+    implementation("commons-codec:commons-codec:1.15")
     implementation("com.google.code.gson:gson:2.9.1")
     implementation("org.bouncycastle:bcutil-jdk18on:1.71.1")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.71.1")
@@ -47,6 +47,7 @@ dependencies {
     testImplementation("no.nav.security:mock-oauth2-server:0.5.1")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.64.0")
+    testImplementation("org.eclipse.jetty:jetty-server:11.0.11")
 
     implementation("javax.validation:validation-api:2.0.1.Final")
 }
