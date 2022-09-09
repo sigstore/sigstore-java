@@ -49,7 +49,6 @@ dependencies {
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.61.0")
 
     implementation("javax.validation:validation-api:2.0.1.Final")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.13.3")
 }
 
 protobuf {
