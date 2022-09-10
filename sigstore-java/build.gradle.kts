@@ -45,7 +45,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     testImplementation("no.nav.security:mock-oauth2-server:0.4.4")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.9.3")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.61.0")
 
     implementation("javax.validation:validation-api:2.0.1.Final")
