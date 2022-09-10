@@ -7,7 +7,7 @@ description = "Gradle plugin with the base set of tasks and configurations for S
 
 dependencies {
     compileOnly(project(":sigstore-java"))
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.13.3")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.13.4")
 
     testImplementation(project(":sigstore-testkit"))
 }
