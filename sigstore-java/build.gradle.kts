@@ -16,7 +16,7 @@ description = "A Java client for signing and verifying using Sigstore"
 
 dependencies {
     compileOnly("org.immutables:gson:2.8.2")
-    compileOnly("org.immutables:value-annotations:2.8.2")
+    compileOnly("org.immutables:value-annotations:2.9.2")
     annotationProcessor("org.immutables:value:2.8.2")
 
     implementation(platform("com.google.cloud:libraries-bom:24.4.0"))
