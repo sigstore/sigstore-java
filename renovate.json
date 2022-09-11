@@ -3,5 +3,15 @@
   "extends": [
     "config:base"
   ],
-  "schedule": ["every weekend"]
+  "schedule": ["every weekend"],
+  "packageRules": [
+    {
+      "matchPackagePrefixes": ["org.immutables"],
+      "groupName": "immutables"
+    },
+    {
+      "matchPackagePrefixes": ["org.bouncycastle"],
+      "groupName": "bouncycastle"
+    }
+  ]
 }
