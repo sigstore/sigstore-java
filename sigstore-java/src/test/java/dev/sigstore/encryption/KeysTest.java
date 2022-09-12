@@ -70,9 +70,9 @@ class KeysTest {
   @Test
   @EnabledForJreRange(min = JRE.JAVA_15)
   void parsePublicKey_ed25519_withStdLib()
-    throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
-      Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
+        Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
     assertEquals("EdDSA", result.getAlgorithm());
   }
 
