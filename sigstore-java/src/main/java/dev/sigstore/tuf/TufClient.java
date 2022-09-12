@@ -65,12 +65,11 @@ public class TufClient {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);
-    Root trustedRoot;
 
     // 5.3.2) load the trust metadata file (root.json), get version of root.json and the role
     // signature threshold value
 
-    trustedRoot = GSON.get().fromJson(Files.readString(trustedRootPath), Root.class);
+    Root trustedRoot = GSON.get().fromJson(Files.readString(trustedRootPath), Root.class);
     int baseVersion = trustedRoot.getSignedMeta().getVersion();
     int nextVersion = baseVersion + 1;
     // keep these for verifying the last step. 5.3.11
@@ -132,8 +131,7 @@ public class TufClient {
 
       // 5.3.5) We've taken the liberty to modify 5.3.5 to just validate that the new root meta
       // matches the version we pulled based off of the pattern {version}.root.json. We know due to
-      // the
-      // loop constraints that it is larger than the current version.
+      // the loop constraints that it is larger than the current version.
       if (newRoot.getSignedMeta().getVersion() != nextVersion) {
         throw new RoleVersionException(nextVersion, newRoot.getSignedMeta().getVersion());
       }
@@ -142,7 +140,7 @@ public class TufClient {
       // 5.3.8) persist to repo
       Path localTrustRoot = localStore.resolve("root.json");
       if (localTrustRoot.toFile().exists()) {
-        // Backup the old root. (not sure if this is necessary)
+        // Backup the old root.
         Files.move(localTrustRoot, localStore.resolve((nextVersion - 1) + ".root.json"));
       }
       try (FileWriter fileWriter = new FileWriter(localTrustRoot.toFile())) {
