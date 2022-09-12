@@ -24,6 +24,8 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 class KeysTest {
 
@@ -37,7 +39,7 @@ class KeysTest {
   void parsePublicKey_rsa() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(RSA_PUB_PATH)));
-    assertEquals(result.getAlgorithm(), "RSA");
+    assertEquals("RSA", result.getAlgorithm());
   }
 
   @Test
@@ -45,23 +47,33 @@ class KeysTest {
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(RSA_PUB_PKCS1_PATH)));
-    assertEquals(result.getAlgorithm(), "RSA");
+    assertEquals("RSA", result.getAlgorithm());
   }
 
   @Test
   void parsePublicKey_ec() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(EC_PUB_PATH)));
-    assertEquals(result.getAlgorithm(), "EC");
+    assertEquals("EC", result.getAlgorithm());
   }
 
   @Test
+  @EnabledForJreRange(max = JRE.JAVA_14)
   void parsePublicKey_ed25519_withBouncyCastle()
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
     // BouncyCastle names the algorithm differently than the JDK
-    assertEquals(result.getAlgorithm(), "Ed25519");
+    assertEquals("Ed25519", result.getAlgorithm());
+  }
+
+  @Test
+  @EnabledForJreRange(min = JRE.JAVA_15)
+  void parsePublicKey_ed25519_withStdLib()
+    throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+    PublicKey result =
+      Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
+    assertEquals("EdDSA", result.getAlgorithm());
   }
 
   @Test
