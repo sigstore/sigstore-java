@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.http.HttpClients;
@@ -40,6 +41,7 @@ import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
@@ -55,7 +57,7 @@ public class TufClient {
 
   protected Clock clock = Clock.systemUTC();
 
-  ZonedDateTime updateStartTime;
+  private ZonedDateTime updateStartTime;
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
   public void updateRoot(Path trustedRootPath, URL mirror, Path localStore)
@@ -120,14 +122,12 @@ public class TufClient {
       byte[] newRootMetaBytes = newRoot.getCanonicalSignedBytes();
       // Verify our new root meta against the trusted root keys.
       RootRole trustedRootRoleMeta = trustedRoot.getSignedMeta().getRole(Role.Name.ROOT);
-      verifyDelegate(
-          newRootSignatures, trustedRootRoleMeta.getThreshold(), trustedRootKeys, newRootMetaBytes);
+      verifyDelegate(newRootSignatures, trustedRootKeys, trustedRootRoleMeta, newRootMetaBytes);
 
       var newRootRoleMeta = newRoot.getSignedMeta().getRole(Role.Name.ROOT);
       var newRootKeys = newRoot.getSignedMeta().getKeys();
       // Verify our new root meta against the new root keys.
-      verifyDelegate(
-          newRootSignatures, newRootRoleMeta.getThreshold(), newRootKeys, newRootMetaBytes);
+      verifyDelegate(newRootSignatures, newRootKeys, newRootRoleMeta, newRootMetaBytes);
 
       // 5.3.5) We've taken the liberty to modify 5.3.5 to just validate that the new root meta
       // matches the version we pulled based off of the pattern {version}.root.json. We know due to
@@ -180,41 +180,48 @@ public class TufClient {
    * Verifies that a delegate role has been signed by the threshold amount of keys.
    *
    * @param signatures these are the signatures on the role meta we're verifying
-   * @param threshold the minimum amount of signatures that must be verified by a trusted key.
-   * @param rootKeys a map of trusted keys used for signing, keyed by key_id
+   * @param publicKeys a map of key IDs to public keys used for signing various roles
+   * @param role the key ids and threshold values for role signing
    * @throws SignatureVerificationException if there are not enough verified signatures
    */
-  private void verifyDelegate(
+  @VisibleForTesting
+  static void verifyDelegate(
       List<Signature> signatures,
-      int threshold,
-      Map<String, Key> rootKeys,
+      Map<String, Key> publicKeys,
+      Role role,
       byte[] verificationMaterial)
       throws SignatureVerificationException, NoSuchAlgorithmException, InvalidKeyException,
           InvalidKeySpecException {
     // use set to not count the same key multiple times towards the threshold.
-    var goodSigs = new HashSet<>(signatures.size());
-    for (Signature signature : signatures) {
-      var key = rootKeys.get(signature.getKeyId());
-      if (key == null) {
-        // this signature doesn't match any keys, move on to the next.
-        continue;
-      }
-
-      // key bytes are in Hex not Base64! TUF also lies that their key is PEM Encoded. Don't believe
-      // them!
-      byte[] keyBytes = Hex.decode(key.getKeyVal().get("public"));
-      var pubKey = Keys.constructTufPublicKey(keyBytes, key.getScheme());
-      byte[] signatureBytes = Hex.decode(signature.getSignature());
-      try {
-        if (Verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
-          goodSigs.add(signature.getKeyId());
+    var goodSigs = new HashSet<>(role.getKeyids().size());
+    // role.getKeyIds() defines the keys allowed to sign for this role.
+    for (String keyid : role.getKeyids()) {
+      Optional<Signature> signatureMaybe =
+          signatures.stream().filter(sig -> sig.getKeyId().equals(keyid)).findFirst();
+      // only verify if we find a signature that matcheds an allowed key id.
+      if (signatureMaybe.isPresent()) {
+        var signature = signatureMaybe.get();
+        // look for the public key that matches the key ID and use it for verification.
+        var key = publicKeys.get(signature.getKeyId());
+        if (key != null) {
+          // key bytes are in Hex not Base64! TUF also lies that their key is PEM Encoded. Don't
+          // believe
+          // them!
+          byte[] keyBytes = Hex.decode(key.getKeyVal().get("public"));
+          var pubKey = Keys.constructTufPublicKey(keyBytes, key.getScheme());
+          byte[] signatureBytes = Hex.decode(signature.getSignature());
+          try {
+            if (Verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
+              goodSigs.add(signature.getKeyId());
+            }
+          } catch (SignatureException e) {
+            throw new RuntimeException(e);
+          }
         }
-      } catch (SignatureException e) {
-        throw new RuntimeException(e);
       }
     }
-    if (goodSigs.size() < threshold) {
-      throw new SignatureVerificationException(threshold, goodSigs.size());
+    if (goodSigs.size() < role.getThreshold()) {
+      throw new SignatureVerificationException(role.getThreshold(), goodSigs.size());
     }
   }
 
