@@ -204,9 +204,8 @@ public class TufClient {
         // look for the public key that matches the key ID and use it for verification.
         var key = publicKeys.get(signature.getKeyId());
         if (key != null) {
-          // key bytes are in Hex not Base64! TUF also lies that their key is PEM Encoded. Don't
-          // believe
-          // them!
+          // key bytes are in Hex not Base64!
+          // TODO(patrick): this will change in a subsequent version. Add code to handle PEM Encoded keys as well.
           byte[] keyBytes = Hex.decode(key.getKeyVal().get("public"));
           var pubKey = Keys.constructTufPublicKey(keyBytes, key.getScheme());
           byte[] signatureBytes = Hex.decode(signature.getSignature());
