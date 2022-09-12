@@ -123,8 +123,7 @@ public class Keys {
           // spec for P-256 curve
           ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("P-256");
           // create a KeyFactory with ECDSA (Elliptic Curve Diffie-Hellman) algorithm and use
-          // BouncyCastle
-          // as the provider
+          // BouncyCastle as the provider
           KeyFactory kf = null;
           try {
             kf = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
