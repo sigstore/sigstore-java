@@ -24,8 +24,6 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 
 class KeysTest {
 
@@ -58,22 +56,12 @@ class KeysTest {
   }
 
   @Test
-  @EnabledForJreRange(max = JRE.JAVA_14)
   void parsePublicKey_ed25519_withBouncyCastle()
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
     // BouncyCastle names the algorithm differently than the JDK
     assertEquals(result.getAlgorithm(), "Ed25519");
-  }
-
-  @Test
-  @EnabledForJreRange(min = JRE.JAVA_15)
-  void parsePublicKey_ed25519_withStdLib()
-      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
-    PublicKey result =
-        Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
-    assertEquals(result.getAlgorithm(), "EdDSA");
   }
 
   @Test
