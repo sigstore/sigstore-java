@@ -97,8 +97,8 @@ public class Keys {
    *       href="https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm">ecdsa-sha2-nistp256</a>
    * </ol>
    *
-   * @see  <a href="https://theupdateframework.github.io/specification/latest/index.html#role-role">spec</a>
-   *
+   * @see <a
+   *     href="https://theupdateframework.github.io/specification/latest/index.html#role-role">spec</a>
    * @param contents keyBytes
    * @param scheme signing scheme
    * @return java {link PublicKey}
