@@ -26,6 +26,17 @@ import java.util.List;
  */
 public interface Role {
 
+  enum Name {
+    ROOT,
+    SNAPSHOT,
+    TIMESTAMP;
+
+    @Override
+    public String toString() {
+      return super.toString().toLowerCase();
+    }
+  }
+
   /** A list of trusted keys for this role. */
   List<String> getKeyids();
 

@@ -26,7 +26,7 @@ public class Verifiers {
     if (publicKey.getAlgorithm().equals("RSA")) {
       return new RsaVerifier(publicKey);
     }
-    if (publicKey.getAlgorithm().equals("EC")) {
+    if (publicKey.getAlgorithm().equals("EC") || publicKey.getAlgorithm().equals("ECDSA")) {
       return new EcdsaVerifier(publicKey);
     }
     throw new NoSuchAlgorithmException(

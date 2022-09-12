@@ -15,13 +15,15 @@
  */
 package dev.sigstore.encryption;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.io.Resources;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
+import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -81,6 +83,77 @@ class KeysTest {
     Assertions.assertThrows(
         NoSuchAlgorithmException.class,
         () -> Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(DSA_PUB_PATH))));
+  }
+
+  @Test
+  void parseTufPublicKey_ecdsa()
+      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+    PublicKey key =
+        Keys.constructTufPublicKey(
+            Hex.decode(
+                "04cbc5cab2684160323c25cd06c3307178a6b1d1c9b949328453ae473c5ba7527e35b13f298b41633382241f3fd8526c262d43b45adee5c618fa0642c82b8a9803"),
+            "ecdsa-sha2-nistp256");
+    assertNotNull(key);
+    assertEquals(key.getAlgorithm(), "ECDSA");
+  }
+
+  @Test
+  void parseTufPublicKey_ecdsaBad()
+      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> {
+          Keys.constructTufPublicKey(
+              Hex.decode(
+                  "04cbcdcab2684160323c25cd06c3307178a6b1d1c9b949328453ae473c5ba7527e35b13f298b41633382241f3fd8526c262d43b45adee5c618fa0642c82b8a9803"),
+              "ecdsa-sha2-nistp256");
+        });
+  }
+
+  @Test
+  void parseTufPublicKey_ed25519()
+      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+    // {@code step crypto keypair ed25519.pub /dev/null --kty OKP --curve Ed25519}
+    // copy just the key part out of ed25519.pub removing PEM header and footer
+    // {@code echo $(copied content) | base64 -d | hexdump -v -e '/1 "%02x" '}
+    PublicKey key =
+        Keys.constructTufPublicKey(
+            Hex.decode(
+                "302a300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
+            "ed25519");
+    assertNotNull(key);
+    assertEquals(key.getAlgorithm(), "Ed25519");
+  }
+
+  @Test
+  void parseTufPublicKey_ed25519Bad() {
+
+    try {
+      PublicKey key =
+          Keys.constructTufPublicKey(
+              Hex.decode(
+                  "302b300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
+              "ed25519");
+      fail();
+    } catch (Exception e) {
+    }
+  }
+
+  @Test
+  void parseTufPublicKey_rsa()
+      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+    // {@code step crypto keypair ed25519.pub /dev/null --kty OKP --curve Ed25519}
+    // copy just the key part out of ed25519.pub removing PEM header and footer
+    // {@code echo $(copied content) | base64 -d | hexdump -v -e '/1 "%02x" '}
+    try {
+      PublicKey key =
+          Keys.constructTufPublicKey(
+              Hex.decode(
+                  "302a300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
+              "rsassa-pss-sha256");
+      fail();
+    } catch (RuntimeException e) {
+    }
   }
 
   @Test

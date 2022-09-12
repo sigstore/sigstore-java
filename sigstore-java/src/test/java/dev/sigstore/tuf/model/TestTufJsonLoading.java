@@ -23,7 +23,7 @@ import com.google.common.io.Resources;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ public class TestTufJsonLoading {
     RootMeta signedMeta = trustRoot.getSignedMeta();
     assertNotNull(signedMeta);
     assertEquals(false, signedMeta.getConsistentSnapshot());
-    assertEquals(LocalDateTime.of(2023, 01, 12, 18, 22, 2), signedMeta.getExpires());
+    assertEquals("2023-01-12T18:22:02Z", signedMeta.getExpires());
     assertEquals(7, signedMeta.getKeys().entrySet().size());
     Key key =
         signedMeta
@@ -124,7 +124,8 @@ public class TestTufJsonLoading {
         "3044022100d54e28736b8ac066410aa4b1560b2244d1c631a8b0192420c34e2db07248ed54021f1193d7e7ecbb0045533ce912f7685fc66cff42a80b56b3e1e7245c6c542bf1",
         targets.getSignatures().get(0).getSignature());
     TargetMeta signedMeta = targets.getSignedMeta();
-    assertEquals(LocalDateTime.of(2023, 01, 12, 18, 22, 3), signedMeta.getExpires());
+    assertEquals("2023-01-12T18:22:03Z", signedMeta.getExpires());
+    assertEquals(ZonedDateTime.parse("2023-01-12T18:22:03Z"), signedMeta.getExpiresAsDate());
     assertEquals("1.0", signedMeta.getSpecVersion());
     assertEquals(4, signedMeta.getVersion());
     Delegations delegations = signedMeta.getDelegations();
