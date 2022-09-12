@@ -132,7 +132,8 @@ public class Keys {
             throw new RuntimeException(e);
           }
 
-          // code below just creates the public key from key contents using the curve parameters (spec variable)
+          // code below just creates the public key from key contents using the curve parameters
+          // (spec variable)
           ECNamedCurveSpec params =
               new ECNamedCurveSpec("P-256", spec.getCurve(), spec.getG(), spec.getN());
           ECPoint point = decodePoint(params.getCurve(), contents);
