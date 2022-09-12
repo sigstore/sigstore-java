@@ -21,4 +21,8 @@ import org.immutables.value.Value;
 /** Signed envelope of the Snapshot metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
-public interface Snapshot extends SignedTufMeta<SnapshotMeta> {}
+public interface Snapshot extends SignedTufMeta<SnapshotMeta> {
+  @Override
+  @Gson.Named("signed")
+  SnapshotMeta getSignedMeta();
+}

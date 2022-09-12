@@ -21,4 +21,8 @@ import org.immutables.value.Value;
 /** Signed envelope of the Root metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
-public interface Root extends SignedTufMeta<RootMeta> {}
+public interface Root extends SignedTufMeta<RootMeta> {
+  @Override
+  @Gson.Named("signed")
+  RootMeta getSignedMeta();
+}

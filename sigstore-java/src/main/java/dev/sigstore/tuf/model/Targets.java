@@ -21,4 +21,8 @@ import org.immutables.value.Value;
 /** Signed envelope of the Targets metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
-public interface Targets extends SignedTufMeta<TargetMeta> {}
+public interface Targets extends SignedTufMeta<TargetMeta> {
+  @Override
+  @Gson.Named("signed")
+  TargetMeta getSignedMeta();
+}

@@ -16,7 +16,6 @@
 package dev.sigstore.tuf.model;
 
 import java.util.List;
-import org.immutables.gson.Gson;
 
 /**
  * Signed wrapper around {@link TufMeta}.
@@ -28,6 +27,5 @@ public interface SignedTufMeta<T extends TufMeta> {
   List<Signature> getSignatures();
 
   /** The role metadata that has been signed. */
-  @Gson.Named("signed")
   T getSignedMeta();
 }
