@@ -46,23 +46,7 @@ public class Keys {
   private static final Logger log = Logger.getLogger(Keys.class.getName());
 
   static {
-    // Added for EdDSA support for Java <15
-
-    // This should work as JDK version strings are of the form '1.x.x' up to Java 8, and '9.x..'
-    // afterwards.
-    if (getJavaVersion() < 15) {
-      try {
-        log.info(
-            "Adding BouncyCastleProvider to SecurityManager for EdDSA algorithm support on Java <15.");
-        Security.addProvider(new BouncyCastleProvider());
-      } catch (SecurityException e) {
-        log.warning(
-            "Could not configure BouncyCastleProvider due to SecurityManager restrictions."
-                + " EdDSA algorithms will not be supported. Refer to "
-                + "https://docs.oracle.com/cd/E19830-01/819-4712/ablsc/index.html to configure BouncyCastle "
-                + "for your JVM");
-      }
-    }
+    Security.addProvider(new BouncyCastleProvider());
   }
 
   /**
