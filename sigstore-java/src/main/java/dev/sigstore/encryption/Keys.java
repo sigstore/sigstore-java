@@ -99,11 +99,11 @@ public class Keys {
    *
    * {@see https://theupdateframework.github.io/specification/latest/index.html#role-role}
    *
-   * @param contents
-   * @param scheme
-   * @return
-   * @throws NoSuchAlgorithmException
-   * @throws InvalidKeySpecException
+   * @param contents keyBytes
+   * @param scheme signing scheme
+   * @return java {link PublicKey}
+   * @throws NoSuchAlgorithmException if we don't support the scheme provided
+   * @throws InvalidKeySpecException if the public key material is invalid
    */
   public static PublicKey constructTufPublicKey(byte[] contents, String scheme)
       throws NoSuchAlgorithmException, InvalidKeySpecException {
@@ -132,8 +132,7 @@ public class Keys {
             throw new RuntimeException(e);
           }
 
-          // code below just creates the public key from the bytes contained in publicK
-          // using the curve parameters (spec variable)
+          // code below just creates the public key from key contents using the curve parameters (spec variable)
           ECNamedCurveSpec params =
               new ECNamedCurveSpec("P-256", spec.getCurve(), spec.getG(), spec.getN());
           ECPoint point = decodePoint(params.getCurve(), contents);
