@@ -15,7 +15,10 @@
  */
 package dev.sigstore.tuf.model;
 
+import dev.sigstore.json.GsonSupplier;
+import java.io.IOException;
 import java.util.List;
+import org.erdtman.jcs.JsonCanonicalizer;
 
 /**
  * Signed wrapper around {@link TufMeta}.
@@ -28,4 +31,8 @@ public interface SignedTufMeta<T extends TufMeta> {
 
   /** The role metadata that has been signed. */
   T getSignedMeta();
+
+  default byte[] getCanonicalSignedBytes() throws IOException {
+    return new JsonCanonicalizer(GsonSupplier.GSON.get().toJson(getSignedMeta())).getEncodedUTF8();
+  }
 }

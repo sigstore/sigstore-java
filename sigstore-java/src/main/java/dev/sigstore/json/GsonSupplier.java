@@ -55,12 +55,6 @@ public enum GsonSupplier implements Supplier<Gson> {
           .registerTypeAdapterFactory(new GsonAdaptersKey())
           .registerTypeAdapterFactory(new GsonAdaptersRoot())
           .registerTypeAdapterFactory(new GsonAdaptersTargets())
-          .registerTypeAdapter(
-              LocalDateTime.class,
-              (JsonDeserializer<LocalDateTime>)
-                  (json, type, jsonDeserializationContext) ->
-                      ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString())
-                          .toLocalDateTime())
           .disableHtmlEscaping()
           .create();
 

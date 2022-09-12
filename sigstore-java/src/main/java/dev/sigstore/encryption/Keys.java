@@ -15,19 +15,15 @@
  */
 package dev.sigstore.encryption;
 
+import static org.bouncycastle.jce.ECPointUtil.*;
+
 import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.Security;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPublicKeySpec;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.*;
+import java.security.spec.*;
 import java.util.logging.Logger;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -36,7 +32,10 @@ import org.bouncycastle.crypto.params.ECKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.util.PublicKeyFactory;
+import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.jce.spec.ECNamedCurveSpec;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
@@ -87,6 +86,63 @@ public class Keys {
     String keyAlgorithm = extractKeyAlgorithm(keyParameters);
     KeyFactory keyFactory = KeyFactory.getInstance(keyAlgorithm);
     return keyFactory.generatePublic(publicKeySpec);
+  }
+
+  /**
+   * Valid values for scheme are:
+   *
+   * <ol>
+   *   <li><a href="https://ed25519.cr.yp.to/">ed25519</a>
+   *   <li><a
+   *       href="https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm">ecdsa-sha2-nistp256</a>
+   * </ol>
+   *
+   * {@see https://theupdateframework.github.io/specification/latest/index.html#role-role}
+   *
+   * @param contents
+   * @param scheme
+   * @return
+   * @throws NoSuchAlgorithmException
+   * @throws InvalidKeySpecException
+   */
+  public static PublicKey constructTufPublicKey(byte[] contents, String scheme)
+      throws NoSuchAlgorithmException, InvalidKeySpecException {
+    PublicKey publicKey = null;
+    switch (scheme) {
+      case "rsassa-pss-sha256":
+        throw new RuntimeException("rsassa-pss-sha256 not currently supported");
+      case "ed25519":
+        {
+          final KeyFactory kf = KeyFactory.getInstance("Ed25519");
+          final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(contents);
+          publicKey = kf.generatePublic(keySpec);
+          break;
+        }
+      case "ecdsa-sha2-nistp256":
+        {
+          // spec for P-256 curve
+          ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("P-256");
+          // create a KeyFactory with ECDSA (Elliptic Curve Diffie-Hellman) algorithm and use
+          // BouncyCastle
+          // as the provider
+          KeyFactory kf = null;
+          try {
+            kf = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
+          } catch (NoSuchProviderException e) {
+            throw new RuntimeException(e);
+          }
+
+          // code below just creates the public key from the bytes contained in publicK
+          // using the curve parameters (spec variable)
+          ECNamedCurveSpec params =
+              new ECNamedCurveSpec("P-256", spec.getCurve(), spec.getG(), spec.getN());
+          ECPoint point = decodePoint(params.getCurve(), contents);
+          ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(point, params);
+          publicKey = kf.generatePublic(pubKeySpec);
+          break;
+        }
+    }
+    return publicKey;
   }
 
   // https://stackoverflow.com/questions/42911637/get-publickey-from-key-bytes-not-knowing-the-key-algorithm

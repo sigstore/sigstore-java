@@ -15,16 +15,23 @@
  */
 package dev.sigstore.tuf.model;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import org.immutables.gson.Gson;
 
 /**
  * Generic Tuf Metadata interface for various TUF resources such as Roles, Snapshots, and Targets.
  */
 public interface TufMeta {
+  /** Returns the metadata type. In this case 'root'. */
+  @Gson.Named("_type")
+  String getType();
 
   /** Date at which this data expires. */
-  LocalDateTime getExpires();
+  String getExpires();
+
+  default ZonedDateTime getExpiresAsDate() {
+    return ZonedDateTime.parse(getExpires());
+  }
 
   /** Spec version of this type. */
   @Gson.Named("spec_version")

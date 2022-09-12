@@ -31,10 +31,6 @@ import org.immutables.value.Value;
 @Value.Immutable
 public interface RootMeta extends TufMeta {
 
-  /** Returns the metadata type. In this case 'root'. */
-  @Gson.Named("_type")
-  String getType();
-
   /**
    * Typically {@code false} and unused for Sigstore TUF.
    *
@@ -58,4 +54,8 @@ public interface RootMeta extends TufMeta {
    * href="https://theupdateframework.io/metadata/#root-metadata-rootjson">role</a>.
    */
   Map<String, RootRole> getRoles();
+
+  default RootRole getRole(Role.Name name) {
+    return getRoles().get(name.toString());
+  }
 }
