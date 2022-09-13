@@ -205,8 +205,7 @@ public class TufClient {
         var key = publicKeys.get(signature.getKeyId());
         if (key != null) {
           // key bytes are in Hex not Base64!
-          // TODO(patrick): this will change in a subsequent version. Add code to handle PEM Encoded
-          // keys as well.
+          // TODO(patrick): this will change in a subsequent version. Add code to handle PEM Encoded keys as well.
           byte[] keyBytes = Hex.decode(key.getKeyVal().get("public"));
           var pubKey = Keys.constructTufPublicKey(keyBytes, key.getScheme());
           byte[] signatureBytes = Hex.decode(signature.getSignature());
@@ -215,7 +214,7 @@ public class TufClient {
               goodSigs.add(signature.getKeyId());
             }
           } catch (SignatureException e) {
-            throw new RuntimeException(e);
+            throw new TufException(e);
           }
         }
       }
