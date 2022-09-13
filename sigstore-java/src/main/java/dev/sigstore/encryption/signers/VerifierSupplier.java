@@ -18,6 +18,7 @@ package dev.sigstore.encryption.signers;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 
+/** Provider {@link Verifier}. Indirection exists to support unit testing. */
 public interface VerifierSupplier {
   Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException;
 }

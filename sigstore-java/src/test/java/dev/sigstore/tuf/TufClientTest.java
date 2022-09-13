@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import dev.sigstore.encryption.signers.Verifier;
-import dev.sigstore.encryption.signers.VerifierSupplier;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.json.GsonSupplier;
 import dev.sigstore.tuf.model.*;
@@ -197,6 +196,44 @@ class TufClientTest {
   }
 
   @Test
+  public void testVerifyDelegate_verificationFailed()
+      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
+
+    Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
+    Role delegate = ImmutableRootRole.builder().addKeyids(PUB_KEY_1.getLeft()).threshold(1).build();
+    byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
+    var client =
+        new TufClient(
+            publicKey ->
+                new Verifier() {
+                  @Override
+                  public PublicKey getPublicKey() {
+                    return null;
+                  }
+
+                  @Override
+                  public boolean verify(byte[] artifact, byte[] signature)
+                      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+                    return false;
+                  }
+
+                  @Override
+                  public boolean verifyDigest(byte[] artifactDigest, byte[] signature)
+                      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+                    return false;
+                  }
+                });
+    try {
+      client.verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
+      fail("This should have failed since the public key for PUB_KEY_1 should fail to verify.");
+    } catch (SignatureVerificationException e) {
+      assertEquals(1, e.getRequiredSignatures());
+      assertEquals(0, e.getVerifiedSignatures());
+    }
+  }
+
+  @Test
   public void testVerifyDelegate_belowThreshold()
       throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
@@ -288,10 +325,8 @@ class TufClientTest {
   @NotNull
   private static TufClient createAlwaysVerifyingTufClient() {
     return new TufClient(
-        new VerifierSupplier() {
-          @Override
-          public Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException {
-            return new Verifier() {
+        publicKey ->
+            new Verifier() {
               @Override
               public PublicKey getPublicKey() {
                 return null;
@@ -308,9 +343,7 @@ class TufClientTest {
                   throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
                 return true;
               }
-            };
-          }
-        });
+            });
   }
 
   private void setupMirror(String repoFolder, String... files) throws IOException {
