@@ -20,4 +20,8 @@ public class TufException extends RuntimeException {
   public TufException(String message) {
     super(message);
   }
+
+  public TufException(Throwable cause) {
+    super(cause);
+  }
 }
