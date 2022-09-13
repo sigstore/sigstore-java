@@ -21,7 +21,7 @@ import java.security.PublicKey;
 /** Autodetection for verification algorithms based on public keys used. */
 public enum Verifiers implements VerifierSupplier {
   INSTANCE;
-  /** Returns a new verifier for the provided public key to use during verificaiton. */
+  /** Returns a new verifier for the provided public key to use during verification. */
   public Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException {
     if (publicKey.getAlgorithm().equals("RSA")) {
       return new RsaVerifier(publicKey);

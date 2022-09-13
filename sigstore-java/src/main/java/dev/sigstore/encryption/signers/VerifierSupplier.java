@@ -20,5 +20,7 @@ import java.security.PublicKey;
 
 /** Provider {@link Verifier}. Indirection exists to support unit testing. */
 public interface VerifierSupplier {
+
+  /** Returns a new verifier for the provided public key to use during verificaiton. */
   Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException;
 }
