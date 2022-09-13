@@ -193,7 +193,7 @@ public class TufClient {
       throws SignatureVerificationException, NoSuchAlgorithmException, InvalidKeyException,
           InvalidKeySpecException {
     // use set to not count the same key multiple times towards the threshold.
-    var goodSigs = new HashSet<>(role.getKeyids().size());
+    var goodSigs = new HashSet<>(role.getKeyids().size() * 4 / 3);
     // role.getKeyIds() defines the keys allowed to sign for this role.
     for (String keyid : role.getKeyids()) {
       Optional<Signature> signatureMaybe =
