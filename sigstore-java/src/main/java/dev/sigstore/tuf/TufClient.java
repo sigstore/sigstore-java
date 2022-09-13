@@ -21,6 +21,7 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.encryption.Keys;
+import dev.sigstore.encryption.signers.VerifierSupplier;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.ImmutableHttpParams;
@@ -55,7 +56,21 @@ public class TufClient {
       1024; // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in
   // 5.3.3 of spec.
 
-  protected Clock clock = Clock.systemUTC();
+  private Clock clock;
+  private VerifierSupplier verifiers;
+
+  public TufClient(Clock clock, VerifierSupplier verifiers) {
+    this.clock = clock;
+    this.verifiers = verifiers;
+  }
+
+  public TufClient(VerifierSupplier verifiers) {
+    this(Clock.systemUTC(), verifiers);
+  }
+
+  public TufClient() {
+    this(Clock.systemUTC(), Verifiers.INSTANCE);
+  }
 
   private ZonedDateTime updateStartTime;
 
@@ -185,7 +200,7 @@ public class TufClient {
    * @throws SignatureVerificationException if there are not enough verified signatures
    */
   @VisibleForTesting
-  static void verifyDelegate(
+  void verifyDelegate(
       List<Signature> signatures,
       Map<String, Key> publicKeys,
       Role role,
@@ -211,7 +226,7 @@ public class TufClient {
           var pubKey = Keys.constructTufPublicKey(keyBytes, key.getScheme());
           byte[] signatureBytes = Hex.decode(signature.getSignature());
           try {
-            if (Verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
+            if (verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
               goodSigs.add(signature.getKeyId());
             }
           } catch (SignatureException e) {

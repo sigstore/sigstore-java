@@ -19,10 +19,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 
 /** Autodetection for verification algorithms based on public keys used. */
-public class Verifiers {
-
+public enum Verifiers implements VerifierSupplier {
+  INSTANCE;
   /** Returns a new verifier for the provided public key to use during verificaiton. */
-  public static Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException {
+  public Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException {
     if (publicKey.getAlgorithm().equals("RSA")) {
       return new RsaVerifier(publicKey);
     }

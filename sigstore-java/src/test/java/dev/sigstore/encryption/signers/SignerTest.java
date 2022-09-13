@@ -33,8 +33,9 @@ public class SignerTest {
     var rsaSigner = Signers.newRsaSigner();
     var ecdsaSigner = Signers.newEcdsaSigner();
     return Stream.of(
-        Arguments.arguments(rsaSigner, Verifiers.newVerifier(rsaSigner.getPublicKey())),
-        Arguments.arguments(ecdsaSigner, Verifiers.newVerifier(ecdsaSigner.getPublicKey())));
+        Arguments.arguments(rsaSigner, Verifiers.INSTANCE.newVerifier(rsaSigner.getPublicKey())),
+        Arguments.arguments(
+            ecdsaSigner, Verifiers.INSTANCE.newVerifier(ecdsaSigner.getPublicKey())));
   }
 
   @ParameterizedTest

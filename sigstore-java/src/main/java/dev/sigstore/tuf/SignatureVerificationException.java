@@ -17,7 +17,7 @@ package dev.sigstore.tuf;
 
 /** Thrown when the metadata has not been signed by enough of the allowed keys. */
 public class SignatureVerificationException extends TufException {
-  final int requiredSignatures, verifiedSignatures;
+  private final int requiredSignatures, verifiedSignatures;
 
   public SignatureVerificationException(int requiredSignatures, int verifiedSignatures) {
     super(
@@ -26,5 +26,13 @@ public class SignatureVerificationException extends TufException {
             requiredSignatures, verifiedSignatures));
     this.requiredSignatures = requiredSignatures;
     this.verifiedSignatures = verifiedSignatures;
+  }
+
+  public int getRequiredSignatures() {
+    return requiredSignatures;
+  }
+
+  public int getVerifiedSignatures() {
+    return verifiedSignatures;
   }
 }
