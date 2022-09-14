@@ -55,7 +55,21 @@ public class TufClient {
       1024; // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in
   // 5.3.3 of spec.
 
-  protected Clock clock = Clock.systemUTC();
+  private Clock clock;
+  private Verifiers.Supplier verifiers;
+
+  TufClient(Clock clock, Verifiers.Supplier verifiers) {
+    this.clock = clock;
+    this.verifiers = verifiers;
+  }
+
+  TufClient(Verifiers.Supplier verifiers) {
+    this(Clock.systemUTC(), verifiers);
+  }
+
+  TufClient() {
+    this(Clock.systemUTC(), Verifiers::newVerifier);
+  }
 
   private ZonedDateTime updateStartTime;
 
@@ -185,7 +199,7 @@ public class TufClient {
    * @throws SignatureVerificationException if there are not enough verified signatures
    */
   @VisibleForTesting
-  static void verifyDelegate(
+  void verifyDelegate(
       List<Signature> signatures,
       Map<String, Key> publicKeys,
       Role role,
@@ -211,7 +225,7 @@ public class TufClient {
           var pubKey = Keys.constructTufPublicKey(keyBytes, key.getScheme());
           byte[] signatureBytes = Hex.decode(signature.getSignature());
           try {
-            if (Verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
+            if (verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
               goodSigs.add(signature.getKeyId());
             }
           } catch (SignatureException e) {
