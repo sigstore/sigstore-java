@@ -17,13 +17,12 @@
 package dev.sigstore.gradle
 
 import dev.sigstore.testkit.BaseGradleTest
-import dev.sigstore.testkit.DisableIfCiWithoutOidc
-import org.assertj.core.api.AbstractCharSequenceAssert
+import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
-@DisableIfCiWithoutOidc
+@EnabledIfOidcExists
 class SigstorePublishSignTest : BaseGradleTest() {
     @ParameterizedTest
     @MethodSource("gradleVersionAndSettings")

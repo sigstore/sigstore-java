@@ -20,6 +20,8 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
+import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
+import dev.sigstore.testkit.annotations.OidcProviderType;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -29,7 +31,6 @@ import java.util.UUID;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -51,7 +52,7 @@ public class KeylessTest {
   }
 
   @Test
-  @Tag("manual")
+  @EnabledIfOidcExists(provider = OidcProviderType.MANUAL)
   public void sign_production() throws Exception {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var result = signer.sign(testArtifact);
@@ -66,7 +67,7 @@ public class KeylessTest {
   }
 
   @Test
-  @Tag("manual")
+  @EnabledIfOidcExists(provider = OidcProviderType.MANUAL)
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
     var result = signer.sign(testArtifact);
@@ -80,7 +81,7 @@ public class KeylessTest {
   }
 
   @Test
-  @Tag("github_oidc")
+  @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
   public void sign_productionWithGithubOidc() throws Exception {
     var signer =
         KeylessSigner.builder()
@@ -98,7 +99,7 @@ public class KeylessTest {
   }
 
   @Test
-  @Tag("github_oidc")
+  @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
   public void sign_stagingWithGithubOidc() throws Exception {
     var signer =
         KeylessSigner.builder()

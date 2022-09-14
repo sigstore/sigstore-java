@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("java-library")
     id("build-logic.java")
+    id("build-logic.testing")
     id("com.github.vlsi.gradle-extensions")
     id("com.github.autostyle")
     kotlin("jvm")
