@@ -58,16 +58,16 @@ public class TufClient {
   private Clock clock;
   private Verifiers.Supplier verifiers;
 
-  public TufClient(Clock clock, Verifiers.Supplier verifiers) {
+  TufClient(Clock clock, Verifiers.Supplier verifiers) {
     this.clock = clock;
     this.verifiers = verifiers;
   }
 
-  public TufClient(Verifiers.Supplier verifiers) {
+  TufClient(Verifiers.Supplier verifiers) {
     this(Clock.systemUTC(), verifiers);
   }
 
-  public TufClient() {
+  TufClient() {
     this(Clock.systemUTC(), Verifiers::newVerifier);
   }
 
