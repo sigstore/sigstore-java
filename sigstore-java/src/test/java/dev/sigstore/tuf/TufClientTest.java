@@ -21,13 +21,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
-import dev.sigstore.json.GsonSupplier;
+import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.model.*;
+import dev.sigstore.tuf.model.Root;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
@@ -55,6 +55,7 @@ class TufClientTest {
   public static final String TEST_STATIC_UPDATE_TIME = "2022-09-09T13:37:00.00Z";
   static Server remote;
   static String remoteUrl;
+  private final Path trustedRoot = TestResources.CLIENT_TRUSTED_ROOT;
   @TempDir Path localStore;
   @TempDir static Path localMirror;
   Path tufTestData = Paths.get("src/test/resources/dev/sigstore/tuf/");
@@ -81,10 +82,11 @@ class TufClientTest {
     setupMirror("remote-repo-prod", "1.root.json", "2.root.json", "3.root.json", "4.root.json");
     var client = createTimeStaticTufClient();
     Path trustedRoot = tufTestData.resolve("trusted-root.json");
-    client.updateRoot(trustedRoot, new URL(remoteUrl), localStore);
+    client.updateRoot(
+        trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
     assertStoreContains("root.json");
-    Root oldRoot = loadRoot(trustedRoot);
-    Root newRoot = loadRoot(localStore.resolve("root.json"));
+    Root oldRoot = TestResources.loadRoot(trustedRoot);
+    Root newRoot = TestResources.loadRoot(localStore.resolve("root.json"));
     assertRootVersionIncreased(oldRoot, newRoot);
     assertRootNotExpired(newRoot);
   }
@@ -95,7 +97,8 @@ class TufClientTest {
     setupMirror("remote-repo-unsigned", "2.root.json");
     var client = createTimeStaticTufClient();
     try {
-      client.updateRoot(tufTestData.resolve("trusted-root.json"), new URL(remoteUrl), localStore);
+      client.updateRoot(
+          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
       fail();
     } catch (SignatureVerificationException e) {
       assertEquals(3, e.getRequiredSignatures());
@@ -109,7 +112,8 @@ class TufClientTest {
     setupMirror("remote-repo-expired", "2.root.json");
     var client = createTimeStaticTufClient();
     try {
-      client.updateRoot(tufTestData.resolve("trusted-root.json"), new URL(remoteUrl), localStore);
+      client.updateRoot(
+          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
       fail();
     } catch (RootExpiredException e) {
       assertEquals(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME), e.getUpdateTime());
@@ -125,7 +129,8 @@ class TufClientTest {
     setupMirror("remote-repo-inconsistent-version", "2.root.json");
     var client = createTimeStaticTufClient();
     try {
-      client.updateRoot(tufTestData.resolve("trusted-root.json"), new URL(remoteUrl), localStore);
+      client.updateRoot(
+          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
       fail();
     } catch (RoleVersionException e) {
       assertEquals(2, e.getExpectedVersion());
@@ -139,7 +144,8 @@ class TufClientTest {
     setupMirror("remote-repo-meta-file-too-big", "2.root.json");
     var client = createTimeStaticTufClient();
     try {
-      client.updateRoot(tufTestData.resolve("trusted-root.json"), new URL(remoteUrl), localStore);
+      client.updateRoot(
+          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
       fail();
     } catch (MetaFileExceedsMaxException e) {
     }
@@ -347,10 +353,8 @@ class TufClientTest {
             });
   }
 
-  private void setupMirror(String repoFolder, String... files) throws IOException {
-    for (String file : files) {
-      Files.copy(tufTestData.resolve(repoFolder).resolve(file), localMirror.resolve(file));
-    }
+  private static void setupMirror(String repoName, String... files) throws IOException {
+    TestResources.setupRepoFiles(repoName, localMirror, files);
   }
 
   private void assertRootNotExpired(Root root) {
@@ -366,10 +370,6 @@ class TufClientTest {
 
   private void assertStoreContains(String resource) {
     assertTrue(localStore.resolve(resource).toFile().exists());
-  }
-
-  Root loadRoot(Path rootPath) throws IOException {
-    return GsonSupplier.GSON.get().fromJson(Files.readString(rootPath), Root.class);
   }
 
   @AfterEach

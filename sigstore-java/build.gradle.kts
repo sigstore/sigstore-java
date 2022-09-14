@@ -41,6 +41,7 @@ dependencies {
     implementation("com.google.oauth-client:google-oauth-client-jetty")
     implementation("com.google.oauth-client:google-oauth-client-java6")
 
+    testImplementation(project(":sigstore-testkit"))
     testImplementation(platform("org.junit:junit-bom:5.9.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 

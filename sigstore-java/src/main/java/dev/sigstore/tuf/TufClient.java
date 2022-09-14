@@ -25,8 +25,6 @@ import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.tuf.model.*;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -47,6 +45,10 @@ import org.bouncycastle.util.encoders.Hex;
 /**
  * Tuf Client. Will eventually support configuring multiple remote mirrors and trust roots and
  * mapping to specific targets.
+ *
+ * @see <a
+ *     href="https://theupdateframework.github.io/specification/latest/#detailed-client-workflow">TUF
+ *     client workflow</a>
  */
 public class TufClient {
 
@@ -74,7 +76,7 @@ public class TufClient {
   private ZonedDateTime updateStartTime;
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
-  public void updateRoot(Path trustedRootPath, URL mirror, Path localStore)
+  public void updateRoot(Path trustedRootPath, URL mirror, TufLocalStore localStore)
       throws IOException, RootExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, MetaFileExceedsMaxException, RoleVersionException,
           SignatureVerificationException {
@@ -152,14 +154,7 @@ public class TufClient {
       // 5.3.7) set the trusted root metadata to the new root
       trustedRoot = newRoot;
       // 5.3.8) persist to repo
-      Path localTrustRoot = localStore.resolve("root.json");
-      if (localTrustRoot.toFile().exists()) {
-        // Backup the old root.
-        Files.move(localTrustRoot, localStore.resolve((nextVersion - 1) + ".root.json"));
-      }
-      try (FileWriter fileWriter = new FileWriter(localTrustRoot.toFile())) {
-        fileWriter.write(GSON.get().toJson(trustedRoot));
-      }
+      localStore.setTrustedRoot(trustedRoot);
       // 5.3.9) see if there are more versions go back 5.3.3
       nextVersion++;
     }
@@ -175,14 +170,7 @@ public class TufClient {
     if (hasNewKeys(preUpdateSnapshotRole, trustedRoot.getSignedMeta().getRole(Role.Name.SNAPSHOT))
         || hasNewKeys(
             preUpdateTimestampRole, trustedRoot.getSignedMeta().getRole(Role.Name.TIMESTAMP))) {
-      File snapshotMetaFile = localStore.resolve("snapshot.json").toFile();
-      if (snapshotMetaFile.exists()) {
-        Files.delete(snapshotMetaFile.toPath());
-      }
-      File timestampMetaFile = localStore.resolve("timestamp.json").toFile();
-      if (timestampMetaFile.exists()) {
-        Files.delete(timestampMetaFile.toPath());
-      }
+      localStore.clearMetaDueToKeyRotation();
     }
   }
 
