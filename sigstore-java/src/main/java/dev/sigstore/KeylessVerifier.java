@@ -183,7 +183,7 @@ public class KeylessVerifier {
     // finally check the supplied signature can be verified by the public key in the certificate
     var publicKey = leafCert.getPublicKey();
     try {
-      var verifier = Verifiers.INSTANCE.newVerifier(publicKey);
+      var verifier = Verifiers.newVerifier(publicKey);
       if (!verifier.verifyDigest(artifactDigest, signature)) {
         throw new KeylessVerificationException("Artifact signature was not valid");
       }

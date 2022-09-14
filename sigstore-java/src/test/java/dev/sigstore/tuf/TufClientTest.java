@@ -319,7 +319,8 @@ class TufClientTest {
   @NotNull
   private static TufClient createTimeStaticTufClient() {
     return new TufClient(
-        Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC), Verifiers.INSTANCE);
+        Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC),
+        Verifiers::newVerifier);
   }
 
   @NotNull

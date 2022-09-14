@@ -35,7 +35,7 @@ public class RekorVerifier {
   public static RekorVerifier newRekorVerifier(byte[] rekorPublicKey)
       throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
     var publicKey = Keys.parsePublicKey(rekorPublicKey);
-    var verifier = Verifiers.INSTANCE.newVerifier(publicKey);
+    var verifier = Verifiers.newVerifier(publicKey);
 
     return new RekorVerifier(verifier);
   }

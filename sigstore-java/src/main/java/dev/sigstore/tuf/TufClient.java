@@ -21,7 +21,6 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.encryption.Keys;
-import dev.sigstore.encryption.signers.VerifierSupplier;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.ImmutableHttpParams;
@@ -57,19 +56,19 @@ public class TufClient {
   // 5.3.3 of spec.
 
   private Clock clock;
-  private VerifierSupplier verifiers;
+  private Verifiers.Supplier verifiers;
 
-  public TufClient(Clock clock, VerifierSupplier verifiers) {
+  public TufClient(Clock clock, Verifiers.Supplier verifiers) {
     this.clock = clock;
     this.verifiers = verifiers;
   }
 
-  public TufClient(VerifierSupplier verifiers) {
+  public TufClient(Verifiers.Supplier verifiers) {
     this(Clock.systemUTC(), verifiers);
   }
 
   public TufClient() {
-    this(Clock.systemUTC(), Verifiers.INSTANCE);
+    this(Clock.systemUTC(), Verifiers::newVerifier);
   }
 
   private ZonedDateTime updateStartTime;
