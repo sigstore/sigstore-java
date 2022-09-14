@@ -15,14 +15,15 @@
  */
 package dev.sigstore.oidc.client;
 
-import dev.sigstore.testing.annotations.RequiresGithubOidc;
+import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
+import dev.sigstore.testkit.annotations.OidcProviderType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class GithubActionsOidcClientTest {
 
   @Test
-  @RequiresGithubOidc
+  @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
   public void getToken() throws OidcException {
     var client = GithubActionsOidcClient.builder().build();
     var token = client.getIDToken();

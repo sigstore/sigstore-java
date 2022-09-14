@@ -3,6 +3,7 @@ import buildlogic.filterEolSimple
 plugins {
     `java-base`
     id("com.github.vlsi.gradle-extensions")
+    id("build-logic.testing")
 }
 
 java {

@@ -50,6 +50,8 @@ dependencies {
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.64.0")
     testImplementation("org.eclipse.jetty:jetty-server:11.0.11")
 
+    testImplementation(project(":sigstore-testkit"))
+
     implementation("javax.validation:validation-api:2.0.1.Final")
 }
 
@@ -115,20 +117,5 @@ tasks.named("sourcesJar") {
 
 tasks.test {
     useJUnitPlatform {
-        includeTags("none()")
-    }
-}
-
-// a special test grouping for tests that require a valid gha oidc token
-val testGithubOidc by tasks.registering(Test::class) {
-    useJUnitPlatform {
-        includeTags("github_oidc")
-    }
-}
-
-// manual test groups that are *not* run in CI, these should be run before
-val testManual by tasks.registering(Test::class) {
-    useJUnitPlatform {
-        includeTags("manual")
     }
 }
