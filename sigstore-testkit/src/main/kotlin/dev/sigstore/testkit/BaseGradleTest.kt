@@ -17,8 +17,8 @@
 package dev.sigstore.testkit
 
 import org.assertj.core.api.AbstractCharSequenceAssert
-import org.gradle.api.JavaVersion
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.internal.DefaultGradleRunner
 import org.gradle.util.GradleVersion
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions
@@ -78,6 +78,19 @@ open class BaseGradleTest {
         gradleRunner
             .withGradleVersion(gradleVersion)
             .withProjectDir(projectDir.toFile())
+            .apply {
+                this as DefaultGradleRunner
+                // See https://github.com/gradle/gradle/issues/10527
+                // Gradle does not provide API to configure heap size for testkit-based Gradle executions,
+                // so we resort to org.gradle.testkit.runner.internal.DefaultGradleRunner
+                System.getProperty("sigstore-java.test.org.gradle.jvmargs")?.let { jvmArgs ->
+                    withJvmArguments(
+                        jvmArgs.split(Regex("\\s+"))
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                    )
+                }
+            }
             .withArguments(*arguments)
             .forwardOutput()
 
