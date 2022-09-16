@@ -32,12 +32,13 @@ class EnableIfOidcExistsCondition : ExecutionCondition {
             .map { it.provider }.orElse(OidcProviderType.ANY)
 
         return when {
-            provider == OidcProviderType.MANUAL ->
-                if (System.getenv("CI") == "true") {
-                    disabled("CI environment is present, and the test has been configured to run with MANUAL OIDC only")
-                } else {
-                    enabled("the test has been configured with MANUAL OIDC, and no CI environment variable is detected")
-                }
+            provider == OidcProviderType.MANUAL &&
+                    System.getenv("CI") == "true" ->
+                disabled("CI environment variable is present, and the test has been configured to run with MANUAL OIDC only")
+
+            provider in listOf(OidcProviderType.ANY, OidcProviderType.MANUAL) &&
+                    System.getenv("CI") != "true" ->
+                enabled("the test has been configured with MANUAL OIDC, and no CI environment variable is detected")
 
             provider in listOf(OidcProviderType.ANY, OidcProviderType.CI, OidcProviderType.GITHUB) &&
                     System.getenv("ACTIONS_ID_TOKEN_REQUEST_URL") != null ->
