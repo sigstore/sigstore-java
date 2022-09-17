@@ -13,3 +13,7 @@
 
   Try running `./gradlew :gradle-sign-file:signFile`.
   The output will be put into `gradle-sign-file/build/sigstore/signFile`
+
+* [Precompiled plugin](gradle-precompiled-plugin)
+  Shows the way `dev.sigstore.sign` can be a part of a
+  [precompiled script plugin](https://docs.gradle.org/current/userguide/custom_plugins.html#sec:precompiled_plugins).
