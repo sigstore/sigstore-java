@@ -6,7 +6,7 @@ plugins {
 description = "Gradle plugin to that automatically signs all Publications in Sigstore"
 
 dependencies {
-    implementation(project(":sigstore-gradle:sigstore-gradle-sign-base-plugin"))
+    api(project(":sigstore-gradle:sigstore-gradle-sign-base-plugin"))
 
     testImplementation(project(":sigstore-testkit"))
 }
