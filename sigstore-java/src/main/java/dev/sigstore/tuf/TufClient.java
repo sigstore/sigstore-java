@@ -17,17 +17,12 @@ package dev.sigstore.tuf;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
-import com.google.api.client.http.GenericUrl;
-import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
-import dev.sigstore.http.HttpClients;
-import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.tuf.model.*;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
@@ -40,6 +35,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
@@ -52,7 +48,6 @@ import org.bouncycastle.util.encoders.Hex;
  */
 public class TufClient {
 
-  private static final int MAX_META_BYTES = 99 * 1024; // 99 KB
   private static final int MAX_UPDATES =
       1024; // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in
   // 5.3.3 of spec.
@@ -60,17 +55,12 @@ public class TufClient {
   private Clock clock;
   private Verifiers.Supplier verifiers;
 
-  TufClient(Clock clock, Verifiers.Supplier verifiers) {
+  private Function<URL, MetaFetcher> fetcherSupplier;
+
+  TufClient(Clock clock, Verifiers.Supplier verifiers, Function<URL, MetaFetcher> fetcherSupplier) {
     this.clock = clock;
     this.verifiers = verifiers;
-  }
-
-  TufClient(Verifiers.Supplier verifiers) {
-    this(Clock.systemUTC(), verifiers);
-  }
-
-  TufClient() {
-    this(Clock.systemUTC(), Verifiers::newVerifier);
+    this.fetcherSupplier = fetcherSupplier;
   }
 
   private ZonedDateTime updateStartTime;
@@ -80,6 +70,7 @@ public class TufClient {
       throws IOException, RootExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, MetaFileExceedsMaxException, RoleVersionException,
           SignatureVerificationException {
+    var fetcher = fetcherSupplier.apply(mirror);
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);
@@ -98,36 +89,12 @@ public class TufClient {
       // 5.3.3) download $version+1.root.json from mirror url (eventually obtained from remote.json
       // or map.json) up MAX_META_BYTES. If the file is not available, or we have reached
       // MAX_UPDATES number of root metadata files go to step 5.3.10
-      String nextVersionFileName = nextVersion + ".root.json";
-      GenericUrl nextVersionUrl = new GenericUrl(mirror + "/" + nextVersionFileName);
-      var req =
-          HttpClients.newHttpTransport(ImmutableHttpParams.builder().build())
-              .createRequestFactory(
-                  request -> {
-                    request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser());
-                  })
-              .buildGetRequest(nextVersionUrl);
-      req.getHeaders().setAccept("application/json; api-version=2.0");
-      req.getHeaders().setContentType("application/json");
-      req.setThrowExceptionOnExecuteError(false);
-      var resp = req.execute();
-      if (resp.getStatusCode() == 404) {
+      var newRootMaybe = fetcher.getRootAtVersion(nextVersion);
+      if (newRootMaybe.isEmpty()) {
         // No newer versions, go to 5.3.10.
         break;
       }
-      if (resp.getStatusCode() != 200) {
-        throw new TufException(
-            String.format(
-                "Unexpected return from mirror. Status code: %s, status message: %s"
-                    + resp.getStatusCode()
-                    + resp.getStatusMessage()));
-      }
-      byte[] rootBytes = resp.getContent().readNBytes(MAX_META_BYTES);
-      if (rootBytes.length == MAX_META_BYTES && resp.getContent().read() != -1) {
-        throw new MetaFileExceedsMaxException(nextVersionUrl.toString(), MAX_META_BYTES);
-      }
-      var newRoot = GSON.get().fromJson(new String(rootBytes, StandardCharsets.UTF_8), Root.class);
-
+      var newRoot = newRootMaybe.get();
       // 5.3.4) we have a valid next version of the root.json. Check that the file has been signed
       // by:
       //   a) a threshold (from step 2) of keys specified in the trusted metadata
@@ -230,7 +197,7 @@ public class TufClient {
   public void updateTimestamp() {
     // 1) download the timestamp.json bytes up to few 10s of K max.
 
-    // 2) verify against threshold of keys as specified in trusted root,json
+    // 2) verify against threshold of keys as specified in trusted root.json
 
     // 3) check that version of new timestamp.json is higher or equal than current, else fail.
     //     3.2) check that timestamp.snapshot.version <= timestamp.version or fail
@@ -282,5 +249,30 @@ public class TufClient {
     // 9) Download target up to length specified in bytes. verify against hash.
 
     // Done!!
+  }
+
+  public static class Builder {
+    private Clock clock = Clock.systemUTC();
+    private Verifiers.Supplier verifiers = Verifiers::newVerifier;
+    private Function<URL, MetaFetcher> fetcherSupplier = HttpMetaFetcher::newFetcher;
+
+    public Builder setClock(Clock clock) {
+      this.clock = clock;
+      return this;
+    }
+
+    public Builder setVerifiers(Verifiers.Supplier verifiers) {
+      this.verifiers = verifiers;
+      return this;
+    }
+
+    public Builder setFetcherSupplier(Function<URL, MetaFetcher> fetcherSupplier) {
+      this.fetcherSupplier = fetcherSupplier;
+      return this;
+    }
+
+    public TufClient build() {
+      return new TufClient(clock, verifiers, fetcherSupplier);
+    }
   }
 }

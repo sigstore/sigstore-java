@@ -53,6 +53,7 @@ import org.junit.jupiter.api.io.TempDir;
 class TufClientTest {
 
   public static final String TEST_STATIC_UPDATE_TIME = "2022-09-09T13:37:00.00Z";
+
   static Server remote;
   static String remoteUrl;
   private final Path trustedRoot = TestResources.CLIENT_TRUSTED_ROOT;
@@ -209,27 +210,7 @@ class TufClientTest {
     Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
     Role delegate = ImmutableRootRole.builder().addKeyids(PUB_KEY_1.getLeft()).threshold(1).build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
-    var client =
-        new TufClient(
-            publicKey ->
-                new Verifier() {
-                  @Override
-                  public PublicKey getPublicKey() {
-                    return null;
-                  }
-
-                  @Override
-                  public boolean verify(byte[] artifact, byte[] signature)
-                      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-                    return false;
-                  }
-
-                  @Override
-                  public boolean verifyDigest(byte[] artifactDigest, byte[] signature)
-                      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-                    return false;
-                  }
-                });
+    var client = new TufClient.Builder().setVerifiers(ALWAYS_FAILS).build();
     try {
       client.verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail("This should have failed since the public key for PUB_KEY_1 should fail to verify.");
@@ -324,33 +305,16 @@ class TufClientTest {
 
   @NotNull
   private static TufClient createTimeStaticTufClient() {
-    return new TufClient(
-        Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC),
-        Verifiers::newVerifier);
+    return new TufClient.Builder()
+        .setClock(Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC))
+        .setVerifiers(Verifiers::newVerifier)
+        .setFetcherSupplier(HttpMetaFetcher::newFetcher)
+        .build();
   }
 
   @NotNull
   private static TufClient createAlwaysVerifyingTufClient() {
-    return new TufClient(
-        publicKey ->
-            new Verifier() {
-              @Override
-              public PublicKey getPublicKey() {
-                return null;
-              }
-
-              @Override
-              public boolean verify(byte[] artifact, byte[] signature)
-                  throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-                return true;
-              }
-
-              @Override
-              public boolean verifyDigest(byte[] artifactDigest, byte[] signature)
-                  throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-                return true;
-              }
-            });
+    return new TufClient.Builder().setVerifiers(ALWAYS_VERIFIES).build();
   }
 
   private static void setupMirror(String repoName, String... files) throws IOException {
@@ -383,4 +347,45 @@ class TufClientTest {
   static void shutdownRemoteResourceServer() throws Exception {
     remote.stop();
   }
+
+  public static final Verifiers.Supplier ALWAYS_VERIFIES =
+      publicKey ->
+          new Verifier() {
+            @Override
+            public PublicKey getPublicKey() {
+              return null;
+            }
+
+            @Override
+            public boolean verify(byte[] artifact, byte[] signature)
+                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+              return true;
+            }
+
+            @Override
+            public boolean verifyDigest(byte[] artifactDigest, byte[] signature)
+                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+              return true;
+            }
+          };
+  public static final Verifiers.Supplier ALWAYS_FAILS =
+      publicKey ->
+          new Verifier() {
+            @Override
+            public PublicKey getPublicKey() {
+              return null;
+            }
+
+            @Override
+            public boolean verify(byte[] artifact, byte[] signature)
+                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+              return false;
+            }
+
+            @Override
+            public boolean verifyDigest(byte[] artifactDigest, byte[] signature)
+                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+              return false;
+            }
+          };
 }
