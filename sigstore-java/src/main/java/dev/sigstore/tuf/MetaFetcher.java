@@ -15,7 +15,10 @@
  */
 package dev.sigstore.tuf;
 
+import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
+import dev.sigstore.tuf.model.Timestamp;
+
 import java.io.IOException;
 import java.util.Optional;
 
@@ -35,4 +38,6 @@ public interface MetaFetcher {
    *     by the client
    */
   Optional<Root> getRootAtVersion(int version) throws IOException, MetaFileExceedsMaxException;
+
+  <T> Optional<T> getMeta(Role.Name name, Class<T> roleType) throws IOException, MetaFileExceedsMaxException;
 }
