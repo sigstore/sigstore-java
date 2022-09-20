@@ -41,6 +41,11 @@ public class HttpMetaFetcher implements MetaFetcher {
   }
 
   @Override
+  public String getSource() {
+    return mirror.toString();
+  }
+
+  @Override
   public Optional<Root> getRootAtVersion(int version)
       throws IOException, MetaFileExceedsMaxException {
     String versionFileName = version + ".root.json";

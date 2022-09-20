@@ -23,6 +23,12 @@ import java.util.Optional;
 public interface MetaFetcher {
 
   /**
+   * Describes the source of the metadata being fetched from. e.g "http://mirror.bla/mirror",
+   * "mock", "c:/tmp".
+   */
+  String getSource();
+
+  /**
    * Fetch the {@link Root} at the specified {@code version}.
    *
    * @throws MetaFileExceedsMaxException when the retrieved file is larger than the maximum allowed

@@ -56,7 +56,7 @@ class TufClientTest {
 
   static Server remote;
   static String remoteUrl;
-  private final Path trustedRoot = TestResources.CLIENT_TRUSTED_ROOT;
+  private static final Path trustedRoot = TestResources.CLIENT_TRUSTED_ROOT;
   @TempDir Path localStore;
   @TempDir static Path localMirror;
   Path tufTestData = Paths.get("src/test/resources/dev/sigstore/tuf/");
@@ -81,10 +81,8 @@ class TufClientTest {
   public void testRootUpdate_fromProdData()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-prod", "1.root.json", "2.root.json", "3.root.json", "4.root.json");
-    var client = createTimeStaticTufClient();
-    Path trustedRoot = tufTestData.resolve("trusted-root.json");
-    client.updateRoot(
-        trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
+    var client = createTimeStaticTufClient(localStore);
+    client.updateRoot();
     assertStoreContains("root.json");
     Root oldRoot = TestResources.loadRoot(trustedRoot);
     Root newRoot = TestResources.loadRoot(localStore.resolve("root.json"));
@@ -96,10 +94,9 @@ class TufClientTest {
   public void testRootUpdate_notEnoughSignatures()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-unsigned", "2.root.json");
-    var client = createTimeStaticTufClient();
+    var client = createTimeStaticTufClient(localStore);
     try {
-      client.updateRoot(
-          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
+      client.updateRoot();
       fail();
     } catch (SignatureVerificationException e) {
       assertEquals(3, e.getRequiredSignatures());
@@ -111,10 +108,9 @@ class TufClientTest {
   public void testRootUpdate_expiredRoot()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-expired", "2.root.json");
-    var client = createTimeStaticTufClient();
+    var client = createTimeStaticTufClient(localStore);
     try {
-      client.updateRoot(
-          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
+      client.updateRoot();
       fail();
     } catch (RootExpiredException e) {
       assertEquals(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME), e.getUpdateTime());
@@ -128,10 +124,9 @@ class TufClientTest {
   public void testRootUpdate_inconsistentVersion()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-inconsistent-version", "2.root.json");
-    var client = createTimeStaticTufClient();
+    var client = createTimeStaticTufClient(localStore);
     try {
-      client.updateRoot(
-          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
+      client.updateRoot();
       fail();
     } catch (RoleVersionException e) {
       assertEquals(2, e.getExpectedVersion());
@@ -143,10 +138,9 @@ class TufClientTest {
   public void testRootUpdate_metaFileTooBig()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-meta-file-too-big", "2.root.json");
-    var client = createTimeStaticTufClient();
+    var client = createTimeStaticTufClient(localStore);
     try {
-      client.updateRoot(
-          trustedRoot, new URL(remoteUrl), FileSystemTufStore.newFileSystemStore(localStore));
+      client.updateRoot();
       fail();
     } catch (MetaFileExceedsMaxException e) {
     }
@@ -304,11 +298,13 @@ class TufClientTest {
   }
 
   @NotNull
-  private static TufClient createTimeStaticTufClient() {
+  private static TufClient createTimeStaticTufClient(Path localStore) throws IOException {
     return TufClient.builder()
         .setClock(Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
-        .setFetcherSupplier(HttpMetaFetcher::newFetcher)
+        .setFetcher(HttpMetaFetcher.newFetcher(new URL(remoteUrl)))
+        .setTrustedRootPath(trustedRoot)
+        .setLocalStore(FileSystemTufStore.newFileSystemStore(localStore))
         .build();
   }
 

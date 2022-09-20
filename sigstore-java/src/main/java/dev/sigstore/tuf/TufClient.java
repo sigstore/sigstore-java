@@ -22,7 +22,6 @@ import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.tuf.model.*;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
@@ -35,7 +34,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
@@ -54,14 +52,23 @@ public class TufClient {
 
   private Clock clock;
   private Verifiers.Supplier verifiers;
-
-  private Function<URL, MetaFetcher> fetcherSupplier;
+  private MetaFetcher fetcher;
   private ZonedDateTime updateStartTime;
+  private Path trustedRootPath;
+  private TufLocalStore localStore;
 
-  TufClient(Clock clock, Verifiers.Supplier verifiers, Function<URL, MetaFetcher> fetcherSupplier) {
+  TufClient(
+      Clock clock,
+      Verifiers.Supplier verifiers,
+      MetaFetcher fetcher,
+      Path trustedRootPath,
+      TufLocalStore localStore) {
     this.clock = clock;
     this.verifiers = verifiers;
-    this.fetcherSupplier = fetcherSupplier;
+    this.fetcher = fetcher;
+    this.trustedRootPath = trustedRootPath;
+    this.localStore = localStore;
+    this.fetcher = fetcher;
   }
 
   public static Builder builder() {
@@ -69,11 +76,10 @@ public class TufClient {
   }
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
-  public void updateRoot(Path trustedRootPath, URL mirror, TufLocalStore localStore)
+  public void updateRoot()
       throws IOException, RootExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, MetaFileExceedsMaxException, RoleVersionException,
           SignatureVerificationException {
-    var fetcher = fetcherSupplier.apply(mirror);
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);
@@ -133,7 +139,7 @@ public class TufClient {
     // otherwise throw error.
     ZonedDateTime expires = trustedRoot.getSignedMeta().getExpiresAsDate();
     if (expires.isBefore(updateStartTime)) {
-      throw new RootExpiredException(mirror.toString(), updateStartTime, expires);
+      throw new RootExpiredException(fetcher.getSource(), updateStartTime, expires);
     }
     // 5.3.11) If the timestamp and / or snapshot keys have been rotated, then delete the trusted
     // timestamp and snapshot metadata files.
@@ -257,7 +263,10 @@ public class TufClient {
   public static class Builder {
     private Clock clock = Clock.systemUTC();
     private Verifiers.Supplier verifiers = Verifiers::newVerifier;
-    private Function<URL, MetaFetcher> fetcherSupplier = HttpMetaFetcher::newFetcher;
+
+    private MetaFetcher fetcher;
+    private Path trustedRootPath;
+    private TufLocalStore localStore;
 
     public Builder setClock(Clock clock) {
       this.clock = clock;
@@ -269,13 +278,23 @@ public class TufClient {
       return this;
     }
 
-    public Builder setFetcherSupplier(Function<URL, MetaFetcher> fetcherSupplier) {
-      this.fetcherSupplier = fetcherSupplier;
+    public Builder setLocalStore(TufLocalStore store) {
+      this.localStore = store;
+      return this;
+    }
+
+    public Builder setTrustedRootPath(Path trustedRootPath) {
+      this.trustedRootPath = trustedRootPath;
+      return this;
+    }
+
+    public Builder setFetcher(MetaFetcher fetcher) {
+      this.fetcher = fetcher;
       return this;
     }
 
     public TufClient build() {
-      return new TufClient(clock, verifiers, fetcherSupplier);
+      return new TufClient(clock, verifiers, fetcher, trustedRootPath, localStore);
     }
   }
 }
