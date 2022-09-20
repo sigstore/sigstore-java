@@ -210,7 +210,7 @@ class TufClientTest {
     Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
     Role delegate = ImmutableRootRole.builder().addKeyids(PUB_KEY_1.getLeft()).threshold(1).build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
-    var client = new TufClient.Builder().setVerifiers(ALWAYS_FAILS).build();
+    var client = TufClient.builder().setVerifiers(ALWAYS_FAILS).build();
     try {
       client.verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail("This should have failed since the public key for PUB_KEY_1 should fail to verify.");
@@ -305,7 +305,7 @@ class TufClientTest {
 
   @NotNull
   private static TufClient createTimeStaticTufClient() {
-    return new TufClient.Builder()
+    return TufClient.builder()
         .setClock(Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
         .setFetcherSupplier(HttpMetaFetcher::newFetcher)
@@ -314,7 +314,7 @@ class TufClientTest {
 
   @NotNull
   private static TufClient createAlwaysVerifyingTufClient() {
-    return new TufClient.Builder().setVerifiers(ALWAYS_VERIFIES).build();
+    return TufClient.builder().setVerifiers(ALWAYS_VERIFIES).build();
   }
 
   private static void setupMirror(String repoName, String... files) throws IOException {

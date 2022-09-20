@@ -56,6 +56,7 @@ public class TufClient {
   private Verifiers.Supplier verifiers;
 
   private Function<URL, MetaFetcher> fetcherSupplier;
+  private ZonedDateTime updateStartTime;
 
   TufClient(Clock clock, Verifiers.Supplier verifiers, Function<URL, MetaFetcher> fetcherSupplier) {
     this.clock = clock;
@@ -63,7 +64,9 @@ public class TufClient {
     this.fetcherSupplier = fetcherSupplier;
   }
 
-  private ZonedDateTime updateStartTime;
+  public static Builder builder() {
+    return new Builder();
+  }
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
   public void updateRoot(Path trustedRootPath, URL mirror, TufLocalStore localStore)
