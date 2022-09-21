@@ -26,7 +26,7 @@ public interface TufLocalStore {
    * If the local store has a root that has been blessed safe either by the client or through update
    * and verification, then this method returns it.
    */
-  Optional<Root> getTrustedRoot();
+  Optional<Root> loadTrustedRoot() throws IOException;
 
   /**
    * Once you have ascertained that your root is trustworthy use this method to persist it to your
@@ -39,7 +39,7 @@ public interface TufLocalStore {
    * @throws IOException since some implementations may persist the root to disk or over the network
    *     we throw {@code IOException} in case of IO error.
    */
-  void setTrustedRoot(Root root) throws IOException;
+  void storeTrustedRoot(Root root) throws IOException;
 
   /**
    * This clears out the snapshot and timestamp metadata from the store, as required when snapshot
