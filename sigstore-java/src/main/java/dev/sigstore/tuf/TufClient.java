@@ -17,17 +17,11 @@ package dev.sigstore.tuf;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
-import com.google.api.client.http.GenericUrl;
-import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
-import dev.sigstore.http.HttpClients;
-import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.tuf.model.*;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
@@ -52,31 +46,37 @@ import org.bouncycastle.util.encoders.Hex;
  */
 public class TufClient {
 
-  private static final int MAX_META_BYTES = 99 * 1024; // 99 KB
   private static final int MAX_UPDATES =
       1024; // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in
   // 5.3.3 of spec.
 
   private Clock clock;
   private Verifiers.Supplier verifiers;
+  private MetaFetcher fetcher;
+  private ZonedDateTime updateStartTime;
+  private Path trustedRootPath;
+  private TufLocalStore localStore;
 
-  TufClient(Clock clock, Verifiers.Supplier verifiers) {
+  TufClient(
+      Clock clock,
+      Verifiers.Supplier verifiers,
+      MetaFetcher fetcher,
+      Path trustedRootPath,
+      TufLocalStore localStore) {
     this.clock = clock;
     this.verifiers = verifiers;
+    this.fetcher = fetcher;
+    this.trustedRootPath = trustedRootPath;
+    this.localStore = localStore;
+    this.fetcher = fetcher;
   }
 
-  TufClient(Verifiers.Supplier verifiers) {
-    this(Clock.systemUTC(), verifiers);
+  public static Builder builder() {
+    return new Builder();
   }
-
-  TufClient() {
-    this(Clock.systemUTC(), Verifiers::newVerifier);
-  }
-
-  private ZonedDateTime updateStartTime;
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
-  public void updateRoot(Path trustedRootPath, URL mirror, TufLocalStore localStore)
+  public void updateRoot()
       throws IOException, RootExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, MetaFileExceedsMaxException, RoleVersionException,
           SignatureVerificationException {
@@ -98,36 +98,12 @@ public class TufClient {
       // 5.3.3) download $version+1.root.json from mirror url (eventually obtained from remote.json
       // or map.json) up MAX_META_BYTES. If the file is not available, or we have reached
       // MAX_UPDATES number of root metadata files go to step 5.3.10
-      String nextVersionFileName = nextVersion + ".root.json";
-      GenericUrl nextVersionUrl = new GenericUrl(mirror + "/" + nextVersionFileName);
-      var req =
-          HttpClients.newHttpTransport(ImmutableHttpParams.builder().build())
-              .createRequestFactory(
-                  request -> {
-                    request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser());
-                  })
-              .buildGetRequest(nextVersionUrl);
-      req.getHeaders().setAccept("application/json; api-version=2.0");
-      req.getHeaders().setContentType("application/json");
-      req.setThrowExceptionOnExecuteError(false);
-      var resp = req.execute();
-      if (resp.getStatusCode() == 404) {
+      var newRootMaybe = fetcher.getRootAtVersion(nextVersion);
+      if (newRootMaybe.isEmpty()) {
         // No newer versions, go to 5.3.10.
         break;
       }
-      if (resp.getStatusCode() != 200) {
-        throw new TufException(
-            String.format(
-                "Unexpected return from mirror. Status code: %s, status message: %s"
-                    + resp.getStatusCode()
-                    + resp.getStatusMessage()));
-      }
-      byte[] rootBytes = resp.getContent().readNBytes(MAX_META_BYTES);
-      if (rootBytes.length == MAX_META_BYTES && resp.getContent().read() != -1) {
-        throw new MetaFileExceedsMaxException(nextVersionUrl.toString(), MAX_META_BYTES);
-      }
-      var newRoot = GSON.get().fromJson(new String(rootBytes, StandardCharsets.UTF_8), Root.class);
-
+      var newRoot = newRootMaybe.get();
       // 5.3.4) we have a valid next version of the root.json. Check that the file has been signed
       // by:
       //   a) a threshold (from step 2) of keys specified in the trusted metadata
@@ -163,7 +139,7 @@ public class TufClient {
     // otherwise throw error.
     ZonedDateTime expires = trustedRoot.getSignedMeta().getExpiresAsDate();
     if (expires.isBefore(updateStartTime)) {
-      throw new RootExpiredException(mirror.toString(), updateStartTime, expires);
+      throw new RootExpiredException(fetcher.getSource(), updateStartTime, expires);
     }
     // 5.3.11) If the timestamp and / or snapshot keys have been rotated, then delete the trusted
     // timestamp and snapshot metadata files.
@@ -230,7 +206,7 @@ public class TufClient {
   public void updateTimestamp() {
     // 1) download the timestamp.json bytes up to few 10s of K max.
 
-    // 2) verify against threshold of keys as specified in trusted root,json
+    // 2) verify against threshold of keys as specified in trusted root.json
 
     // 3) check that version of new timestamp.json is higher or equal than current, else fail.
     //     3.2) check that timestamp.snapshot.version <= timestamp.version or fail
@@ -282,5 +258,43 @@ public class TufClient {
     // 9) Download target up to length specified in bytes. verify against hash.
 
     // Done!!
+  }
+
+  public static class Builder {
+    private Clock clock = Clock.systemUTC();
+    private Verifiers.Supplier verifiers = Verifiers::newVerifier;
+
+    private MetaFetcher fetcher;
+    private Path trustedRootPath;
+    private TufLocalStore localStore;
+
+    public Builder setClock(Clock clock) {
+      this.clock = clock;
+      return this;
+    }
+
+    public Builder setVerifiers(Verifiers.Supplier verifiers) {
+      this.verifiers = verifiers;
+      return this;
+    }
+
+    public Builder setLocalStore(TufLocalStore store) {
+      this.localStore = store;
+      return this;
+    }
+
+    public Builder setTrustedRootPath(Path trustedRootPath) {
+      this.trustedRootPath = trustedRootPath;
+      return this;
+    }
+
+    public Builder setFetcher(MetaFetcher fetcher) {
+      this.fetcher = fetcher;
+      return this;
+    }
+
+    public TufClient build() {
+      return new TufClient(clock, verifiers, fetcher, trustedRootPath, localStore);
+    }
   }
 }
