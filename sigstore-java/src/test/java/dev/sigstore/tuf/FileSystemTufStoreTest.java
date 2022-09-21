@@ -28,7 +28,7 @@ class FileSystemTufStoreTest {
   @Test
   void newFileSystemStore_empty(@TempDir Path repoBase) throws IOException {
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    assertFalse(tufLocalStore.getTrustedRoot().isPresent());
+    assertFalse(tufLocalStore.loadTrustedRoot().isPresent());
   }
 
   @Test
@@ -36,14 +36,14 @@ class FileSystemTufStoreTest {
     String repoName = "remote-repo-prod";
     TestResources.setupRepoFiles(repoName, repoBase, "root.json");
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    assertTrue(tufLocalStore.getTrustedRoot().isPresent());
+    assertTrue(tufLocalStore.loadTrustedRoot().isPresent());
   }
 
   @Test
   void setTrustedRoot_noPrevious(@TempDir Path repoBase) throws IOException {
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
-    tufLocalStore.setTrustedRoot(TestResources.loadRoot(TestResources.CLIENT_TRUSTED_ROOT));
+    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.CLIENT_TRUSTED_ROOT));
     assertEquals(1, repoBase.toFile().list().length);
     assertTrue(repoBase.resolve("root.json").toFile().exists());
   }
@@ -53,9 +53,9 @@ class FileSystemTufStoreTest {
     String repoName = "remote-repo-prod";
     TestResources.setupRepoFiles(repoName, repoBase, "root.json");
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    int version = tufLocalStore.getTrustedRoot().get().getSignedMeta().getVersion();
+    int version = tufLocalStore.loadTrustedRoot().get().getSignedMeta().getVersion();
     assertFalse(repoBase.resolve(version + ".root.json").toFile().exists());
-    tufLocalStore.setTrustedRoot(TestResources.loadRoot(TestResources.CLIENT_TRUSTED_ROOT));
+    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.CLIENT_TRUSTED_ROOT));
     assertTrue(repoBase.resolve(version + ".root.json").toFile().exists());
   }
 

@@ -154,7 +154,7 @@ public class TufClient {
       // 5.3.7) set the trusted root metadata to the new root
       trustedRoot = newRoot;
       // 5.3.8) persist to repo
-      localStore.setTrustedRoot(trustedRoot);
+      localStore.storeTrustedRoot(trustedRoot);
       // 5.3.9) see if there are more versions go back 5.3.3
       nextVersion++;
     }
