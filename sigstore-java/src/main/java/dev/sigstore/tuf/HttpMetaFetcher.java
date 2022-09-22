@@ -21,6 +21,7 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.json.gson.GsonFactory;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
 import java.io.IOException;
 import java.net.URL;
@@ -30,7 +31,7 @@ import java.util.Optional;
 public class HttpMetaFetcher implements MetaFetcher {
 
   private static final int MAX_META_BYTES = 99 * 1024; // 99 KB
-  private URL mirror;
+  private final URL mirror;
 
   HttpMetaFetcher(URL mirror) {
     this.mirror = mirror;
@@ -49,13 +50,24 @@ public class HttpMetaFetcher implements MetaFetcher {
   public Optional<Root> getRootAtVersion(int version)
       throws IOException, MetaFileExceedsMaxException {
     String versionFileName = version + ".root.json";
-    GenericUrl nextVersionUrl = new GenericUrl(mirror + "/" + versionFileName);
+    return getMeta(versionFileName, Root.class);
+  }
+
+  @Override
+  public <T> Optional<T> getMeta(Role.Name role, Class<T> t)
+      throws IOException, MetaFileExceedsMaxException {
+    String fileName = role.name().toLowerCase() + ".json";
+    return getMeta(fileName, t);
+  }
+
+  <T> Optional<T> getMeta(String filename, Class<T> t)
+      throws IOException, MetaFileExceedsMaxException {
+    GenericUrl nextVersionUrl = new GenericUrl(mirror + "/" + filename);
     var req =
         HttpClients.newHttpTransport(ImmutableHttpParams.builder().build())
             .createRequestFactory(
-                request -> {
-                  request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser());
-                })
+                request ->
+                    request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser()))
             .buildGetRequest(nextVersionUrl);
     req.getHeaders().setAccept("application/json; api-version=2.0");
     req.getHeaders().setContentType("application/json");
@@ -71,11 +83,10 @@ public class HttpMetaFetcher implements MetaFetcher {
                   + resp.getStatusCode()
                   + resp.getStatusMessage()));
     }
-    byte[] rootBytes = resp.getContent().readNBytes(MAX_META_BYTES);
-    if (rootBytes.length == MAX_META_BYTES && resp.getContent().read() != -1) {
+    byte[] roleBytes = resp.getContent().readNBytes(MAX_META_BYTES);
+    if (roleBytes.length == MAX_META_BYTES && resp.getContent().read() != -1) {
       throw new MetaFileExceedsMaxException(nextVersionUrl.toString(), MAX_META_BYTES);
     }
-    return Optional.of(
-        GSON.get().fromJson(new String(rootBytes, StandardCharsets.UTF_8), Root.class));
+    return Optional.of(GSON.get().fromJson(new String(roleBytes, StandardCharsets.UTF_8), t));
   }
 }
