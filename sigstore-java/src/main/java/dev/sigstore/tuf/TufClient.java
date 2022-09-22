@@ -109,17 +109,9 @@ public class TufClient {
       //   a) a threshold (from step 2) of keys specified in the trusted metadata
       //   b) and a threshold of keys in the new root.json.
       //    Fail if either a or b aren't true.
-      var trustedRootKeys = trustedRoot.getSignedMeta().getKeys();
-      var newRootSignatures = newRoot.getSignatures();
-      byte[] newRootMetaBytes = newRoot.getCanonicalSignedBytes();
-      // Verify our new root meta against the trusted root keys.
-      RootRole trustedRootRoleMeta = trustedRoot.getSignedMeta().getRole(Role.Name.ROOT);
-      verifyDelegate(newRootSignatures, trustedRootKeys, trustedRootRoleMeta, newRootMetaBytes);
 
-      var newRootRoleMeta = newRoot.getSignedMeta().getRole(Role.Name.ROOT);
-      var newRootKeys = newRoot.getSignedMeta().getKeys();
-      // Verify our new root meta against the new root keys.
-      verifyDelegate(newRootSignatures, newRootKeys, newRootRoleMeta, newRootMetaBytes);
+      verifyDelegate(trustedRoot, newRoot);
+      verifyDelegate(newRoot, newRoot);
 
       // 5.3.5) We've taken the liberty to modify 5.3.5 to just validate that the new root meta
       // matches the version we pulled based off of the pattern {version}.root.json. We know due to
@@ -152,6 +144,17 @@ public class TufClient {
 
   private boolean hasNewKeys(RootRole oldRole, RootRole newRole) {
     return newRole.getKeyids().stream().allMatch(s -> oldRole.getKeyids().contains(s));
+  }
+
+  void verifyDelegate(Root trustedRoot, SignedTufMeta delegate)
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    verifyDelegate(
+        delegate.getSignatures(),
+        trustedRoot.getSignedMeta().getKeys(),
+        trustedRoot
+            .getSignedMeta()
+            .getRole(Role.Name.valueOf(delegate.getSignedMeta().getType().toUpperCase())),
+        delegate.getCanonicalSignedBytes());
   }
 
   /**
