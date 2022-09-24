@@ -53,12 +53,12 @@ jobs:
           go install github.com/sigstore/fulcio@main
 
     - name: Test sigstore-java
-      uses: gradle/gradle-build-action@dd8493d4f23e652bdf286013ed7cd9108f540316 # tag=v2.3.0
+      uses: gradle/gradle-build-action@c295a4096e1d2c453eaf1f65c6f96686e26bd8be # tag=v2.3.1
       with:
         arguments: build
 
     - name: Test sigstore-java/sandbox
-      uses: gradle/gradle-build-action@dd8493d4f23e652bdf286013ed7cd9108f540316 # tag=v2.3.0 
+      uses: gradle/gradle-build-action@c295a4096e1d2c453eaf1f65c6f96686e26bd8be # tag=v2.3.1 
       with:
         arguments: build
         build-root-directory: sandbox
