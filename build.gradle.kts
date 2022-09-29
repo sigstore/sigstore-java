@@ -3,7 +3,7 @@ plugins {
     // It does not support participating in precompiled script plugins
     id("com.github.vlsi.stage-vote-release") version "1.82"
     // The Kotlin Gradle plugin was loaded multiple times in different subprojects, which is not supported and may break the build.
-    kotlin("jvm") version "1.5.31" apply false
+    kotlin("jvm") version "1.7.20" apply false
 }
 
 val buildVersion = "${findProperty("version")}${releaseParams.snapshotSuffix}"
