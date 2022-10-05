@@ -52,6 +52,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class TufClientTest {
 
+  // frivolous comment to kick CI.
   public static final String TEST_STATIC_UPDATE_TIME = "2022-09-09T13:37:00.00Z";
 
   static Server remote;
