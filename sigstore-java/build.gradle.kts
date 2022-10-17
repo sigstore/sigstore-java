@@ -26,7 +26,7 @@ dependencies {
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
 
     // grpc deps
-    implementation(platform("io.grpc:grpc-bom:1.49.2"))
+    implementation(platform("io.grpc:grpc-bom:1.50.0"))
     implementation("io.grpc:grpc-protobuf")
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
