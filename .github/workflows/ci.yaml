@@ -45,7 +45,7 @@ jobs:
     - name: Setup Go environment
       uses: actions/setup-go@v3.3.0
       with:
-        go-version: '1.17.x'
+        go-version: '1.19.x'
 
     # at some point this should just be replaced with something that can bring up a sigstore test env
     - name: Install Fulcio
