@@ -1,15 +1,10 @@
-import com.google.protobuf.gradle.generateProtoTasks
 import com.google.protobuf.gradle.id
-import com.google.protobuf.gradle.ofSourceSet
-import com.google.protobuf.gradle.plugins
-import com.google.protobuf.gradle.protobuf
-import com.google.protobuf.gradle.protoc
 
 plugins {
     id("build-logic.java-published-library")
     id("com.diffplug.spotless") version "6.11.0"
     id("org.jsonschema2dataclass") version "4.4.0"
-    id("com.google.protobuf") version "0.8.19"
+    id("com.google.protobuf") version "0.9.1"
 }
 
 description = "A Java client for signing and verifying using Sigstore"
@@ -31,6 +26,7 @@ dependencies {
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
+
     implementation("commons-codec:commons-codec:1.15")
     implementation("com.google.code.gson:gson:2.9.1")
     implementation("org.bouncycastle:bcutil-jdk18on:1.72")
@@ -65,8 +61,8 @@ protobuf {
         }
     }
     generateProtoTasks {
-        ofSourceSet("main").forEach() {
-            it.plugins {
+        ofSourceSet("main").configureEach {
+            plugins {
                 id("grpc")
             }
         }
@@ -97,14 +93,9 @@ spotless {
     }
 }
 
-sourceSets["main"].java {
-    srcDirs("build/generated/source/proto/main/grpc")
-    srcDirs("build/generated/source/proto/main/java")
-}
-
 jsonSchema2Pojo {
     source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
-    targetDirectoryPrefix.set(file("${project.buildDir}/generated/sources/rekor-model/"))
+    targetDirectoryPrefix.set(file("$buildDir/generated/sources/rekor-model/"))
     targetPackage.set("dev.sigstore.rekor")
     generateBuilders.set(true)
     annotationStyle.set("gson")
@@ -112,7 +103,7 @@ jsonSchema2Pojo {
 
 // TODO: keep until these code gen plugins explicitly declare dependencies
 tasks.named("sourcesJar") {
-    dependsOn("generateProto", "generateJsonSchema2DataClass0")
+    dependsOn("generateJsonSchema2DataClass0")
 }
 
 tasks.test {
