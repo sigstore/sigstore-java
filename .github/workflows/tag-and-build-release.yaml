@@ -65,7 +65,7 @@ jobs:
         id: hash
         run: |
           cd build/release
-          echo "::set-output name=hashes::$(sha256sum ./* | base64 -w0)"
+          echo "hashes=$(sha256sum ./* | base64 -w0)" >> $GITHUB_OUTPUT
           sha256sum ./*
 
       - name: Upload build artifacts
