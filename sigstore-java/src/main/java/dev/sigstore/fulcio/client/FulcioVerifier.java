@@ -24,9 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.*;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
+import java.util.*;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Verifier for fulcio {@link dev.sigstore.fulcio.client.SigningCertificate}. */
@@ -38,15 +36,18 @@ public class FulcioVerifier {
    * Instantiate a new verifier.
    *
    * @param fulcioRoot fulcio's root certificate
-   * @param ctfePublicKey fulcio's certificate transparency log's public key
+   * @param ctfePublicKeys fulcio's certificate transparency log public keys (for all logs)
    */
-  public static FulcioVerifier newFulcioVerifier(byte[] fulcioRoot, byte @Nullable [] ctfePublicKey)
+  public static FulcioVerifier newFulcioVerifier(byte[] fulcioRoot, List<byte[]> ctfePublicKeys)
       throws InvalidKeySpecException, NoSuchAlgorithmException, CertificateException, IOException,
           InvalidAlgorithmParameterException {
 
-    PublicKey ctfePublicKeyObj = null;
-    if (ctfePublicKey != null) {
-      ctfePublicKeyObj = Keys.parsePublicKey(ctfePublicKey);
+    List<PublicKey> ctfePublicKeyObjs = null;
+    if (ctfePublicKeys != null && ctfePublicKeys.size() != 0) {
+      ctfePublicKeyObjs = new ArrayList<>();
+      for (var pk : ctfePublicKeys) {
+        ctfePublicKeyObjs.add(Keys.parsePublicKey(pk));
+      }
     }
 
     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
@@ -59,15 +60,25 @@ public class FulcioVerifier {
     // encountered in verifyCertPath
     new PKIXParameters(Collections.singleton(fulcioRootTrustAnchor));
 
-    return new FulcioVerifier(fulcioRootTrustAnchor, ctfePublicKeyObj);
+    return new FulcioVerifier(fulcioRootTrustAnchor, ctfePublicKeyObjs);
   }
 
-  private FulcioVerifier(TrustAnchor fulcioRoot, @Nullable PublicKey ctfePublicKey) {
+  private FulcioVerifier(TrustAnchor fulcioRoot, @Nullable List<PublicKey> ctfePublicKeys) {
     this.fulcioRoot = fulcioRoot;
-    if (ctfePublicKey != null) {
-      var ctLogInfo = new CTLogInfo(ctfePublicKey, "fulcio ct log", "unused-url");
+    if (ctfePublicKeys != null) {
+      var logInfos = new ArrayList<CTLogInfo>();
+      for (var pk : ctfePublicKeys) {
+        var ctLogInfo = new CTLogInfo(pk, "fulcio ct log", "unused-url");
+        logInfos.add(ctLogInfo);
+      }
       this.ctVerifier =
-          new CTVerifier(logId -> Arrays.equals(logId, ctLogInfo.getID()) ? ctLogInfo : null);
+          new CTVerifier(
+              logId ->
+                  logInfos
+                      .stream()
+                      .filter(ctLogInfo -> Arrays.equals(ctLogInfo.getID(), logId))
+                      .findFirst()
+                      .orElse(null));
     } else {
       ctVerifier = null;
     }

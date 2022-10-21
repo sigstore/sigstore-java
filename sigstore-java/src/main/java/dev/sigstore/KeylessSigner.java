@@ -17,7 +17,6 @@ package dev.sigstore;
 
 import com.google.api.client.util.Preconditions;
 import com.google.common.hash.Hashing;
-import com.google.common.io.Resources;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -113,17 +112,14 @@ public class KeylessSigner {
     public Builder sigstorePublicDefaults()
         throws IOException, InvalidAlgorithmParameterException, CertificateException,
             InvalidKeySpecException, NoSuchAlgorithmException {
-      var fulcioCert =
-          Resources.toByteArray(
-              Resources.getResource("dev/sigstore/tuf/production/fulcio_v1.crt.pem"));
-      var ctfePublicKey =
-          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/ctfe.pub"));
-      var rekorPublicKey =
-          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/rekor.pub"));
       fulcioClient(
           FulcioClient.builder().build(),
-          FulcioVerifier.newFulcioVerifier(fulcioCert, ctfePublicKey));
-      rekorClient(RekorClient.builder().build(), RekorVerifier.newRekorVerifier(rekorPublicKey));
+          FulcioVerifier.newFulcioVerifier(
+              VerificationMaterial.Production.fulioCert(),
+              VerificationMaterial.Production.ctfePublicKeys()));
+      rekorClient(
+          RekorClient.builder().build(),
+          RekorVerifier.newRekorVerifier(VerificationMaterial.Production.rekorPublicKey()));
       oidcClient(WebOidcClient.builder().build());
       signer(Signers.newEcdsaSigner());
       return this;
@@ -132,20 +128,16 @@ public class KeylessSigner {
     public Builder sigstoreStagingDefaults()
         throws IOException, InvalidAlgorithmParameterException, CertificateException,
             InvalidKeySpecException, NoSuchAlgorithmException {
-      var fulcioCert =
-          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/fulcio.crt.pem"));
-      var ctfePublicKey =
-          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/ctfe.pub"));
-      var rekorPublicKey =
-          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/staging/rekor.pub"));
       fulcioClient(
           FulcioClient.builder()
               .setServerUrl(URI.create(FulcioClient.STAGING_FULCIO_SERVER))
               .build(),
-          FulcioVerifier.newFulcioVerifier(fulcioCert, ctfePublicKey));
+          FulcioVerifier.newFulcioVerifier(
+              VerificationMaterial.Staging.fulioCert(),
+              VerificationMaterial.Staging.ctfePublicKeys()));
       rekorClient(
           RekorClient.builder().setServerUrl(URI.create(RekorClient.STAGING_REKOR_SERVER)).build(),
-          RekorVerifier.newRekorVerifier(rekorPublicKey));
+          RekorVerifier.newRekorVerifier(VerificationMaterial.Staging.rekorPublicKey()));
       oidcClient(WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build());
       signer(Signers.newEcdsaSigner());
       return this;

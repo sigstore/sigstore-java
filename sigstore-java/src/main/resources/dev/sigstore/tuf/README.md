@@ -13,9 +13,9 @@ We keep copies of the remote tuf repositories locally in
    for interfacing with *.sigstage.dev
 
 For this client to function we need the following keys
-1. CTFE public key (`ctfe.pub` \
+1. CTFE public keys (`ctfe.pub`, `ctfe_*.pub`) \
    the public key for the certificate transparency log
-2. Fulcio root cert (`fulcio_v1.crt.pem` or `fulcio.crt.pem`)\
+2. Fulcio root cert (`fulcio_v1.crt.pem` or `fulcio.crt.pem`) \
    the root certificate for fulcio issued certificates
 3. Rekor public key (`rekor.pub`) \
    the public key for the rekor transparency log
