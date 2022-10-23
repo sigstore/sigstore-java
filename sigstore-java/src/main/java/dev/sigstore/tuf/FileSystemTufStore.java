@@ -21,9 +21,11 @@ import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.SignedTufMeta;
+import dev.sigstore.tuf.model.Timestamp;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -41,7 +43,7 @@ public class FileSystemTufStore implements TufLocalStore {
     this.repoBaseDir = repoBaseDir;
   }
 
-  static TufLocalStore newFileSystemStore(Path repoBaseDir) {
+  public static TufLocalStore newFileSystemStore(Path repoBaseDir) {
     if (!repoBaseDir.toFile().isDirectory()) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
@@ -49,8 +51,23 @@ public class FileSystemTufStore implements TufLocalStore {
   }
 
   @Override
+  public String getDirectoryPath() {
+    return repoBaseDir.toAbsolutePath().toString();
+  }
+
+  @Override
   public Optional<Root> loadTrustedRoot() throws IOException {
     return loadRole(Role.Name.ROOT, Root.class);
+  }
+
+  @Override
+  public Optional<Timestamp> loadTimestamp() throws IOException {
+    return loadRole(Role.Name.TIMESTAMP, Timestamp.class);
+  }
+
+  @Override
+  public <T extends SignedTufMeta> void storeMeta(T timestamp) throws IOException {
+    saveRole(timestamp);
   }
 
   <T extends SignedTufMeta> Optional<T> loadRole(Role.Name roleName, Class<T> tClass)
@@ -73,10 +90,14 @@ public class FileSystemTufStore implements TufLocalStore {
   public void storeTrustedRoot(Root root) throws IOException {
     Optional<Root> trustedRoot = loadTrustedRoot();
     if (trustedRoot.isPresent()) {
-      Files.move(
-          repoBaseDir.resolve(ROOT_FILE_NAME),
-          repoBaseDir.resolve(
-              trustedRoot.get().getSignedMeta().getVersion() + "." + ROOT_FILE_NAME));
+      try {
+        Files.move(
+            repoBaseDir.resolve(ROOT_FILE_NAME),
+            repoBaseDir.resolve(
+                trustedRoot.get().getSignedMeta().getVersion() + "." + ROOT_FILE_NAME));
+      } catch (FileAlreadyExistsException e) {
+        // The file is already backed-up. continue.
+      }
     }
     saveRole(root);
   }

@@ -16,17 +16,25 @@
 package dev.sigstore.tuf;
 
 import dev.sigstore.tuf.model.Root;
+import dev.sigstore.tuf.model.SignedTufMeta;
+import dev.sigstore.tuf.model.Timestamp;
 import java.io.IOException;
 import java.util.Optional;
 
 /** Defines the set of actions needed to support a local repository of TUF metadata. */
 public interface TufLocalStore {
 
+  String getDirectoryPath();
+
   /**
    * If the local store has a root that has been blessed safe either by the client or through update
    * and verification, then this method returns it.
    */
   Optional<Root> loadTrustedRoot() throws IOException;
+
+  Optional<Timestamp> loadTimestamp() throws IOException;
+
+  <T extends SignedTufMeta> void storeMeta(T meta) throws IOException;
 
   /**
    * Once you have ascertained that your root is trustworthy use this method to persist it to your

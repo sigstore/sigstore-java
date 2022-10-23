@@ -65,7 +65,6 @@ public class TufClient {
       TufLocalStore localStore) {
     this.clock = clock;
     this.verifiers = verifiers;
-    this.fetcher = fetcher;
     this.trustedRootPath = trustedRootPath;
     this.localStore = localStore;
     this.fetcher = fetcher;
@@ -77,7 +76,7 @@ public class TufClient {
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
   public void updateRoot()
-      throws IOException, RootExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
+      throws IOException, RoleExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, MetaFileExceedsMaxException, RoleVersionException,
           SignatureVerificationException {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
@@ -130,9 +129,7 @@ public class TufClient {
     // 5.3.10) Check expiration timestamp in trusted root is higher than fixed update start time,
     // otherwise throw error.
     ZonedDateTime expires = trustedRoot.getSignedMeta().getExpiresAsDate();
-    if (expires.isBefore(updateStartTime)) {
-      throw new RootExpiredException(fetcher.getSource(), updateStartTime, expires);
-    }
+    throwIfExpired(expires);
     // 5.3.11) If the timestamp and / or snapshot keys have been rotated, then delete the trusted
     // timestamp and snapshot metadata files.
     if (hasNewKeys(preUpdateSnapshotRole, trustedRoot.getSignedMeta().getRole(Role.Name.SNAPSHOT))
@@ -142,12 +139,19 @@ public class TufClient {
     }
   }
 
+  private void throwIfExpired(ZonedDateTime expires) {
+    if (expires.isBefore(updateStartTime)) {
+      throw new RoleExpiredException(fetcher.getSource(), updateStartTime, expires);
+    }
+  }
+
   private boolean hasNewKeys(RootRole oldRole, RootRole newRole) {
     return newRole.getKeyids().stream().allMatch(s -> oldRole.getKeyids().contains(s));
   }
 
   void verifyDelegate(Root trustedRoot, SignedTufMeta delegate)
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws SignatureVerificationException, IOException, NoSuchAlgorithmException,
+          InvalidKeySpecException, InvalidKeyException {
     verifyDelegate(
         delegate.getSignatures(),
         trustedRoot.getSignedMeta().getKeys(),
@@ -206,17 +210,44 @@ public class TufClient {
     }
   }
 
-  public void updateTimestamp() {
-    // 1) download the timestamp.json bytes up to few 10s of K max.
+  public void updateTimestamp()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
+          MetaNotFoundException, SignatureVerificationException {
+    // 1) download the timestamp.json bytes.
+    var timestamp =
+        fetcher
+            .getMeta(Role.Name.TIMESTAMP, Timestamp.class)
+            .orElseThrow(
+                () -> new MetaNotFoundException("could not find timestamp.json on mirror."));
 
     // 2) verify against threshold of keys as specified in trusted root.json
+    Root root =
+        localStore
+            .loadTrustedRoot()
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "we shouldn't reach this point in the update cycle without a local trusted root, but none was found at "
+                            + localStore.getDirectoryPath()
+                            + "/root.json"));
+    verifyDelegate(root, timestamp);
 
     // 3) check that version of new timestamp.json is higher or equal than current, else fail.
     //     3.2) check that timestamp.snapshot.version <= timestamp.version or fail
-
+    Optional<Timestamp> localTimestampMaybe = localStore.loadTimestamp();
+    if (localTimestampMaybe.isPresent()) {
+      Timestamp localTimestamp = localTimestampMaybe.get();
+      if (localTimestampMaybe.get().getSignedMeta().getVersion()
+          >= timestamp.getSignedMeta().getVersion()) {
+        throw new RoleVersionException(
+            localTimestamp.getSignedMeta().getVersion() + 1,
+            timestamp.getSignedMeta().getVersion());
+      }
+    }
     // 4) check expiration timestamp is after tuf update start time, else fail.
-
+    throwIfExpired(timestamp.getSignedMeta().getExpiresAsDate());
     // 5) persist timestamp.json
+    localStore.storeMeta(timestamp);
   }
 
   public void updateSnapshot() {
@@ -261,6 +292,11 @@ public class TufClient {
     // 9) Download target up to length specified in bytes. verify against hash.
 
     // Done!!
+  }
+
+  @VisibleForTesting
+  TufLocalStore getLocalStore() {
+    return localStore;
   }
 
   public static class Builder {

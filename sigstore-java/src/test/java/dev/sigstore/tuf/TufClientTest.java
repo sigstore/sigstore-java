@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
@@ -112,17 +113,18 @@ class TufClientTest {
     try {
       client.updateRoot();
       fail();
-    } catch (RootExpiredException e) {
+    } catch (RoleExpiredException e) {
       assertEquals(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME), e.getUpdateTime());
       // straight from remote-repo-expired/2.root.json
       assertEquals(
-          ZonedDateTime.parse("2022-05-11T19:09:02.663975009Z"), e.getRootExpirationTime());
+          ZonedDateTime.parse("2022-05-11T19:09:02.663975009Z"), e.getRoleExpirationTime());
     }
   }
 
   @Test
   public void testRootUpdate_inconsistentVersion()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
+          SignatureVerificationException {
     setupMirror("remote-repo-inconsistent-version", "2.root.json");
     var client = createTimeStaticTufClient(localStore);
     try {
@@ -143,6 +145,97 @@ class TufClientTest {
       client.updateRoot();
       fail();
     } catch (MetaFileExceedsMaxException e) {
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_throwMetaNotFoundException() throws IOException {
+    setupMirror("remote-timestamp-not-present");
+    var client = createTimeStaticTufClient(localStore);
+    assertThrows(
+        MetaNotFoundException.class,
+        () -> {
+          client.updateTimestamp();
+        });
+  }
+
+  @Test
+  public void testTimestampUpdate_throwsSignatureVerificationException()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("remote-timestamp-unsigned", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    try {
+      client.updateRoot();
+      client.updateTimestamp();
+      fail();
+    } catch (SignatureVerificationException e) {
+      assertEquals(0, e.getVerifiedSignatures());
+      assertEquals(1, e.getRequiredSignatures());
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_throwsRoleVersionException()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
+    setupMirror(
+        "remote-timestamp-rollback-version", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    try {
+      client.updateRoot();
+      client.updateTimestamp();
+      fail();
+    } catch (RoleVersionException e) {
+      assertEquals(42, e.getExpectedVersion());
+      assertEquals(38, e.getFoundVersion());
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_throwsRoleExpiredException()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("remote-timestamp-expired", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    try {
+      client.updateRoot();
+      client.updateTimestamp();
+      fail();
+    } catch (RoleExpiredException e) {
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_noPreviousTimestamp_success()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
+    setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    client.updateRoot();
+    client.updateTimestamp();
+    assertStoreContains("timestamp.json");
+    assertEquals(52, client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion());
+  }
+
+  @Test
+  public void testTimestampUpdate_updateExistingTimestamp_success()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    client.updateRoot();
+    client.updateTimestamp();
+    assertStoreContains("timestamp.json");
+    assertEquals(52, client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion());
+  }
+
+  private void bootstrapLocalStore(
+      Path localStore, String tufFolder, String rootFile, String... roleFiles) throws IOException {
+    Files.copy(
+        TestResources.TUF_TEST_DATA_DIRECTORY.resolve(tufFolder).resolve(rootFile),
+        localStore.resolve("root.json"));
+    for (String file : roleFiles) {
+      Files.copy(
+          TestResources.TUF_TEST_DATA_DIRECTORY.resolve(tufFolder).resolve(file),
+          localStore.resolve(file));
     }
   }
 

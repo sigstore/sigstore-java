@@ -15,15 +15,20 @@
  */
 package dev.sigstore.tuf.model;
 
+import java.util.Map;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
-/** Signed envelope of the Timestamp metadata. */
+/**
+ * To prevent an adversary from replaying an out-of-date signed metadata file whose signature has
+ * not yet expired, an automated process periodically signs a timestamped statement containing the
+ * hash of the snapshot file. Even though this timestamp key must be kept online, the risk posed to
+ * clients by the compromise of this key is minimal.
+ */
 @Gson.TypeAdapters
 @Value.Immutable
-public interface Timestamp extends SignedTufMeta<TufMeta> {
+public interface TimestampMeta extends TufMeta {
 
-  @Override
-  @Gson.Named("signed")
-  TimestampMeta getSignedMeta();
+  /** Will only contain one element called snapshot.json */
+  Map<String, SnapshotMeta.SnapshotTarget> getMeta();
 }

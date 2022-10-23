@@ -18,34 +18,35 @@ package dev.sigstore.tuf;
 import java.time.ZonedDateTime;
 
 /**
- * Thrown when the local trusted root is expired and no valid root is found on the remote mirror.
+ * Thrown when the local trusted role is expired and no valid un-expired new role is found on the
+ * remote mirror.
  */
-public class RootExpiredException extends TufException {
-  private String rootUrl;
+public class RoleExpiredException extends TufException {
+  private String mirrorUrl;
   private ZonedDateTime updateTime;
-  private ZonedDateTime rootExpirationTime;
+  private ZonedDateTime roleExpirationTime;
 
-  public RootExpiredException(
-      String rootUrl, ZonedDateTime updateTime, ZonedDateTime rootExpirationTime) {
+  public RoleExpiredException(
+      String mirrorUrl, ZonedDateTime updateTime, ZonedDateTime roleExpirationTime) {
     super(
         String.format(
-            "Trusted root metadata is expired but no new versions are available at the "
+            "Trusted metadata is expired but no new versions are available at the "
                 + "mirror URL:(%s)\n update start time: %tc\n expired time: %tc)",
-            rootUrl, updateTime, rootExpirationTime));
-    this.rootUrl = rootUrl;
+            mirrorUrl, updateTime, roleExpirationTime));
+    this.mirrorUrl = mirrorUrl;
     this.updateTime = updateTime;
-    this.rootExpirationTime = rootExpirationTime;
+    this.roleExpirationTime = roleExpirationTime;
   }
 
-  public String getRootUrl() {
-    return rootUrl;
+  public String getMirrorUrl() {
+    return mirrorUrl;
   }
 
   public ZonedDateTime getUpdateTime() {
     return updateTime;
   }
 
-  public ZonedDateTime getRootExpirationTime() {
-    return rootExpirationTime;
+  public ZonedDateTime getRoleExpirationTime() {
+    return roleExpirationTime;
   }
 }
