@@ -51,7 +51,7 @@ public class FileSystemTufStore implements TufLocalStore {
   }
 
   @Override
-  public String getDirectoryPath() {
+  public String getIdentifier() {
     return repoBaseDir.toAbsolutePath().toString();
   }
 

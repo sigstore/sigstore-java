@@ -46,9 +46,9 @@ import org.bouncycastle.util.encoders.Hex;
  */
 public class TufClient {
 
-  private static final int MAX_UPDATES =
-      1024; // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in
-  // 5.3.3 of spec.
+  // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in 5.3.3 of
+  // spec.
+  private static final int MAX_UPDATES = 1024;
 
   private Clock clock;
   private Verifiers.Supplier verifiers;
@@ -228,7 +228,7 @@ public class TufClient {
                 () ->
                     new IllegalStateException(
                         "we shouldn't reach this point in the update cycle without a local trusted root, but none was found at "
-                            + localStore.getDirectoryPath()
+                            + localStore.getIdentifier()
                             + "/root.json"));
     verifyDelegate(root, timestamp);
 
