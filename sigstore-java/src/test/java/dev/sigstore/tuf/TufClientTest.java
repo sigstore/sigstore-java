@@ -98,7 +98,8 @@ class TufClientTest {
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
+      fail(
+          "SignastureVerificationException was expected as 0 verification signatures should be present.");
     } catch (SignatureVerificationException e) {
       assertEquals(3, e.getRequiredSignatures());
       assertEquals(0, e.getVerifiedSignatures());
@@ -112,7 +113,7 @@ class TufClientTest {
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
+      fail("The remote repo should be expired and cause a RoleExpiredException.");
     } catch (RoleExpiredException e) {
       assertEquals(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME), e.getUpdateTime());
       // straight from remote-repo-expired/2.root.json
@@ -129,7 +130,7 @@ class TufClientTest {
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
+      fail("RoleVersionException expected fetching 2.root.json with a version field set to 3.");
     } catch (RoleVersionException e) {
       assertEquals(2, e.getExpectedVersion());
       assertEquals(3, e.getFoundVersion());
@@ -143,8 +144,9 @@ class TufClientTest {
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
+      fail("MetaFileExceedsMaxException expected as 2.root.json is larger than max allowable.");
     } catch (MetaFileExceedsMaxException e) {
+      // expected
     }
   }
 
@@ -167,7 +169,7 @@ class TufClientTest {
     try {
       client.updateRoot();
       client.updateTimestamp();
-      fail();
+      fail("The timestamp was not signed so should have thown a SignatureVerificationException.");
     } catch (SignatureVerificationException e) {
       assertEquals(0, e.getVerifiedSignatures());
       assertEquals(1, e.getRequiredSignatures());
@@ -184,7 +186,8 @@ class TufClientTest {
     try {
       client.updateRoot();
       client.updateTimestamp();
-      fail();
+      fail(
+          "The repo in this test provides an older signed timestamp version that should have caused a RoleVersionException.");
     } catch (RoleVersionException e) {
       assertEquals(42, e.getExpectedVersion());
       assertEquals(38, e.getFoundVersion());
@@ -199,8 +202,9 @@ class TufClientTest {
     try {
       client.updateRoot();
       client.updateTimestamp();
-      fail();
+      fail("Expects a RoleExpiredException as the repo timestamp.json should be expired.");
     } catch (RoleExpiredException e) {
+      // expected.
     }
   }
 

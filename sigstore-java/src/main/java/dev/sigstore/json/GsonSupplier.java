@@ -19,7 +19,6 @@ import com.google.gson.*;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntry;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntryBody;
 import dev.sigstore.tuf.model.*;
-
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.function.Supplier;
@@ -34,33 +33,33 @@ public enum GsonSupplier implements Supplier<Gson> {
   GSON;
 
   private final Gson gson =
-    new GsonBuilder()
-      .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
-      .registerTypeAdapter(
-        LocalDateTime.class,
-        (JsonDeserializer<LocalDateTime>)
-          (json, type, jsonDeserializationContext) ->
-            ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString())
-              .toLocalDateTime())
-      // Immutables generated GSON Adapters in alphabetical order
-      .registerTypeAdapterFactory(new GsonAdaptersDelegations())
-      .registerTypeAdapterFactory(new GsonAdaptersDelegationRole())
-      .registerTypeAdapterFactory(new GsonAdaptersHashes())
-      .registerTypeAdapterFactory(new GsonAdaptersKey())
-      .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
-      .registerTypeAdapterFactory(new GsonAdaptersRekorEntryBody())
-      .registerTypeAdapterFactory(new GsonAdaptersRoot())
-      .registerTypeAdapterFactory(new GsonAdaptersRootMeta())
-      .registerTypeAdapterFactory(new GsonAdaptersRootRole())
-      .registerTypeAdapterFactory(new GsonAdaptersSignature())
-      .registerTypeAdapterFactory(new GsonAdaptersSnapshot())
-      .registerTypeAdapterFactory(new GsonAdaptersSnapshotMeta())
-      .registerTypeAdapterFactory(new GsonAdaptersTargets())
-      .registerTypeAdapterFactory(new GsonAdaptersTargetMeta())
-      .registerTypeAdapterFactory(new GsonAdaptersTimestamp())
-      .registerTypeAdapterFactory(new GsonAdaptersTimestampMeta())
-      .disableHtmlEscaping()
-      .create();
+      new GsonBuilder()
+          .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
+          .registerTypeAdapter(
+              LocalDateTime.class,
+              (JsonDeserializer<LocalDateTime>)
+                  (json, type, jsonDeserializationContext) ->
+                      ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString())
+                          .toLocalDateTime())
+          // Immutables generated GSON Adapters in alphabetical order
+          .registerTypeAdapterFactory(new GsonAdaptersDelegations())
+          .registerTypeAdapterFactory(new GsonAdaptersDelegationRole())
+          .registerTypeAdapterFactory(new GsonAdaptersHashes())
+          .registerTypeAdapterFactory(new GsonAdaptersKey())
+          .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
+          .registerTypeAdapterFactory(new GsonAdaptersRekorEntryBody())
+          .registerTypeAdapterFactory(new GsonAdaptersRoot())
+          .registerTypeAdapterFactory(new GsonAdaptersRootMeta())
+          .registerTypeAdapterFactory(new GsonAdaptersRootRole())
+          .registerTypeAdapterFactory(new GsonAdaptersSignature())
+          .registerTypeAdapterFactory(new GsonAdaptersSnapshot())
+          .registerTypeAdapterFactory(new GsonAdaptersSnapshotMeta())
+          .registerTypeAdapterFactory(new GsonAdaptersTargets())
+          .registerTypeAdapterFactory(new GsonAdaptersTargetMeta())
+          .registerTypeAdapterFactory(new GsonAdaptersTimestamp())
+          .registerTypeAdapterFactory(new GsonAdaptersTimestampMeta())
+          .disableHtmlEscaping()
+          .create();
 
   @Override
   public Gson get() {
