@@ -101,8 +101,8 @@ class TufClientTest {
       fail(
           "SignastureVerificationException was expected as 0 verification signatures should be present.");
     } catch (SignatureVerificationException e) {
-      assertEquals(3, e.getRequiredSignatures());
-      assertEquals(0, e.getVerifiedSignatures());
+      assertEquals(3, e.getRequiredSignatures(), "expected signature threshold");
+      assertEquals(0, e.getVerifiedSignatures(), "expected verified signatures");
     }
   }
 
@@ -132,8 +132,8 @@ class TufClientTest {
       client.updateRoot();
       fail("RoleVersionException expected fetching 2.root.json with a version field set to 3.");
     } catch (RoleVersionException e) {
-      assertEquals(2, e.getExpectedVersion());
-      assertEquals(3, e.getFoundVersion());
+      assertEquals(2, e.getExpectedVersion(), "expected root version");
+      assertEquals(3, e.getFoundVersion(), "found version");
     }
   }
 
@@ -171,8 +171,8 @@ class TufClientTest {
       client.updateTimestamp();
       fail("The timestamp was not signed so should have thown a SignatureVerificationException.");
     } catch (SignatureVerificationException e) {
-      assertEquals(0, e.getVerifiedSignatures());
-      assertEquals(1, e.getRequiredSignatures());
+      assertEquals(0, e.getVerifiedSignatures(), "verified signature threshold did not match");
+      assertEquals(1, e.getRequiredSignatures(), "required signatures found did not match");
     }
   }
 
@@ -189,8 +189,8 @@ class TufClientTest {
       fail(
           "The repo in this test provides an older signed timestamp version that should have caused a RoleVersionException.");
     } catch (RoleVersionException e) {
-      assertEquals(42, e.getExpectedVersion());
-      assertEquals(38, e.getFoundVersion());
+      assertEquals(42, e.getExpectedVersion(), "expected timestamp version did not match");
+      assertEquals(38, e.getFoundVersion(), "found timestamp version did not match");
     }
   }
 
@@ -217,7 +217,10 @@ class TufClientTest {
     client.updateRoot();
     client.updateTimestamp();
     assertStoreContains("timestamp.json");
-    assertEquals(52, client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion());
+    assertEquals(
+        52,
+        client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        "timestamp version did not match expectations");
   }
 
   @Test
@@ -228,7 +231,10 @@ class TufClientTest {
     client.updateRoot();
     client.updateTimestamp();
     assertStoreContains("timestamp.json");
-    assertEquals(52, client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion());
+    assertEquals(
+        52,
+        client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        "timestamp version did not match expectations.");
   }
 
   private void bootstrapLocalStore(
@@ -306,8 +312,9 @@ class TufClientTest {
       client.verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail("This should have failed since the public key for PUB_KEY_1 should fail to verify.");
     } catch (SignatureVerificationException e) {
-      assertEquals(1, e.getRequiredSignatures());
-      assertEquals(0, e.getVerifiedSignatures());
+      assertEquals(
+          1, e.getRequiredSignatures(), "required signature count did not match expectations.");
+      assertEquals(0, e.getVerifiedSignatures(), "verified signature expectations did not match.");
     }
   }
 
@@ -330,8 +337,9 @@ class TufClientTest {
       fail(
           "Test should have thrown SignatureVerificationException due to insufficient public keys");
     } catch (SignatureVerificationException e) {
-      assertEquals(1, e.getVerifiedSignatures());
-      assertEquals(2, e.getRequiredSignatures());
+      assertEquals(1, e.getVerifiedSignatures(), "verified signature expectations did not match.");
+      assertEquals(
+          2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
   }
 
@@ -351,8 +359,9 @@ class TufClientTest {
       fail(
           "Test should have thrown SignatureVerificationException due to insufficient public keys");
     } catch (SignatureVerificationException e) {
-      assertEquals(0, e.getVerifiedSignatures());
-      assertEquals(2, e.getRequiredSignatures());
+      assertEquals(0, e.getVerifiedSignatures(), "verified signature expectations did not match.");
+      assertEquals(
+          2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
   }
 
@@ -380,8 +389,9 @@ class TufClientTest {
     } catch (SignatureVerificationException e) {
       // pub key #1 and #3 were allowed, but only #1 and #2 were present so verification only
       // verified #1.
-      assertEquals(1, e.getVerifiedSignatures());
-      assertEquals(2, e.getRequiredSignatures());
+      assertEquals(1, e.getVerifiedSignatures(), "verified signature expectations did not match.");
+      assertEquals(
+          2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
   }
 
@@ -418,15 +428,21 @@ class TufClientTest {
     assertTrue(
         root.getSignedMeta()
             .getExpiresAsDate()
-            .isAfter(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME)));
+            .isAfter(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME)),
+        "The root should not be expired passed test static update time: "
+            + TEST_STATIC_UPDATE_TIME);
   }
 
   private void assertRootVersionIncreased(Root oldRoot, Root newRoot) throws IOException {
-    assertTrue(oldRoot.getSignedMeta().getVersion() <= newRoot.getSignedMeta().getVersion());
+    assertTrue(
+        oldRoot.getSignedMeta().getVersion() <= newRoot.getSignedMeta().getVersion(),
+        "The new root version should be higher than the old root.");
   }
 
   private void assertStoreContains(String resource) {
-    assertTrue(localStore.resolve(resource).toFile().exists());
+    assertTrue(
+        localStore.resolve(resource).toFile().exists(),
+        "The local store was expected to contain: " + resource);
   }
 
   @AfterEach
