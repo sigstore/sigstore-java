@@ -23,6 +23,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,7 @@ public class FulcioVerifierTest {
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/fulcio.crt.pem"));
     ctfePub =
         Resources.toByteArray(
-            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/ctfe-ec.pub"));
+            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/ctfe.pub"));
     badCtfePub =
         Resources.toByteArray(Resources.getResource("dev/sigstore/samples/keys/test-rsa.pub"));
 
@@ -67,7 +68,7 @@ public class FulcioVerifierTest {
           NoSuchAlgorithmException, InvalidAlgorithmParameterException,
           FulcioVerificationException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, ctfePub);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(ctfePub, badCtfePub));
 
     fulcioVerifier.verifyCertChain(signingCertificate);
     fulcioVerifier.verifySct(signingCertificate);
@@ -93,7 +94,7 @@ public class FulcioVerifierTest {
       throws SerializationException, CertificateException, IOException,
           InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchAlgorithmException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certs, null);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, ctfePub);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(ctfePub, badCtfePub));
 
     try {
       fulcioVerifier.verifySct(signingCertificate);
@@ -110,7 +111,7 @@ public class FulcioVerifierTest {
           NoSuchAlgorithmException, InvalidAlgorithmParameterException,
           FulcioVerificationException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certsWithEmbeddedSct, null);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, ctfePub);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(ctfePub, badCtfePub));
 
     fulcioVerifier.verifyCertChain(signingCertificate);
     fulcioVerifier.verifySct(signingCertificate);
@@ -122,7 +123,7 @@ public class FulcioVerifierTest {
           InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchAlgorithmException,
           FulcioVerificationException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certsWithEmbeddedSct, null);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, badCtfePub);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(badCtfePub));
 
     var fve =
         Assertions.assertThrows(
@@ -136,7 +137,7 @@ public class FulcioVerifierTest {
       throws SerializationException, CertificateException, IOException,
           InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchAlgorithmException {
     var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, badCtfePub);
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(badCtfePub));
 
     var fve =
         Assertions.assertThrows(
