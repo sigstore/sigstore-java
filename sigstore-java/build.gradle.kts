@@ -3,7 +3,7 @@ import com.google.protobuf.gradle.id
 plugins {
     id("build-logic.java-published-library")
     id("com.diffplug.spotless") version "6.11.0"
-    id("org.jsonschema2dataclass") version "4.4.0"
+    id("org.jsonschema2dataclass") version "4.5.0"
     id("com.google.protobuf") version "0.9.1"
 }
 
