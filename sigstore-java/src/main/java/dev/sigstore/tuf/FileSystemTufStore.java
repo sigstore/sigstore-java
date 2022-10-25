@@ -44,7 +44,7 @@ public class FileSystemTufStore implements TufLocalStore {
   }
 
   public static TufLocalStore newFileSystemStore(Path repoBaseDir) {
-    if (!repoBaseDir.toFile().isDirectory()) {
+    if (!Files.isDirectory(repoBaseDir)) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
     return new FileSystemTufStore(repoBaseDir);

@@ -154,11 +154,7 @@ class TufClientTest {
   public void testTimestampUpdate_throwMetaNotFoundException() throws IOException {
     setupMirror("remote-timestamp-not-present");
     var client = createTimeStaticTufClient(localStore);
-    assertThrows(
-        MetaNotFoundException.class,
-        () -> {
-          client.updateTimestamp();
-        });
+    assertThrows(MetaNotFoundException.class, client::updateTimestamp);
   }
 
   @Test

@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf;
 
-/** Thrown when a metadata resources was unexpectedly missing. * */
+/** Thrown when a metadata resources was unexpectedly missing. */
 public class MetaNotFoundException extends TufException {
 
   public MetaNotFoundException(String message) {
