@@ -43,7 +43,7 @@ class FileSystemTufStoreTest {
   void setTrustedRoot_noPrevious(@TempDir Path repoBase) throws IOException {
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
-    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.CLIENT_TRUSTED_ROOT));
+    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_TRUSTED_ROOT));
     assertEquals(1, repoBase.toFile().list().length);
     assertTrue(repoBase.resolve("root.json").toFile().exists());
   }
@@ -55,7 +55,7 @@ class FileSystemTufStoreTest {
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     int version = tufLocalStore.loadTrustedRoot().get().getSignedMeta().getVersion();
     assertFalse(repoBase.resolve(version + ".root.json").toFile().exists());
-    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.CLIENT_TRUSTED_ROOT));
+    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_TRUSTED_ROOT));
     assertTrue(repoBase.resolve(version + ".root.json").toFile().exists());
   }
 

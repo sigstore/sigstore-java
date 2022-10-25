@@ -51,13 +51,13 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 
-class TufClientTest {
+class UpdaterTest {
 
   public static final String TEST_STATIC_UPDATE_TIME = "2022-09-09T13:37:00.00Z";
 
   static Server remote;
   static String remoteUrl;
-  private static final Path trustedRoot = TestResources.CLIENT_TRUSTED_ROOT;
+  private static final Path trustedRoot = TestResources.UPDATER_TRUSTED_ROOT;
   @TempDir Path localStore;
   @TempDir static Path localMirror;
   Path tufTestData = Paths.get("src/test/resources/dev/sigstore/tuf/");
@@ -82,8 +82,8 @@ class TufClientTest {
   public void testRootUpdate_fromProdData()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-prod", "1.root.json", "2.root.json", "3.root.json", "4.root.json");
-    var client = createTimeStaticTufClient(localStore);
-    client.updateRoot();
+    var updater = createTimeStaticUpdater(localStore);
+    updater.updateRoot();
     assertStoreContains("root.json");
     Root oldRoot = TestResources.loadRoot(trustedRoot);
     Root newRoot = TestResources.loadRoot(localStore.resolve("root.json"));
@@ -95,9 +95,9 @@ class TufClientTest {
   public void testRootUpdate_notEnoughSignatures()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-unsigned", "2.root.json");
-    var client = createTimeStaticTufClient(localStore);
+    var updater = createTimeStaticUpdater(localStore);
     try {
-      client.updateRoot();
+      updater.updateRoot();
       fail(
           "SignastureVerificationException was expected as 0 verification signatures should be present.");
     } catch (SignatureVerificationException e) {
@@ -110,9 +110,9 @@ class TufClientTest {
   public void testRootUpdate_expiredRoot()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-expired", "2.root.json");
-    var client = createTimeStaticTufClient(localStore);
+    var updater = createTimeStaticUpdater(localStore);
     try {
-      client.updateRoot();
+      updater.updateRoot();
       fail("The remote repo should be expired and cause a RoleExpiredException.");
     } catch (RoleExpiredException e) {
       assertEquals(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME), e.getUpdateTime());
@@ -127,9 +127,9 @@ class TufClientTest {
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
           SignatureVerificationException {
     setupMirror("remote-repo-inconsistent-version", "2.root.json");
-    var client = createTimeStaticTufClient(localStore);
+    var updater = createTimeStaticUpdater(localStore);
     try {
-      client.updateRoot();
+      updater.updateRoot();
       fail("RoleVersionException expected fetching 2.root.json with a version field set to 3.");
     } catch (RoleVersionException e) {
       assertEquals(2, e.getExpectedVersion(), "expected root version");
@@ -141,9 +141,9 @@ class TufClientTest {
   public void testRootUpdate_metaFileTooBig()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-repo-meta-file-too-big", "2.root.json");
-    var client = createTimeStaticTufClient(localStore);
+    var updater = createTimeStaticUpdater(localStore);
     try {
-      client.updateRoot();
+      updater.updateRoot();
       fail("MetaFileExceedsMaxException expected as 2.root.json is larger than max allowable.");
     } catch (MetaFileExceedsMaxException e) {
       // expected
@@ -152,19 +152,22 @@ class TufClientTest {
 
   @Test
   public void testTimestampUpdate_throwMetaNotFoundException() throws IOException {
-    setupMirror("remote-timestamp-not-present");
-    var client = createTimeStaticTufClient(localStore);
-    assertThrows(MetaNotFoundException.class, client::updateTimestamp);
+    setupMirror("remote-timestamp-not-present", "2.root.json", "3.root.json");
+    var updater = createTimeStaticUpdater(localStore);
+    assertThrows(
+        MetaNotFoundException.class,
+        () -> {
+          updater.updateTimestamp(updater.updateRoot());
+        });
   }
 
   @Test
   public void testTimestampUpdate_throwsSignatureVerificationException()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-timestamp-unsigned", "2.root.json", "3.root.json", "timestamp.json");
-    var client = createTimeStaticTufClient(localStore);
+    var updater = createTimeStaticUpdater(localStore);
     try {
-      client.updateRoot();
-      client.updateTimestamp();
+      updater.updateTimestamp(updater.updateRoot());
       fail("The timestamp was not signed so should have thown a SignatureVerificationException.");
     } catch (SignatureVerificationException e) {
       assertEquals(0, e.getVerifiedSignatures(), "verified signature threshold did not match");
@@ -178,10 +181,9 @@ class TufClientTest {
     bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
     setupMirror(
         "remote-timestamp-rollback-version", "2.root.json", "3.root.json", "timestamp.json");
-    var client = createTimeStaticTufClient(localStore);
+    var updater = createTimeStaticUpdater(localStore);
     try {
-      client.updateRoot();
-      client.updateTimestamp();
+      updater.updateTimestamp(updater.updateRoot());
       fail(
           "The repo in this test provides an older signed timestamp version that should have caused a RoleVersionException.");
     } catch (RoleVersionException e) {
@@ -194,10 +196,9 @@ class TufClientTest {
   public void testTimestampUpdate_throwsRoleExpiredException()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-timestamp-expired", "2.root.json", "3.root.json", "timestamp.json");
-    var client = createTimeStaticTufClient(localStore);
+    var updater = createTimeStaticUpdater(localStore);
     try {
-      client.updateRoot();
-      client.updateTimestamp();
+      updater.updateTimestamp(updater.updateRoot());
       fail("Expects a RoleExpiredException as the repo timestamp.json should be expired.");
     } catch (RoleExpiredException e) {
       // expected.
@@ -209,13 +210,12 @@ class TufClientTest {
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
     setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
-    var client = createTimeStaticTufClient(localStore);
-    client.updateRoot();
-    client.updateTimestamp();
+    var updater = createTimeStaticUpdater(localStore);
+    updater.updateTimestamp(updater.updateRoot());
     assertStoreContains("timestamp.json");
     assertEquals(
         52,
-        client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        updater.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
         "timestamp version did not match expectations");
   }
 
@@ -223,13 +223,12 @@ class TufClientTest {
   public void testTimestampUpdate_updateExistingTimestamp_success()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
-    var client = createTimeStaticTufClient(localStore);
-    client.updateRoot();
-    client.updateTimestamp();
+    var updater = createTimeStaticUpdater(localStore);
+    updater.updateTimestamp(updater.updateRoot());
     assertStoreContains("timestamp.json");
     assertEquals(
         52,
-        client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        updater.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
         "timestamp version did not match expectations.");
   }
 
@@ -290,8 +289,7 @@ class TufClientTest {
             .build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
 
-    createAlwaysVerifyingTufClient()
-        .verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
+    createAlwaysVerifyingUpdater().verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
     // we are good
   }
 
@@ -303,9 +301,9 @@ class TufClientTest {
     Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
     Role delegate = ImmutableRootRole.builder().addKeyids(PUB_KEY_1.getLeft()).threshold(1).build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
-    var client = TufClient.builder().setVerifiers(ALWAYS_FAILS).build();
+    var updater = Updater.builder().setVerifiers(ALWAYS_FAILS).build();
     try {
-      client.verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
+      updater.verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail("This should have failed since the public key for PUB_KEY_1 should fail to verify.");
     } catch (SignatureVerificationException e) {
       assertEquals(
@@ -328,7 +326,7 @@ class TufClientTest {
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
 
     try {
-      createAlwaysVerifyingTufClient()
+      createAlwaysVerifyingUpdater()
           .verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail(
           "Test should have thrown SignatureVerificationException due to insufficient public keys");
@@ -350,7 +348,7 @@ class TufClientTest {
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
 
     try {
-      createAlwaysVerifyingTufClient()
+      createAlwaysVerifyingUpdater()
           .verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail(
           "Test should have thrown SignatureVerificationException due to insufficient public keys");
@@ -378,7 +376,7 @@ class TufClientTest {
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
 
     try {
-      createAlwaysVerifyingTufClient()
+      createAlwaysVerifyingUpdater()
           .verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail(
           "Test should have thrown SignatureVerificationException due to insufficient public keys");
@@ -401,8 +399,8 @@ class TufClientTest {
   }
 
   @NotNull
-  private static TufClient createTimeStaticTufClient(Path localStore) throws IOException {
-    return TufClient.builder()
+  private static Updater createTimeStaticUpdater(Path localStore) throws IOException {
+    return Updater.builder()
         .setClock(Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
         .setFetcher(HttpMetaFetcher.newFetcher(new URL(remoteUrl)))
@@ -412,8 +410,8 @@ class TufClientTest {
   }
 
   @NotNull
-  private static TufClient createAlwaysVerifyingTufClient() {
-    return TufClient.builder().setVerifiers(ALWAYS_VERIFIES).build();
+  private static Updater createAlwaysVerifyingUpdater() {
+    return Updater.builder().setVerifiers(ALWAYS_VERIFIES).build();
   }
 
   private static void setupMirror(String repoName, String... files) throws IOException {

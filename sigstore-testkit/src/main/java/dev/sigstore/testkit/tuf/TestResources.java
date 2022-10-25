@@ -25,8 +25,8 @@ import java.nio.file.Path;
 
 public class TestResources {
 
-  public static final Path CLIENT_TRUSTED_ROOT = Path.of(Resources.getResource("dev/sigstore/tuf/trusted-root.json").getPath());
-  public static final Path TUF_TEST_DATA_DIRECTORY = CLIENT_TRUSTED_ROOT.getParent();
+  public static final Path UPDATER_TRUSTED_ROOT = Path.of(Resources.getResource("dev/sigstore/tuf/trusted-root.json").getPath());
+  public static final Path TUF_TEST_DATA_DIRECTORY = UPDATER_TRUSTED_ROOT.getParent();
 
   public static void setupRepoFiles(String repoName, Path destinationDir, String... files)
       throws IOException {

@@ -37,14 +37,13 @@ import java.util.Optional;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
- * Tuf Client. Will eventually support configuring multiple remote mirrors and trust roots and
- * mapping to specific targets.
+ * Tuf metadata updater. Implements updating your trusted metadata from a single TUF mirror.
  *
  * @see <a
  *     href="https://theupdateframework.github.io/specification/latest/#detailed-client-workflow">TUF
  *     client workflow</a>
  */
-public class TufClient {
+public class Updater {
 
   // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in 5.3.3 of
   // spec.
@@ -57,7 +56,7 @@ public class TufClient {
   private Path trustedRootPath;
   private TufLocalStore localStore;
 
-  TufClient(
+  Updater(
       Clock clock,
       Verifiers.Supplier verifiers,
       MetaFetcher fetcher,
@@ -74,8 +73,16 @@ public class TufClient {
     return new Builder();
   }
 
+  public void update()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    var root = updateRoot();
+    var timestamp = updateTimestamp(root);
+    var snapshot = updateSnapshot(root, timestamp);
+    updateTargets(root, snapshot);
+  }
+
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
-  public void updateRoot()
+  Root updateRoot()
       throws IOException, RoleExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, MetaFileExceedsMaxException, RoleVersionException,
           SignatureVerificationException {
@@ -137,6 +144,7 @@ public class TufClient {
             preUpdateTimestampRole, trustedRoot.getSignedMeta().getRole(Role.Name.TIMESTAMP))) {
       localStore.clearMetaDueToKeyRotation();
     }
+    return trustedRoot;
   }
 
   private void throwIfExpired(ZonedDateTime expires) {
@@ -210,7 +218,7 @@ public class TufClient {
     }
   }
 
-  public void updateTimestamp()
+  Timestamp updateTimestamp(Root root)
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
           MetaNotFoundException, SignatureVerificationException {
     // 1) download the timestamp.json bytes.
@@ -221,15 +229,6 @@ public class TufClient {
                 () -> new MetaNotFoundException("could not find timestamp.json on mirror."));
 
     // 2) verify against threshold of keys as specified in trusted root.json
-    Root root =
-        localStore
-            .loadTrustedRoot()
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "we shouldn't reach this point in the update cycle without a local trusted root, but none was found at "
-                            + localStore.getIdentifier()
-                            + "/root.json"));
     verifyDelegate(root, timestamp);
 
     // 3) check that version of new timestamp.json is higher or equal than current, else fail.
@@ -248,9 +247,10 @@ public class TufClient {
     throwIfExpired(timestamp.getSignedMeta().getExpiresAsDate());
     // 5) persist timestamp.json
     localStore.storeMeta(timestamp);
+    return timestamp;
   }
 
-  public void updateSnapshot() {
+  Snapshot updateSnapshot(Root root, Timestamp timestamp) {
     // 1) download the snapshot.json bytes up to few 10s of K max.
 
     // 2) check against timestamp.snapshot.hash
@@ -266,9 +266,10 @@ public class TufClient {
     // 6) Ensure expiration timestamp of snapshot is later than tuf update start time.
 
     // 7) persist snapshot.
+    return null;
   }
 
-  public void updateTargets() {
+  Targets updateTargets(Root root, Snapshot snapshot) {
     // 1) download the targets.json to max bytes
 
     // 2) check hash against snapshot.targets.hash, else fail.
@@ -292,6 +293,7 @@ public class TufClient {
     // 9) Download target up to length specified in bytes. verify against hash.
 
     // Done!!
+    return null;
   }
 
   @VisibleForTesting
@@ -332,8 +334,8 @@ public class TufClient {
       return this;
     }
 
-    public TufClient build() {
-      return new TufClient(clock, verifiers, fetcher, trustedRootPath, localStore);
+    public Updater build() {
+      return new Updater(clock, verifiers, fetcher, trustedRootPath, localStore);
     }
   }
 }
