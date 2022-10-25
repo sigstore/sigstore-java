@@ -17,7 +17,7 @@ package dev.sigstore.tuf;
 
 /**
  * Thrown when the Meta File exceeds the max allowable file size as configured in the {@link
- * TufClient}
+ * Updater}
  */
 public class MetaFileExceedsMaxException extends TufException {
 
