@@ -109,7 +109,7 @@ public class Updater {
         // No newer versions, go to 5.3.10.
         break;
       }
-      var newRoot = newRootMaybe.get();
+      var newRoot = newRootMaybe.get().getMetaResource();
       // 5.3.4) we have a valid next version of the root.json. Check that the file has been signed
       // by:
       //   a) a threshold (from step 2) of keys specified in the trusted metadata
@@ -226,7 +226,8 @@ public class Updater {
         fetcher
             .getMeta(Role.Name.TIMESTAMP, Timestamp.class)
             .orElseThrow(
-                () -> new MetaNotFoundException("could not find timestamp.json on mirror."));
+                () -> new MetaNotFoundException("could not find timestamp.json on mirror."))
+            .getMetaResource();
 
     // 2) verify against threshold of keys as specified in trusted root.json
     verifyDelegate(root, timestamp);
