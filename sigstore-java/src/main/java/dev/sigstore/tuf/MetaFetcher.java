@@ -17,6 +17,7 @@ package dev.sigstore.tuf;
 
 import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
+import dev.sigstore.tuf.model.SignedTufMeta;
 import java.io.IOException;
 import java.util.Optional;
 
@@ -35,7 +36,8 @@ public interface MetaFetcher {
    * @throws MetaFileExceedsMaxException when the retrieved file is larger than the maximum allowed
    *     by the client
    */
-  Optional<Root> getRootAtVersion(int version) throws IOException, MetaFileExceedsMaxException;
+  Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
+      throws IOException, MetaFileExceedsMaxException;
 
   /**
    * Fetches the specified role meta from the source
@@ -47,6 +49,6 @@ public interface MetaFetcher {
    * @throws MetaFileExceedsMaxException if the role meta at source exceeds client specified max
    *     size
    */
-  <T> Optional<T> getMeta(Role.Name name, Class<T> roleType)
+  <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(Role.Name name, Class<T> roleType)
       throws IOException, MetaFileExceedsMaxException;
 }

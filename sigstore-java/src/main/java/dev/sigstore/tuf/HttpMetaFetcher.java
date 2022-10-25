@@ -23,6 +23,7 @@ import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
+import dev.sigstore.tuf.model.SignedTufMeta;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -47,20 +48,20 @@ public class HttpMetaFetcher implements MetaFetcher {
   }
 
   @Override
-  public Optional<Root> getRootAtVersion(int version)
+  public Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
       throws IOException, MetaFileExceedsMaxException {
     String versionFileName = version + ".root.json";
     return getMeta(versionFileName, Root.class);
   }
 
   @Override
-  public <T> Optional<T> getMeta(Role.Name role, Class<T> t)
+  public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(Role.Name role, Class<T> t)
       throws IOException, MetaFileExceedsMaxException {
     String fileName = role.name().toLowerCase() + ".json";
     return getMeta(fileName, t);
   }
 
-  <T> Optional<T> getMeta(String filename, Class<T> t)
+  <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(String filename, Class<T> t)
       throws IOException, MetaFileExceedsMaxException {
     GenericUrl nextVersionUrl = new GenericUrl(mirror + "/" + filename);
     var req =
@@ -87,6 +88,9 @@ public class HttpMetaFetcher implements MetaFetcher {
     if (roleBytes.length == MAX_META_BYTES && resp.getContent().read() != -1) {
       throw new MetaFileExceedsMaxException(nextVersionUrl.toString(), MAX_META_BYTES);
     }
-    return Optional.of(GSON.get().fromJson(new String(roleBytes, StandardCharsets.UTF_8), t));
+    var result =
+        new MetaFetchResult<T>(
+            roleBytes, GSON.get().fromJson(new String(roleBytes, StandardCharsets.UTF_8), t));
+    return Optional.of(result);
   }
 }
