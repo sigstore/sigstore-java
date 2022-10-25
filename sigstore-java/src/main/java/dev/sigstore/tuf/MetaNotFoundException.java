@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.tuf.model;
+package dev.sigstore.tuf;
 
-import org.immutables.gson.Gson;
-import org.immutables.value.Value;
+/** Thrown when a metadata resources was unexpectedly missing. */
+public class MetaNotFoundException extends TufException {
 
-/** Signed envelope of the Timestamp metadata. */
-@Gson.TypeAdapters
-@Value.Immutable
-public interface Timestamp extends SignedTufMeta<TufMeta> {
-
-  @Override
-  @Gson.Named("signed")
-  TimestampMeta getSignedMeta();
+  public MetaNotFoundException(String message) {
+    super(message);
+  }
 }

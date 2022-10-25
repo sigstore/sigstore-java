@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
@@ -97,10 +98,11 @@ class TufClientTest {
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
+      fail(
+          "SignastureVerificationException was expected as 0 verification signatures should be present.");
     } catch (SignatureVerificationException e) {
-      assertEquals(3, e.getRequiredSignatures());
-      assertEquals(0, e.getVerifiedSignatures());
+      assertEquals(3, e.getRequiredSignatures(), "expected signature threshold");
+      assertEquals(0, e.getVerifiedSignatures(), "expected verified signatures");
     }
   }
 
@@ -111,26 +113,27 @@ class TufClientTest {
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
-    } catch (RootExpiredException e) {
+      fail("The remote repo should be expired and cause a RoleExpiredException.");
+    } catch (RoleExpiredException e) {
       assertEquals(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME), e.getUpdateTime());
       // straight from remote-repo-expired/2.root.json
       assertEquals(
-          ZonedDateTime.parse("2022-05-11T19:09:02.663975009Z"), e.getRootExpirationTime());
+          ZonedDateTime.parse("2022-05-11T19:09:02.663975009Z"), e.getRoleExpirationTime());
     }
   }
 
   @Test
   public void testRootUpdate_inconsistentVersion()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
+          SignatureVerificationException {
     setupMirror("remote-repo-inconsistent-version", "2.root.json");
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
+      fail("RoleVersionException expected fetching 2.root.json with a version field set to 3.");
     } catch (RoleVersionException e) {
-      assertEquals(2, e.getExpectedVersion());
-      assertEquals(3, e.getFoundVersion());
+      assertEquals(2, e.getExpectedVersion(), "expected root version");
+      assertEquals(3, e.getFoundVersion(), "found version");
     }
   }
 
@@ -141,8 +144,104 @@ class TufClientTest {
     var client = createTimeStaticTufClient(localStore);
     try {
       client.updateRoot();
-      fail();
+      fail("MetaFileExceedsMaxException expected as 2.root.json is larger than max allowable.");
     } catch (MetaFileExceedsMaxException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_throwMetaNotFoundException() throws IOException {
+    setupMirror("remote-timestamp-not-present");
+    var client = createTimeStaticTufClient(localStore);
+    assertThrows(MetaNotFoundException.class, client::updateTimestamp);
+  }
+
+  @Test
+  public void testTimestampUpdate_throwsSignatureVerificationException()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("remote-timestamp-unsigned", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    try {
+      client.updateRoot();
+      client.updateTimestamp();
+      fail("The timestamp was not signed so should have thown a SignatureVerificationException.");
+    } catch (SignatureVerificationException e) {
+      assertEquals(0, e.getVerifiedSignatures(), "verified signature threshold did not match");
+      assertEquals(1, e.getRequiredSignatures(), "required signatures found did not match");
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_throwsRoleVersionException()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
+    setupMirror(
+        "remote-timestamp-rollback-version", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    try {
+      client.updateRoot();
+      client.updateTimestamp();
+      fail(
+          "The repo in this test provides an older signed timestamp version that should have caused a RoleVersionException.");
+    } catch (RoleVersionException e) {
+      assertEquals(42, e.getExpectedVersion(), "expected timestamp version did not match");
+      assertEquals(38, e.getFoundVersion(), "found timestamp version did not match");
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_throwsRoleExpiredException()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("remote-timestamp-expired", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    try {
+      client.updateRoot();
+      client.updateTimestamp();
+      fail("Expects a RoleExpiredException as the repo timestamp.json should be expired.");
+    } catch (RoleExpiredException e) {
+      // expected.
+    }
+  }
+
+  @Test
+  public void testTimestampUpdate_noPreviousTimestamp_success()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
+    setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    client.updateRoot();
+    client.updateTimestamp();
+    assertStoreContains("timestamp.json");
+    assertEquals(
+        52,
+        client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        "timestamp version did not match expectations");
+  }
+
+  @Test
+  public void testTimestampUpdate_updateExistingTimestamp_success()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
+    var client = createTimeStaticTufClient(localStore);
+    client.updateRoot();
+    client.updateTimestamp();
+    assertStoreContains("timestamp.json");
+    assertEquals(
+        52,
+        client.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        "timestamp version did not match expectations.");
+  }
+
+  private void bootstrapLocalStore(
+      Path localStore, String tufFolder, String rootFile, String... roleFiles) throws IOException {
+    Files.copy(
+        TestResources.TUF_TEST_DATA_DIRECTORY.resolve(tufFolder).resolve(rootFile),
+        localStore.resolve("root.json"));
+    for (String file : roleFiles) {
+      Files.copy(
+          TestResources.TUF_TEST_DATA_DIRECTORY.resolve(tufFolder).resolve(file),
+          localStore.resolve(file));
     }
   }
 
@@ -209,8 +308,9 @@ class TufClientTest {
       client.verifyDelegate(sigs, publicKeys, delegate, verificationMaterial);
       fail("This should have failed since the public key for PUB_KEY_1 should fail to verify.");
     } catch (SignatureVerificationException e) {
-      assertEquals(1, e.getRequiredSignatures());
-      assertEquals(0, e.getVerifiedSignatures());
+      assertEquals(
+          1, e.getRequiredSignatures(), "required signature count did not match expectations.");
+      assertEquals(0, e.getVerifiedSignatures(), "verified signature expectations did not match.");
     }
   }
 
@@ -233,8 +333,9 @@ class TufClientTest {
       fail(
           "Test should have thrown SignatureVerificationException due to insufficient public keys");
     } catch (SignatureVerificationException e) {
-      assertEquals(1, e.getVerifiedSignatures());
-      assertEquals(2, e.getRequiredSignatures());
+      assertEquals(1, e.getVerifiedSignatures(), "verified signature expectations did not match.");
+      assertEquals(
+          2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
   }
 
@@ -254,8 +355,9 @@ class TufClientTest {
       fail(
           "Test should have thrown SignatureVerificationException due to insufficient public keys");
     } catch (SignatureVerificationException e) {
-      assertEquals(0, e.getVerifiedSignatures());
-      assertEquals(2, e.getRequiredSignatures());
+      assertEquals(0, e.getVerifiedSignatures(), "verified signature expectations did not match.");
+      assertEquals(
+          2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
   }
 
@@ -283,8 +385,9 @@ class TufClientTest {
     } catch (SignatureVerificationException e) {
       // pub key #1 and #3 were allowed, but only #1 and #2 were present so verification only
       // verified #1.
-      assertEquals(1, e.getVerifiedSignatures());
-      assertEquals(2, e.getRequiredSignatures());
+      assertEquals(1, e.getVerifiedSignatures(), "verified signature expectations did not match.");
+      assertEquals(
+          2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
   }
 
@@ -321,15 +424,21 @@ class TufClientTest {
     assertTrue(
         root.getSignedMeta()
             .getExpiresAsDate()
-            .isAfter(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME)));
+            .isAfter(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME)),
+        "The root should not be expired passed test static update time: "
+            + TEST_STATIC_UPDATE_TIME);
   }
 
   private void assertRootVersionIncreased(Root oldRoot, Root newRoot) throws IOException {
-    assertTrue(oldRoot.getSignedMeta().getVersion() <= newRoot.getSignedMeta().getVersion());
+    assertTrue(
+        oldRoot.getSignedMeta().getVersion() <= newRoot.getSignedMeta().getVersion(),
+        "The new root version should be higher than the old root.");
   }
 
   private void assertStoreContains(String resource) {
-    assertTrue(localStore.resolve(resource).toFile().exists());
+    assertTrue(
+        localStore.resolve(resource).toFile().exists(),
+        "The local store was expected to contain: " + resource);
   }
 
   @AfterEach
