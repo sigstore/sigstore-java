@@ -20,7 +20,7 @@ import dev.sigstore.tuf.model.SignedTufMeta;
 /**
  * Result object returned by {@link MetaFetcher} interface.
  *
- * @param <T>
+ * @param <T> a TUF signed resource role
  */
 public class MetaFetchResult<T extends SignedTufMeta> {
   private byte[] rawBytes;
