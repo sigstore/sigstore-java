@@ -152,7 +152,7 @@ class UpdaterTest {
 
   @Test
   public void testTimestampUpdate_throwMetaNotFoundException() throws IOException {
-    setupMirror("remote-timestamp-not-present");
+    setupMirror("remote-timestamp-not-present", "2.root.json", "3.root.json");
     var updater = createTimeStaticUpdater(localStore);
     assertThrows(
         MetaNotFoundException.class,
