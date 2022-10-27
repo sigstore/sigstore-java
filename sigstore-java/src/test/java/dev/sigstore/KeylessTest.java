@@ -55,7 +55,7 @@ public class KeylessTest {
   @EnabledIfOidcExists(provider = OidcProviderType.MANUAL)
   public void sign_production() throws Exception {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
-    var result = signer.sign(testArtifact);
+    var result = signer.sign2(testArtifact);
 
     verifySigningResult(result);
 
@@ -70,7 +70,7 @@ public class KeylessTest {
   @EnabledIfOidcExists(provider = OidcProviderType.MANUAL)
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
-    var result = signer.sign(testArtifact);
+    var result = signer.sign2(testArtifact);
     verifySigningResult(result);
 
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
@@ -88,7 +88,7 @@ public class KeylessTest {
             .sigstorePublicDefaults()
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
-    var result = signer.sign(testArtifact);
+    var result = signer.sign2(testArtifact);
     verifySigningResult(result);
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
@@ -106,7 +106,7 @@ public class KeylessTest {
             .sigstoreStagingDefaults()
             .oidcClient(GithubActionsOidcClient.builder().build())
             .build();
-    var result = signer.sign(testArtifact);
+    var result = signer.sign2(testArtifact);
     verifySigningResult(result);
 
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();

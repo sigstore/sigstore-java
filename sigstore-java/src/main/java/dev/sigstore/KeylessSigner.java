@@ -144,7 +144,7 @@ public class KeylessSigner {
     }
   }
 
-  public KeylessSigningResult sign(Path artifact)
+  public KeylessSigningResult sign2(Path artifact)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, CertificateException, IOException,
           FulcioVerificationException, RekorVerificationException, InterruptedException {
