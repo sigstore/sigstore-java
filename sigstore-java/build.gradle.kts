@@ -28,7 +28,7 @@ dependencies {
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
 
     implementation("commons-codec:commons-codec:1.15")
-    implementation("com.google.code.gson:gson:2.9.1")
+    implementation("com.google.code.gson:gson:2.10")
     implementation("org.bouncycastle:bcutil-jdk18on:1.72")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.72")
 

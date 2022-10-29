@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":sigstore-java"))
-    implementation("com.google.code.gson:gson:2.9.1")
+    implementation("com.google.code.gson:gson:2.10")
     implementation("com.google.guava:guava:31.1-jre")
 
     api(platform("org.junit:junit-bom:5.9.1"))
