@@ -4,6 +4,7 @@ plugins {
     `java-base`
     id("com.github.vlsi.gradle-extensions")
     id("build-logic.testing")
+    id("build-logic.errorprone")
 }
 
 java {

@@ -21,6 +21,8 @@ import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
 /**
+ * TUF Delegations.
+ *
  * @see <a href="https://theupdateframework.github.io/specification/latest/#delegations">TUF
  *     Delegation docs.</a>
  */

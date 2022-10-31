@@ -32,6 +32,7 @@ import java.util.function.Supplier;
 public enum GsonSupplier implements Supplier<Gson> {
   GSON;
 
+  @SuppressWarnings("ImmutableEnumChecker")
   private final Gson gson =
       new GsonBuilder()
           .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())

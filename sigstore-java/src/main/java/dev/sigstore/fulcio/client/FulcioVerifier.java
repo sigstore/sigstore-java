@@ -164,6 +164,7 @@ public class FulcioVerifier {
     pkixParams.setRevocationEnabled(false);
 
     // these certs are only valid for 15 minutes, so find a time in the validity period
+    @SuppressWarnings("JavaUtilDate")
     Date dateInValidityPeriod =
         new Date(signingCertificate.getLeafCertificate().getNotBefore().getTime());
     pkixParams.setDate(dateInValidityPeriod);

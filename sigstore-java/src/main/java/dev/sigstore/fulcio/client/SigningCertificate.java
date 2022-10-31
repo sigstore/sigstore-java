@@ -145,7 +145,8 @@ public class SigningCertificate {
       }
       if (extensions.length != 0) {
         throw new JsonParseException(
-            "SCT has extensions that cannot be handled by client:" + new String(extensions));
+            "SCT has extensions that cannot be handled by client:"
+                + new String(extensions, StandardCharsets.UTF_8));
       }
 
       DigitallySigned digiSig = DigitallySigned.decode(signature);

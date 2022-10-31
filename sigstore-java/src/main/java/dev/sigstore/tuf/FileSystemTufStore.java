@@ -22,8 +22,8 @@ import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.Timestamp;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -80,9 +80,9 @@ public class FileSystemTufStore implements TufLocalStore {
   }
 
   <T extends SignedTufMeta> void saveRole(T role) throws IOException {
-    try (FileWriter fileWriter =
-        new FileWriter(repoBaseDir.resolve(role.getSignedMeta().getType() + ".json").toFile())) {
-      fileWriter.write(GSON.get().toJson(role));
+    try (BufferedWriter fileWriter =
+        Files.newBufferedWriter(repoBaseDir.resolve(role.getSignedMeta().getType() + ".json"))) {
+      GSON.get().toJson(role, fileWriter);
     }
   }
 
