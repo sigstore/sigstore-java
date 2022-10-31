@@ -52,7 +52,8 @@ public class HashedRekordRequest {
                 new Data()
                     .withHash(
                         new Hash()
-                            .withValue(new String(Hex.encode(artifactDigest)))
+                            .withValue(
+                                new String(Hex.encode(artifactDigest), StandardCharsets.ISO_8859_1))
                             .withAlgorithm(Hash.Algorithm.SHA_256)))
             .withSignature(
                 new Signature()

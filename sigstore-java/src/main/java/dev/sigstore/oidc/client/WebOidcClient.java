@@ -117,6 +117,7 @@ public class WebOidcClient implements OidcClient {
    * @return an openid token with additional email scopes
    * @throws OidcException if an error occurs doing the authorization flow
    */
+  @Override
   public OidcToken getIDToken() throws OidcException {
     JsonFactory jsonFactory = new GsonFactory();
     HttpTransport httpTransport = HttpClients.newHttpTransport(httpParams);

@@ -61,6 +61,12 @@ protobuf {
             plugins {
                 id("grpc")
             }
+            builtins {
+                named("java") {
+                    // Adds @javax.annotation.Generated annotation to the generated code
+                    option("annotate_code")
+                }
+            }
         }
     }
 }
