@@ -16,6 +16,8 @@
 package dev.sigstore;
 
 import com.google.api.client.util.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
@@ -24,10 +26,7 @@ import dev.sigstore.fulcio.client.*;
 import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.WebOidcClient;
-import dev.sigstore.rekor.client.HashedRekordRequest;
-import dev.sigstore.rekor.client.RekorClient;
-import dev.sigstore.rekor.client.RekorVerificationException;
-import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.rekor.client.*;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +37,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.bouncycastle.util.encoders.Hex;
 
 /** A full sigstore keyless signing flow. */
@@ -144,10 +146,25 @@ public class KeylessSigner {
     }
   }
 
-  public KeylessSigningResult sign(Path artifact)
+  /**
+   * Sign one or more artifact digests using the keyless signing workflow. The oidc/fulcio dance to
+   * obtain a signing certificate will only occur once. The same ephemeral private key will be used
+   * to sign all artifacts. Errors may occur is the request is for an overwhelming number of
+   * artifactDigests as the certificate may expire -- this method does not current have the ability
+   * to obtain a new certificate if the one is use expires.
+   *
+   * @param artifactDigests sha256 digests of the artifacts to sign.
+   * @return a list of keyless singing results.
+   */
+  public List<KeylessSigningResult> sign(List<byte[]> artifactDigests)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, CertificateException, IOException,
           FulcioVerificationException, RekorVerificationException, InterruptedException {
+
+    if (artifactDigests.size() == 0) {
+      throw new IllegalArgumentException("Require one or more digests");
+    }
+
     var tokenInfo = oidcClient.getIDToken();
     var signingCert =
         fulcioClient.signingCertificate(
@@ -161,21 +178,77 @@ public class KeylessSigner {
     // allow that to be known
     fulcioVerifier.verifySct(signingCert);
 
-    var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
-    var artifactDigest = artifactByteSource.hash(Hashing.sha256()).asBytes();
-    var signature = signer.signDigest(artifactDigest);
+    var result = ImmutableList.<KeylessSigningResult>builder();
 
-    var rekorRequest =
-        HashedRekordRequest.newHashedRekordRequest(
-            artifactDigest, Certificates.toPemBytes(signingCert.getLeafCertificate()), signature);
-    var rekorResponse = rekorClient.putEntry(rekorRequest);
-    rekorVerifier.verifyEntry(rekorResponse.getEntry());
+    for (var artifactDigest : artifactDigests) {
+      var signature = signer.signDigest(artifactDigest);
 
-    return ImmutableKeylessSigningResult.builder()
-        .digest(Hex.toHexString(artifactDigest))
-        .certPath(signingCert.getCertPath())
-        .signature(signature)
-        .entry(rekorResponse.getEntry())
-        .build();
+      var rekorRequest =
+          HashedRekordRequest.newHashedRekordRequest(
+              artifactDigest, Certificates.toPemBytes(signingCert.getLeafCertificate()), signature);
+      var rekorResponse = rekorClient.putEntry(rekorRequest);
+      rekorVerifier.verifyEntry(rekorResponse.getEntry());
+
+      result.add(
+          ImmutableKeylessSigningResult.builder()
+              .digest(Hex.toHexString(artifactDigest))
+              .certPath(signingCert.getCertPath())
+              .signature(signature)
+              .entry(rekorResponse.getEntry())
+              .build());
+    }
+    return result.build();
+  }
+
+  /**
+   * Convenience wrapper around {@link #sign(List)} to sign a single digest
+   *
+   * @param artifactDigest sha256 digest of the artifact to sign.
+   * @return a keyless singing results.
+   */
+  public KeylessSigningResult sign(byte[] artifactDigest)
+      throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
+          CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
+          OidcException, InvalidKeyException, InterruptedException {
+    return sign(List.of(artifactDigest)).get(0);
+  }
+
+  /**
+   * Convenience wrapper around {@link #sign(List)} to accept files instead of digests
+   *
+   * @param artifacts list of the artifacts to sign.
+   * @return a map of artifacts and their keyless singing results.
+   */
+  public Map<Path, KeylessSigningResult> signFiles(List<Path> artifacts)
+      throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
+          CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
+          OidcException, InvalidKeyException, InterruptedException {
+    if (artifacts.size() == 0) {
+      throw new IllegalArgumentException("Require one or more paths");
+    }
+    var digests = new ArrayList<byte[]>(artifacts.size());
+    for (var artifact : artifacts) {
+      var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
+      digests.add(artifactByteSource.hash(Hashing.sha256()).asBytes());
+    }
+    var signingResult = sign(digests);
+    var result = ImmutableMap.<Path, KeylessSigningResult>builder();
+    for (int i = 0; i < artifacts.size(); i++) {
+      result.put(artifacts.get(i), signingResult.get(i));
+    }
+    return result.build();
+  }
+
+  /**
+   * Convenience wrapper around {@link #sign(List)} to accept a file instead of digests
+   *
+   * @param artifact the artifacts to sign.
+   * @return a keyless singing results.
+   */
+  public KeylessSigningResult signFile(Path artifact)
+      throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
+          CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
+          OidcException, InvalidKeyException, InterruptedException {
+    return signFiles(List.of(artifact)).get(artifact);
   }
 }

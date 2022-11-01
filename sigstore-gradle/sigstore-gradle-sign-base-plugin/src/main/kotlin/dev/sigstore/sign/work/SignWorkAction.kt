@@ -52,7 +52,7 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
             oidcClient(parameters.oidcClient.get().build() as OidcClient)
         }.build()
 
-        val result = signer.sign(inputFile.toPath())
+        val result = signer.signFile(inputFile.toPath())
         val signature = SigstoreBundle(
             mediaType = BundleMediaTypes.V1_JSON.value,
             timestampProof = RekorEntry(
