@@ -34,7 +34,9 @@ public class VerificationMaterial {
 
     public static List<byte[]> ctfePublicKeys() throws IOException {
       return List.of(
-          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/ctfe.pub")));
+          Resources.toByteArray(Resources.getResource("dev/sigstore/tuf/production/ctfe.pub")),
+          Resources.toByteArray(
+              Resources.getResource("dev/sigstore/tuf/production/ctfe_2022.pub")));
     }
 
     public static byte[] rekorPublicKey() throws IOException {

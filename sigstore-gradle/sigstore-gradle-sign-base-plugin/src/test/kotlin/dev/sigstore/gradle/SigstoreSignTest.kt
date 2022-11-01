@@ -19,10 +19,12 @@ package dev.sigstore.gradle
 import dev.sigstore.testkit.BaseGradleTest
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 @EnabledIfOidcExists
+@Disabled("Disabled until 2.0 release")
 class SigstoreSignTest: BaseGradleTest() {
     @ParameterizedTest
     @MethodSource("gradleVersionAndSettings")
