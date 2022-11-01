@@ -59,12 +59,12 @@ jobs:
       - name: Build project
         run: |
           # override the version in gradle.properties
-          ./gradlew clean createReleaseBundle -Pversion=${{ github.event.inputs.release_version }}
+          ./gradlew clean :sigstore-java:createReleaseBundle -Pversion=${{ github.event.inputs.release_version }}
 
       - name: Hash Artifacts
         id: hash
         run: |
-          cd build/release
+          cd sigstore-java/build/release
           echo "hashes=$(sha256sum ./* | base64 -w0)" >> $GITHUB_OUTPUT
           sha256sum ./*
 
@@ -72,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # tag=v3.1.1
         with:
           name: project-release-artifacts
-          path: ./build/release/
+          path: ./sigstore-java/build/release/
           if-no-files-found: error
 
   provenance:
