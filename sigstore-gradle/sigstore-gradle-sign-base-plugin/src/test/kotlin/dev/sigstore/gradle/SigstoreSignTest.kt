@@ -24,7 +24,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 @EnabledIfOidcExists
-@Disabled("Disabled until 2.0 release")
 class SigstoreSignTest: BaseGradleTest() {
     @ParameterizedTest
     @MethodSource("gradleVersionAndSettings")
