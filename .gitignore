@@ -13,8 +13,11 @@
 *.iml
 *.ipr
 *.iws
-.idea
+/.idea/*
 .settings/
 .classpath
 .project
 .DS_Store
+
+# except this icon
+!/.idea/icon.png
