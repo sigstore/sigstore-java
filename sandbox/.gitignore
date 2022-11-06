@@ -1,1 +1,5 @@
 */build/
+/.idea/*
+
+# except this icon
+!/.idea/icon.png
