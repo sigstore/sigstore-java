@@ -25,8 +25,13 @@ import java.nio.file.Path;
 
 public class TestResources {
 
-  public static final Path UPDATER_TRUSTED_ROOT = Path.of(Resources.getResource("dev/sigstore/tuf/trusted-root.json").getPath());
-  public static final Path TUF_TEST_DATA_DIRECTORY = UPDATER_TRUSTED_ROOT.getParent();
+  public static final Path UPDATER_REAL_TRUSTED_ROOT = Path.of(Resources.getResource("dev/sigstore/tuf/real/trusted-root.json").getPath());
+  public static final Path UPDATER_SYNTHETIC_TRUSTED_ROOT = Path.of(Resources.getResource("dev/sigstore/tuf/synthetic/trusted-root.json").getPath());
+
+  // get the child folder and retrieve the parent to avoid resource loader finding the dev/sigstore/tuf folder in the classes/ dir.
+  // TODO(patrick@chainguard.dev): cleanup after we move the v5 root into main.
+  public static final Path TUF_TEST_DATA_DIRECTORY = Path.of(Resources.getResource("dev/sigstore/tuf/real").getPath()).getParent();
+
 
   public static void setupRepoFiles(String repoName, Path destinationDir, String... files)
       throws IOException {

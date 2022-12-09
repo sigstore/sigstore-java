@@ -15,6 +15,8 @@
  */
 package dev.sigstore.tuf;
 
+import static dev.sigstore.testkit.tuf.TestResources.UPDATER_REAL_TRUSTED_ROOT;
+import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.collect.ImmutableList;
@@ -30,7 +32,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -57,10 +58,8 @@ class UpdaterTest {
 
   static Server remote;
   static String remoteUrl;
-  private static final Path trustedRoot = TestResources.UPDATER_TRUSTED_ROOT;
-  @TempDir Path localStore;
-  @TempDir static Path localMirror;
-  Path tufTestData = Paths.get("src/test/resources/dev/sigstore/tuf/");
+  @TempDir Path localStorePath;
+  @TempDir static Path localMirrorPath;
 
   @BeforeAll
   static void startRemoteResourceServer() throws Exception {
@@ -69,7 +68,7 @@ class UpdaterTest {
     connector.setHost("127.0.0.1");
     remote.addConnector(connector);
     ResourceHandler handler = new ResourceHandler();
-    handler.setBaseResource(Resource.newResource(localMirror.toUri()));
+    handler.setBaseResource(Resource.newResource(localMirrorPath.toUri()));
     handler.setDirectoriesListed(true);
     handler.setAcceptRanges(true);
     remote.setHandler(handler);
@@ -81,12 +80,13 @@ class UpdaterTest {
   @Test
   public void testRootUpdate_fromProdData()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("remote-repo-prod", "1.root.json", "2.root.json", "3.root.json", "4.root.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror(
+        "real/prod", "1.root.json", "2.root.json", "3.root.json", "4.root.json", "5.root.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
     updater.updateRoot();
     assertStoreContains("root.json");
-    Root oldRoot = TestResources.loadRoot(trustedRoot);
-    Root newRoot = TestResources.loadRoot(localStore.resolve("root.json"));
+    Root oldRoot = TestResources.loadRoot(UPDATER_REAL_TRUSTED_ROOT);
+    Root newRoot = TestResources.loadRoot(localStorePath.resolve("root.json"));
     assertRootVersionIncreased(oldRoot, newRoot);
     assertRootNotExpired(newRoot);
   }
@@ -94,14 +94,14 @@ class UpdaterTest {
   @Test
   public void testRootUpdate_notEnoughSignatures()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("remote-repo-unsigned", "2.root.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/root-unsigned", "2.root.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     try {
       updater.updateRoot();
       fail(
           "SignastureVerificationException was expected as 0 verification signatures should be present.");
     } catch (SignatureVerificationException e) {
-      assertEquals(3, e.getRequiredSignatures(), "expected signature threshold");
+      assertEquals(1, e.getRequiredSignatures(), "expected signature threshold");
       assertEquals(0, e.getVerifiedSignatures(), "expected verified signatures");
     }
   }
@@ -109,39 +109,41 @@ class UpdaterTest {
   @Test
   public void testRootUpdate_expiredRoot()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("remote-repo-expired", "2.root.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/test-template", "2.root.json");
+    // root expires 2023-03-09T18:02:21Z
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2023-03-09T18:02:22Z");
     try {
       updater.updateRoot();
       fail("The remote repo should be expired and cause a RoleExpiredException.");
     } catch (RoleExpiredException e) {
-      assertEquals(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME), e.getUpdateTime());
+      assertEquals(ZonedDateTime.parse("2023-03-09T18:02:22Z"), e.getUpdateTime());
       // straight from remote-repo-expired/2.root.json
-      assertEquals(
-          ZonedDateTime.parse("2022-05-11T19:09:02.663975009Z"), e.getRoleExpirationTime());
+      assertEquals(ZonedDateTime.parse("2023-03-09T18:02:21Z"), e.getRoleExpirationTime());
     }
   }
 
   @Test
-  public void testRootUpdate_inconsistentVersion()
+  public void testRootUpdate_wrongVersion()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
           SignatureVerificationException {
-    setupMirror("remote-repo-inconsistent-version", "2.root.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/root-wrong-version", "2.root.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     try {
       updater.updateRoot();
       fail("RoleVersionException expected fetching 2.root.json with a version field set to 3.");
-    } catch (RoleVersionException e) {
-      assertEquals(2, e.getExpectedVersion(), "expected root version");
-      assertEquals(3, e.getFoundVersion(), "found version");
+    } catch (RollbackVersionException e) {
+      assertEquals(2, e.getCurrentVersion(), "expected root version");
+      assertEquals(1, e.getFoundVersion(), "found version");
     }
   }
 
   @Test
   public void testRootUpdate_metaFileTooBig()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("remote-repo-meta-file-too-big", "2.root.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/root-too-big", "2.root.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     try {
       updater.updateRoot();
       fail("MetaFileExceedsMaxException expected as 2.root.json is larger than max allowable.");
@@ -152,8 +154,8 @@ class UpdaterTest {
 
   @Test
   public void testTimestampUpdate_throwMetaNotFoundException() throws IOException {
-    setupMirror("remote-timestamp-not-present", "2.root.json", "3.root.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/test-template", "2.root.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         MetaNotFoundException.class,
         () -> {
@@ -164,8 +166,8 @@ class UpdaterTest {
   @Test
   public void testTimestampUpdate_throwsSignatureVerificationException()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("remote-timestamp-unsigned", "2.root.json", "3.root.json", "timestamp.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/timestamp-unsigned", "2.root.json", "timestamp.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     try {
       updater.updateTimestamp(updater.updateRoot());
       fail("The timestamp was not signed so should have thown a SignatureVerificationException.");
@@ -176,27 +178,29 @@ class UpdaterTest {
   }
 
   @Test
-  public void testTimestampUpdate_throwsRoleVersionException()
+  public void testTimestampUpdate_throwsRolebackVersionException()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
-    setupMirror(
-        "remote-timestamp-rollback-version", "2.root.json", "3.root.json", "timestamp.json");
-    var updater = createTimeStaticUpdater(localStore);
+    bootstrapLocalStore(localStorePath, "synthetic/test-template", "root.json", "timestamp.json");
+    setupMirror("synthetic/timestamp-rollback-version", "2.root.json", "timestamp.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     try {
       updater.updateTimestamp(updater.updateRoot());
       fail(
           "The repo in this test provides an older signed timestamp version that should have caused a RoleVersionException.");
-    } catch (RoleVersionException e) {
-      assertEquals(42, e.getExpectedVersion(), "expected timestamp version did not match");
-      assertEquals(38, e.getFoundVersion(), "found timestamp version did not match");
+    } catch (RollbackVersionException e) {
+      assertEquals(3, e.getCurrentVersion(), "expected timestamp version did not match");
+      assertEquals(1, e.getFoundVersion(), "found timestamp version did not match");
     }
   }
 
   @Test
   public void testTimestampUpdate_throwsRoleExpiredException()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("remote-timestamp-expired", "2.root.json", "3.root.json", "timestamp.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json");
+    // timestamp expires 2022-12-10T18:07:30Z
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-12-10T18:07:31Z");
     try {
       updater.updateTimestamp(updater.updateRoot());
       fail("Expects a RoleExpiredException as the repo timestamp.json should be expired.");
@@ -208,13 +212,12 @@ class UpdaterTest {
   @Test
   public void testTimestampUpdate_noPreviousTimestamp_success()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    bootstrapLocalStore(localStore, "remote-repo-prod", "2.root.json", "timestamp.json");
-    setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
-    var updater = createTimeStaticUpdater(localStore);
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     updater.updateTimestamp(updater.updateRoot());
     assertStoreContains("timestamp.json");
     assertEquals(
-        52,
+        3,
         updater.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
         "timestamp version did not match expectations");
   }
@@ -222,12 +225,18 @@ class UpdaterTest {
   @Test
   public void testTimestampUpdate_updateExistingTimestamp_success()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("remote-timestamp-valid", "2.root.json", "3.root.json", "timestamp.json");
-    var updater = createTimeStaticUpdater(localStore);
+    bootstrapLocalStore(
+        localStorePath, "synthetic/test-template", "1.root.json", "1.timestamp.json");
+    setupMirror("synthetic/test-template", "1.root.json", "2.root.json", "timestamp.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    assertEquals(
+        1,
+        updater.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        "timestamp version should start at 1 before the update.");
     updater.updateTimestamp(updater.updateRoot());
     assertStoreContains("timestamp.json");
     assertEquals(
-        52,
+        3,
         updater.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
         "timestamp version did not match expectations.");
   }
@@ -238,9 +247,12 @@ class UpdaterTest {
         TestResources.TUF_TEST_DATA_DIRECTORY.resolve(tufFolder).resolve(rootFile),
         localStore.resolve("root.json"));
     for (String file : roleFiles) {
+      // strip version from versioned filenames (e.g. 1.timestamp.json)
+      String destinationFilename =
+          file.matches("^\\d.*") ? file.substring(file.indexOf('.') + 1) : file;
       Files.copy(
           TestResources.TUF_TEST_DATA_DIRECTORY.resolve(tufFolder).resolve(file),
-          localStore.resolve(file));
+          localStore.resolve(destinationFilename));
     }
   }
 
@@ -275,7 +287,7 @@ class UpdaterTest {
 
   @Test
   public void testVerifyDelegate_verified()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
     Map<String, Key> publicKeys =
@@ -295,7 +307,7 @@ class UpdaterTest {
 
   @Test
   public void testVerifyDelegate_verificationFailed()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
     Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
@@ -314,7 +326,7 @@ class UpdaterTest {
 
   @Test
   public void testVerifyDelegate_belowThreshold()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
     Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
@@ -340,7 +352,7 @@ class UpdaterTest {
   // Just testing boundary conditions for iteration bugs.
   @Test
   public void testVerifyDelegate_emptyLists()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
     List<Signature> sigs = ImmutableList.of();
 
     Map<String, Key> publicKeys = ImmutableMap.of();
@@ -361,7 +373,7 @@ class UpdaterTest {
 
   @Test
   public void testVerifyDelegate_goodSigsAndKeysButNotInRole()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
     Map<String, Key> publicKeys =
@@ -399,12 +411,19 @@ class UpdaterTest {
   }
 
   @NotNull
-  private static Updater createTimeStaticUpdater(Path localStore) throws IOException {
+  private static Updater createTimeStaticUpdater(Path localStore, Path trustedRootFile)
+      throws IOException {
+    return createTimeStaticUpdater(localStore, trustedRootFile, TEST_STATIC_UPDATE_TIME);
+  }
+
+  @NotNull
+  private static Updater createTimeStaticUpdater(Path localStore, Path trustedRootFile, String time)
+      throws IOException {
     return Updater.builder()
-        .setClock(Clock.fixed(Instant.parse(TEST_STATIC_UPDATE_TIME), ZoneOffset.UTC))
+        .setClock(Clock.fixed(Instant.parse(time), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
         .setFetcher(HttpMetaFetcher.newFetcher(new URL(remoteUrl)))
-        .setTrustedRootPath(trustedRoot)
+        .setTrustedRootPath(trustedRootFile)
         .setLocalStore(FileSystemTufStore.newFileSystemStore(localStore))
         .build();
   }
@@ -415,7 +434,7 @@ class UpdaterTest {
   }
 
   private static void setupMirror(String repoName, String... files) throws IOException {
-    TestResources.setupRepoFiles(repoName, localMirror, files);
+    TestResources.setupRepoFiles(repoName, localMirrorPath, files);
   }
 
   private void assertRootNotExpired(Root root) {
@@ -435,13 +454,13 @@ class UpdaterTest {
 
   private void assertStoreContains(String resource) {
     assertTrue(
-        localStore.resolve(resource).toFile().exists(),
+        localStorePath.resolve(resource).toFile().exists(),
         "The local store was expected to contain: " + resource);
   }
 
   @AfterEach
   void clearLocalMirror() {
-    for (File file : localMirror.toFile().listFiles()) {
+    for (File file : localMirrorPath.toFile().listFiles()) {
       file.delete();
     }
   }

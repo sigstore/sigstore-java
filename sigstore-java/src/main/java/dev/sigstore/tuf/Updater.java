@@ -22,10 +22,12 @@ import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.tuf.model.*;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Clock;
@@ -84,7 +86,7 @@ public class Updater {
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
   Root updateRoot()
       throws IOException, RoleExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
-          InvalidKeyException, MetaFileExceedsMaxException, RoleVersionException,
+          InvalidKeyException, MetaFileExceedsMaxException, RollbackVersionException,
           SignatureVerificationException {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
@@ -123,7 +125,7 @@ public class Updater {
       // matches the version we pulled based off of the pattern {version}.root.json. We know due to
       // the loop constraints that it is larger than the current version.
       if (newRoot.getSignedMeta().getVersion() != nextVersion) {
-        throw new RoleVersionException(nextVersion, newRoot.getSignedMeta().getVersion());
+        throw new RollbackVersionException(nextVersion, newRoot.getSignedMeta().getVersion());
       }
       // 5.3.7) set the trusted root metadata to the new root
       trustedRoot = newRoot;
@@ -154,7 +156,7 @@ public class Updater {
   }
 
   private boolean hasNewKeys(RootRole oldRole, RootRole newRole) {
-    return newRole.getKeyids().stream().allMatch(s -> oldRole.getKeyids().contains(s));
+    return !newRole.getKeyids().stream().allMatch(key -> oldRole.getKeyids().contains(key));
   }
 
   void verifyDelegate(Root trustedRoot, SignedTufMeta delegate)
@@ -184,24 +186,29 @@ public class Updater {
       Role role,
       byte[] verificationMaterial)
       throws SignatureVerificationException, NoSuchAlgorithmException, InvalidKeyException,
-          InvalidKeySpecException {
+          InvalidKeySpecException, IOException {
     // use set to not count the same key multiple times towards the threshold.
     var goodSigs = new HashSet<>(role.getKeyids().size() * 4 / 3);
     // role.getKeyIds() defines the keys allowed to sign for this role.
     for (String keyid : role.getKeyids()) {
       Optional<Signature> signatureMaybe =
           signatures.stream().filter(sig -> sig.getKeyId().equals(keyid)).findFirst();
-      // only verify if we find a signature that matcheds an allowed key id.
+      // only verify if we find a signature that matches an allowed key id.
       if (signatureMaybe.isPresent()) {
         var signature = signatureMaybe.get();
         // look for the public key that matches the key ID and use it for verification.
         var key = publicKeys.get(signature.getKeyId());
         if (key != null) {
-          // key bytes are in Hex not Base64!
-          // TODO(patrick): this will change in a subsequent version. Add code to handle PEM Encoded
-          // keys as well.
-          byte[] keyBytes = Hex.decode(key.getKeyVal().get("public"));
-          var pubKey = Keys.constructTufPublicKey(keyBytes, key.getScheme());
+          String publicKeyContents = key.getKeyVal().get("public");
+          PublicKey pubKey;
+          // TUF root version 4 and less is raw hex encoded key while 5+ is PEM.
+          // TODO(patrick@chainguard.dev): remove hex handling code once we upgrade the trusted root
+          // to v5.
+          if (publicKeyContents.startsWith("-----BEGIN PUBLIC KEY-----")) {
+            pubKey = Keys.parsePublicKey(publicKeyContents.getBytes(StandardCharsets.UTF_8));
+          } else {
+            pubKey = Keys.constructTufPublicKey(Hex.decode(publicKeyContents), key.getScheme());
+          }
           byte[] signatureBytes = Hex.decode(signature.getSignature());
           try {
             if (verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
@@ -239,9 +246,8 @@ public class Updater {
       Timestamp localTimestamp = localTimestampMaybe.get();
       if (localTimestampMaybe.get().getSignedMeta().getVersion()
           >= timestamp.getSignedMeta().getVersion()) {
-        throw new RoleVersionException(
-            localTimestamp.getSignedMeta().getVersion() + 1,
-            timestamp.getSignedMeta().getVersion());
+        throw new RollbackVersionException(
+            localTimestamp.getSignedMeta().getVersion(), timestamp.getSignedMeta().getVersion());
       }
     }
     // 4) check expiration timestamp is after tuf update start time, else fail.

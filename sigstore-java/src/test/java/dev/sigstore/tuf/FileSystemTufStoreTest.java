@@ -25,6 +25,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 class FileSystemTufStoreTest {
 
+  public static final String PROD_REPO = "real/prod";
+
   @Test
   void newFileSystemStore_empty(@TempDir Path repoBase) throws IOException {
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
@@ -33,8 +35,7 @@ class FileSystemTufStoreTest {
 
   @Test
   void newFileSystemStore_hasRepo(@TempDir Path repoBase) throws IOException {
-    String repoName = "remote-repo-prod";
-    TestResources.setupRepoFiles(repoName, repoBase, "root.json");
+    TestResources.setupRepoFiles(PROD_REPO, repoBase, "root.json");
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertTrue(tufLocalStore.loadTrustedRoot().isPresent());
   }
@@ -43,26 +44,24 @@ class FileSystemTufStoreTest {
   void setTrustedRoot_noPrevious(@TempDir Path repoBase) throws IOException {
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
-    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_TRUSTED_ROOT));
+    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
     assertEquals(1, repoBase.toFile().list().length);
     assertTrue(repoBase.resolve("root.json").toFile().exists());
   }
 
   @Test
   void setTrustedRoot_backupPerformed(@TempDir Path repoBase) throws IOException {
-    String repoName = "remote-repo-prod";
-    TestResources.setupRepoFiles(repoName, repoBase, "root.json");
+    TestResources.setupRepoFiles(PROD_REPO, repoBase, "root.json");
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     int version = tufLocalStore.loadTrustedRoot().get().getSignedMeta().getVersion();
     assertFalse(repoBase.resolve(version + ".root.json").toFile().exists());
-    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_TRUSTED_ROOT));
+    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
     assertTrue(repoBase.resolve(version + ".root.json").toFile().exists());
   }
 
   @Test
   void clearMetaDueToKeyRotation(@TempDir Path repoBase) throws IOException {
-    String repoName = "remote-repo-prod";
-    TestResources.setupRepoFiles(repoName, repoBase, "snapshot.json", "timestamp.json");
+    TestResources.setupRepoFiles(PROD_REPO, repoBase, "snapshot.json", "timestamp.json");
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertTrue(repoBase.resolve("snapshot.json").toFile().exists());
     assertTrue(repoBase.resolve("timestamp.json").toFile().exists());

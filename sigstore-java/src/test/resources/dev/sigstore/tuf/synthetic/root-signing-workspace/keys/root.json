@@ -1,0 +1,41 @@
+{
+	"encrypted": false,
+	"data": [
+		{
+			"keytype": "ecdsa-sha2-nistp256",
+			"scheme": "ecdsa-sha2-nistp256",
+			"keyid_hash_algorithms": [
+				"sha256",
+				"sha512"
+			],
+			"keyval": {
+				"private": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIJnjwwgMnOZKOwukg86WcJyWUJIux3jO8Dg6/cXOsdH0oAoGCCqGSM49\nAwEHoUQDQgAERMS7h3+aSWRbQUFtMNi4cRuS4dRBVti5+myNUQgbaPcgvu2Lisqo\nTRDMhpjNn5QMeZCb5cBgLwSNCcfkvNImdA==\n-----END EC PRIVATE KEY-----\n",
+				"public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAERMS7h3+aSWRbQUFtMNi4cRuS4dRB\nVti5+myNUQgbaPcgvu2LisqoTRDMhpjNn5QMeZCb5cBgLwSNCcfkvNImdA==\n-----END PUBLIC KEY-----\n"
+			}
+		},
+		{
+			"keytype": "ecdsa-sha2-nistp256",
+			"scheme": "ecdsa-sha2-nistp256",
+			"keyid_hash_algorithms": [
+				"sha256",
+				"sha512"
+			],
+			"keyval": {
+				"private": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPsowoYxTqqcME+6jViJXdmvndaB/p/UWiQ5NSWaah0goAoGCCqGSM49\nAwEHoUQDQgAEn3iCA4jyHg/t702ar5N1mWNnA0odlI2JNbKEN9zHWZLpcwu23lFp\nm/xGsANv3SM0JwekCOOJ5uHYbI93tHldUQ==\n-----END EC PRIVATE KEY-----\n",
+				"public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEn3iCA4jyHg/t702ar5N1mWNnA0od\nlI2JNbKEN9zHWZLpcwu23lFpm/xGsANv3SM0JwekCOOJ5uHYbI93tHldUQ==\n-----END PUBLIC KEY-----\n"
+			}
+		},
+		{
+			"keytype": "ecdsa-sha2-nistp256",
+			"scheme": "ecdsa-sha2-nistp256",
+			"keyid_hash_algorithms": [
+				"sha256",
+				"sha512"
+			],
+			"keyval": {
+				"private": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIHzUaHw2Wqe9H4ngFIxhJm3xAh8SVKHN0t/4Mn2KjX2eoAoGCCqGSM49\nAwEHoUQDQgAEHNEBmNg8kSmgu6gdwGArDmHoFNU+Fml7O2ThJyDvdgYiWIis0DSW\n2f2xMcVuQK1/EM4dhkPxbIMMoPSqRGxP2Q==\n-----END EC PRIVATE KEY-----\n",
+				"public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHNEBmNg8kSmgu6gdwGArDmHoFNU+\nFml7O2ThJyDvdgYiWIis0DSW2f2xMcVuQK1/EM4dhkPxbIMMoPSqRGxP2Q==\n-----END PUBLIC KEY-----\n"
+			}
+		}
+	]
+}

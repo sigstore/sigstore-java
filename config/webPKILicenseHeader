@@ -1,5 +1,6 @@
 /*
- * Copyright 2022 The Sigstore Authors.
+ * Copyright $YEAR The Sigstore Authors.
+ * Copyright 2006-2018 WebPKI.org (http://webpki.org).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +14,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.tuf.model;
-
-import javax.annotation.Nullable;
-import org.immutables.gson.Gson;
-import org.immutables.value.Value;
-
-/** The Hash values for some given thing. */
-@Gson.TypeAdapters
-@Value.Immutable
-public interface Hashes {
-
-  @Nullable
-  /** SHA_256 hash of the thing. * */
-  String getSha256();
-
-  @Nullable
-  /** SHA_512 hash of the thing. * */
-  String getSha512();
-}

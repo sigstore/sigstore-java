@@ -37,6 +37,9 @@ class KeysTest {
   static final String ED25519_PUB_PATH = "dev/sigstore/samples/keys/test-ed25519.pub";
   static final String DSA_PUB_PATH = "dev/sigstore/samples/keys/test-dsa.pub";
 
+  static final String ECDSA_SHA2_NISTP256 =
+      "dev/sigstore/samples/keys/test-ecdsa-sha2-nistp256.pub";
+
   @Test
   void parsePublicKey_rsa() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
@@ -83,6 +86,14 @@ class KeysTest {
     Assertions.assertThrows(
         NoSuchAlgorithmException.class,
         () -> Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(DSA_PUB_PATH))));
+  }
+
+  @Test
+  void parseTufPublicKeyPemEncoded_sha2_nistp256()
+      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+    PublicKey result =
+        Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ECDSA_SHA2_NISTP256)));
+    assertEquals("EC", result.getAlgorithm());
   }
 
   @Test

@@ -87,12 +87,21 @@ spotless {
     java {
         googleJavaFormat("1.6")
         licenseHeaderFile("$rootDir/config/licenseHeader")
-        targetExclude("build/**/*.java", "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
+        targetExclude(
+            "build/**/*.java",
+            "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java",
+            "src/*/java/dev/sigstore/json/canonicalizer/*.java"
+        )
     }
     format("conscrypt", com.diffplug.gradle.spotless.JavaExtension::class.java) {
         googleJavaFormat("1.6")
         licenseHeaderFile("$rootDir/config/conscryptLicenseHeader")
         target("src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
+    }
+    format("webPki", com.diffplug.gradle.spotless.JavaExtension::class.java) {
+        googleJavaFormat("1.6")
+        licenseHeaderFile("$rootDir/config/webPKILicenseHeader")
+        target("src/*/java/dev/sigstore/json/canonicalizer/*.java")
     }
 }
 

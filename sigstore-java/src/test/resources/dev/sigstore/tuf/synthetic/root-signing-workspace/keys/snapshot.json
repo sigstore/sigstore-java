@@ -1,0 +1,17 @@
+{
+	"encrypted": false,
+	"data": [
+		{
+			"keytype": "ecdsa-sha2-nistp256",
+			"scheme": "ecdsa-sha2-nistp256",
+			"keyid_hash_algorithms": [
+				"sha256",
+				"sha512"
+			],
+			"keyval": {
+				"private": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIK2wSevTdyo5hjw5raCP5lRE6tDezxbLBCDZ2P6L9QHloAoGCCqGSM49\nAwEHoUQDQgAEuEqDYqKSQOWNLDBTVVhevDTl9Agw9AuDjgT+W2ZQEHB3J4dnCp/B\nKpRYXKCMP9ZkO158oHlbFd5fJg3RbpasCQ==\n-----END EC PRIVATE KEY-----\n",
+				"public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEuEqDYqKSQOWNLDBTVVhevDTl9Agw\n9AuDjgT+W2ZQEHB3J4dnCp/BKpRYXKCMP9ZkO158oHlbFd5fJg3RbpasCQ==\n-----END PUBLIC KEY-----\n"
+			}
+		}
+	]
+}

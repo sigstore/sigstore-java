@@ -1,0 +1,18 @@
+{
+  "signed": {
+    "_type": "timestamp",
+    "spec_version": "1.0",
+    "version": 3,
+    "expires": "2022-12-10T18:07:30Z",
+    "meta": {
+      "snapshot.json": {
+        "length": 542,
+        "hashes": {
+          "sha512": "19584e474aafefce00d504cdb2c6103fd964872c3806639d66a8852f68bf42071c7324fdffbb85a7257cdca839d3cea35172c9eba9007963fecc041899375482"
+        },
+        "version": 3
+      }
+    }
+  },
+  "signatures": []
+}
