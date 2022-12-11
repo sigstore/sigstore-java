@@ -1,0 +1,35 @@
+name: Conformance Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  conformance:
+    permissions:
+      # Needed to access the workflow's OIDC identity.
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d171c3b028d844f2bf14e9fdec0c58114451e4bf
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Build sigstore-java
+        uses: gradle/gradle-build-action@3fbe033aaae657f011f88f29be9e65ed26bd29ef # tag=v2.3.3
+        with:
+          arguments: clean :sigstore-conformance:build
+
+      - name: Unpack sigstore-java distribution
+        run: tar -xvf ${{ github.workspace }}/sigstore-conformance/build/distributions/sigstore-conformance-0.3.0.tar
+
+      - uses: trailofbits/sigstore-conformance@4b6b3c2877f7fd629d33c654b75143ecfcc68e2b
+        with:
+          entrypoint: ${{ github.workspace }}/sigstore-conformance-0.3.0/bin/sigstore-conformance
