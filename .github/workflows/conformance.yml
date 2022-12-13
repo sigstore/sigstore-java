@@ -28,8 +28,8 @@ jobs:
           arguments: clean :sigstore-conformance:build
 
       - name: Unpack sigstore-java distribution
-        run: tar -xvf ${{ github.workspace }}/sigstore-conformance/build/distributions/sigstore-conformance-0.3.0.tar
+        run: tar -xvf ${{ github.workspace }}/sigstore-conformance/build/distributions/sigstore-conformance-*.tar --strip-components 1
 
       - uses: trailofbits/sigstore-conformance@4b6b3c2877f7fd629d33c654b75143ecfcc68e2b
         with:
-          entrypoint: ${{ github.workspace }}/sigstore-conformance-0.3.0/bin/sigstore-conformance
+          entrypoint: ${{ github.workspace }}/bin/sigstore-conformance
