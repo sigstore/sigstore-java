@@ -15,7 +15,7 @@ public class Main {
   private static final String VERIFY_COMMAND = "verify";
   private static final String SIGNATURE_FLAG = "--signature";
   private static final String CERTIFICATE_FLAG = "--certificate";
-  private static final String CERTIFICATE_EMAIL_FLAG = "--certificate-email";
+  private static final String CERTIFICATE_IDENTITY_FLAG = "--certificate-identity";
   private static final String CERTIFICATE_OIDC_ISSUER_FLAG = "--certificate-oidc-issuer";
 
   public static void main(String[] args) throws Exception {
@@ -103,7 +103,7 @@ public class Main {
     verifyArgs.signature = Paths.get(args.getNextArgument());
     args.expectNextArgument(CERTIFICATE_FLAG);
     verifyArgs.certificate = Paths.get(args.getNextArgument());
-    args.expectNextArgument(CERTIFICATE_EMAIL_FLAG);
+    args.expectNextArgument(CERTIFICATE_IDENTITY_FLAG);
     verifyArgs.certificateIdentity = args.getNextArgument();
     args.expectNextArgument(CERTIFICATE_OIDC_ISSUER_FLAG);
     verifyArgs.certificateOidcIssuer = args.getNextArgument();
