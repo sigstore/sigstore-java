@@ -9,6 +9,11 @@ on:
 
 jobs:
   conformance:
+    strategy:
+      matrix:
+        java-version: [11, 17]
+      fail-fast: false
+
     permissions:
       # Needed to access the workflow's OIDC identity.
       id-token: write
@@ -16,10 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@d171c3b028d844f2bf14e9fdec0c58114451e4bf
 
-      - name: Set up JDK 17
+      - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v3
         with:
-          java-version: 17
+          java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
 
       - name: Build sigstore-java
