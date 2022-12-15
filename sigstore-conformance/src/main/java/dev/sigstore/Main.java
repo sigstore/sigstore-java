@@ -1,14 +1,28 @@
+/*
+ * Copyright 2022 The Sigstore Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.sigstore;
-
-import com.google.common.hash.Hashing;
-import dev.sigstore.oidc.client.GithubActionsOidcClient;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static com.google.common.io.Files.asByteSource;
 import static dev.sigstore.encryption.certificates.Certificates.toPemString;
+
+import com.google.common.hash.Hashing;
+import dev.sigstore.oidc.client.GithubActionsOidcClient;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class Main {
   private static final String SIGN_COMMAND = "sign";
@@ -34,7 +48,7 @@ public class Main {
 
   private static class Arguments {
     private int index;
-    final private String[] args;
+    private final String[] args;
 
     public Arguments(String[] args) {
       this.index = 0;
@@ -43,9 +57,8 @@ public class Main {
 
     public String getNextArgument() {
       if (index >= args.length) {
-        final var errorMsg = String.format(
-          "Insufficient arguments; amount=%d, requested=%d",
-          args.length, index);
+        final var errorMsg =
+            String.format("Insufficient arguments; amount=%d, requested=%d", args.length, index);
         throw new IllegalArgumentException(errorMsg);
       }
       return args[index++];
@@ -54,9 +67,9 @@ public class Main {
     public void expectNextArgument(String expectedArg) {
       final var nextArg = getNextArgument();
       if (!expectedArg.equals(nextArg)) {
-        final var errorMsg = String.format(
-          "Found unexpected argument; expected=\"%s\", found=\"%s\"",
-          expectedArg, nextArg);
+        final var errorMsg =
+            String.format(
+                "Found unexpected argument; expected=\"%s\", found=\"%s\"", expectedArg, nextArg);
         throw new IllegalArgumentException(errorMsg);
       }
     }
@@ -80,9 +93,10 @@ public class Main {
 
   private static void executeSign(SignArguments args) throws Exception {
     final var signer =
-      KeylessSigner.builder().sigstorePublicDefaults().oidcClient(
-        GithubActionsOidcClient.builder().build()
-      ).build();
+        KeylessSigner.builder()
+            .sigstorePublicDefaults()
+            .oidcClient(GithubActionsOidcClient.builder().build())
+            .build();
     final var result = signer.signFile(args.artifact);
     Files.write(args.signature, result.getSignature());
     final var pemBytes = toPemString(result.getCertPath()).getBytes();
@@ -112,14 +126,10 @@ public class Main {
   }
 
   private static void executeVerify(VerifyArguments args) throws Exception {
-    final var verifier =
-      KeylessVerifier.builder().sigstorePublicDefaults().build();
+    final var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     final var artifactByteSource = asByteSource(args.artifact.toFile());
-    final byte[] artifactDigest =
-      artifactByteSource.hash(Hashing.sha256()).asBytes();
+    final byte[] artifactDigest = artifactByteSource.hash(Hashing.sha256()).asBytes();
     verifier.verifyOnline(
-      artifactDigest,
-      Files.readAllBytes(args.certificate),
-      Files.readAllBytes(args.signature));
+        artifactDigest, Files.readAllBytes(args.certificate), Files.readAllBytes(args.signature));
   }
 }
