@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  pull_request_trigger:
   workflow_dispatch:
 
 jobs:
@@ -35,6 +35,6 @@ jobs:
       - name: Unpack sigstore-java distribution
         run: tar -xvf ${{ github.workspace }}/sigstore-conformance/build/distributions/sigstore-conformance-*.tar --strip-components 1
 
-      - uses: trailofbits/sigstore-conformance@5570a249b6d84f6a04e195a0811704ebe2167e32
+      - uses: trailofbits/sigstore-conformance@0748d63c53810e36cc3f4bbe4114301080f0d844
         with:
           entrypoint: ${{ github.workspace }}/bin/sigstore-conformance
