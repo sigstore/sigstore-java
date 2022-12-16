@@ -115,6 +115,7 @@ public class KeylessTest {
   }
 
   @Test
+  @Disabled("Temporary disable staging tests")
   @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
   public void sign_stagingWithGithubOidc() throws Exception {
     var signer =
