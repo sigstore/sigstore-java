@@ -33,6 +33,7 @@ import java.util.UUID;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -77,6 +78,7 @@ public class KeylessTest {
   }
 
   @Test
+  @Disabled("Temporary disable staging tests")
   @EnabledIfOidcExists(provider = OidcProviderType.MANUAL)
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();

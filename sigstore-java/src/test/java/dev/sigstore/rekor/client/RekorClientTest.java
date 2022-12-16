@@ -42,13 +42,14 @@ import org.junit.jupiter.api.Test;
 
 public class RekorClientTest {
 
+  private static final String REKOR_URL = "https://rekor.sigstore.dev";
   private RekorClient client;
 
   @BeforeEach
   public void setupClient() throws URISyntaxException {
     // this tests directly against rekor in staging, it's a bit hard to bring up a rekor instance
     // without docker compose.
-    client = RekorClient.builder().setServerUrl(new URI("https://rekor.sigstage.dev")).build();
+    client = RekorClient.builder().setServerUrl(new URI(REKOR_URL)).build();
   }
 
   @Test
@@ -59,7 +60,7 @@ public class RekorClientTest {
     // pretty basic testing
     MatcherAssert.assertThat(
         resp.getEntryLocation().toString(),
-        CoreMatchers.startsWith("https://rekor.sigstage.dev/api/v1/log/entries/"));
+        CoreMatchers.startsWith(REKOR_URL + "/api/v1/log/entries/"));
 
     assertNotNull(resp.getUuid());
     assertNotNull(resp.getRaw());
