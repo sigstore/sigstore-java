@@ -1,0 +1,41 @@
+name: Conformance Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request_target:
+    types: [labeled]
+  workflow_dispatch:
+
+jobs:
+  conformance:
+    strategy:
+      matrix:
+        java-version: [11, 17]
+      fail-fast: false
+
+    permissions:
+      # Needed to access the workflow's OIDC identity.
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d171c3b028d844f2bf14e9fdec0c58114451e4bf
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
+
+      - name: Build sigstore-java
+        uses: gradle/gradle-build-action@3fbe033aaae657f011f88f29be9e65ed26bd29ef # tag=v2.3.3
+        with:
+          arguments: :sigstore-conformance:build
+
+      - name: Unpack sigstore-java distribution
+        run: tar -xvf ${{ github.workspace }}/sigstore-conformance/build/distributions/sigstore-conformance-*.tar --strip-components 1
+
+      - uses: trailofbits/sigstore-conformance@0748d63c53810e36cc3f4bbe4114301080f0d844
+        with:
+          entrypoint: ${{ github.workspace }}/bin/sigstore-conformance
