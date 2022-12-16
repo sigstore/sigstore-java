@@ -16,9 +16,9 @@
 package dev.sigstore.tuf.model;
 
 import dev.sigstore.json.GsonSupplier;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import java.io.IOException;
 import java.util.List;
-import org.erdtman.jcs.JsonCanonicalizer;
 
 /**
  * Signed wrapper around {@link TufMeta}.
