@@ -1,6 +1,7 @@
 plugins {
     id("build-logic.kotlin")
     id("build-logic.repositories")
+    id("build-logic.test-junit5")
 }
 
 dependencies {
@@ -8,8 +9,12 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10")
     implementation("com.google.guava:guava:31.1-jre")
 
+    // This is different from typical "testImplementation" dependencies, because
+    // testkit exposes junit5 dependencies in its API (e.g. annotations)
     api(platform("org.junit:junit-bom:5.9.1"))
-    api("org.junit.jupiter:junit-jupiter")
+    api("org.junit.jupiter:junit-jupiter-api")
+    api("org.junit.jupiter:junit-jupiter-params")
+    implementation("org.junit.jupiter:junit-jupiter")
     api("org.assertj:assertj-core:3.23.1")
     api(gradleTestKit())
 }

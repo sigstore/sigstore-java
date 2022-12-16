@@ -3,6 +3,7 @@ import buildlogic.filterEolSimple
 plugins {
     `java-base`
     id("com.github.vlsi.gradle-extensions")
+    id("build-logic.spotless-base")
     id("build-logic.testing")
     id("build-logic.errorprone")
 }
@@ -10,6 +11,16 @@ plugins {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+}
+
+spotless {
+    java {
+        googleJavaFormat("1.6")
+        licenseHeaderFile("$rootDir/config/licenseHeader")
+        // Note if submodule needs to add more exclusions, it should list ALL of them since
+        // Spotless does not have "addTargetExclude" method
+        targetExclude("build/**/*.java")
+    }
 }
 
 tasks.withType<JavaCompile>().configureEach {
