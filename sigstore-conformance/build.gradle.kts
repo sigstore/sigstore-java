@@ -32,5 +32,5 @@ spotless {
 }
 
 application {
-    mainClass.set("dev.sigstore.Main")
+    mainClass.set("dev.sigstore.conformance.Main")
 }

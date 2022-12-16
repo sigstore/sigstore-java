@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore;
+package dev.sigstore.conformance;
 
 import static com.google.common.io.Files.asByteSource;
 import static dev.sigstore.encryption.certificates.Certificates.toPemString;
 
 import com.google.common.hash.Hashing;
+import dev.sigstore.KeylessSigner;
+import dev.sigstore.KeylessVerifier;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
