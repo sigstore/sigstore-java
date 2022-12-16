@@ -2,7 +2,7 @@ import com.google.protobuf.gradle.id
 
 plugins {
     id("build-logic.java-published-library")
-    id("com.diffplug.spotless") version "6.12.0"
+    id("build-logic.test-junit5")
     id("org.jsonschema2dataclass") version "4.5.0"
     id("com.google.protobuf") version "0.9.1"
 }
@@ -73,20 +73,7 @@ protobuf {
 }
 
 spotless {
-    kotlinGradle {
-        target("*.gradle.kts") // default target for kotlinGradle
-        ktlint()
-    }
-    format("misc") {
-        target("*.md", ".gitignore", "**/*.yaml")
-
-        trimTrailingWhitespace()
-        indentWithSpaces()
-        endWithNewline()
-    }
     java {
-        googleJavaFormat("1.6")
-        licenseHeaderFile("$rootDir/config/licenseHeader")
         targetExclude(
             "build/**/*.java",
             "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java",
@@ -116,9 +103,4 @@ jsonSchema2Pojo {
 // TODO: keep until these code gen plugins explicitly declare dependencies
 tasks.named("sourcesJar") {
     dependsOn("generateJsonSchema2DataClass0")
-}
-
-tasks.test {
-    useJUnitPlatform {
-    }
 }
