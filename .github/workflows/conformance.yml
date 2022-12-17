@@ -20,7 +20,7 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@d171c3b028d844f2bf14e9fdec0c58114451e4bf
+      - uses: actions/checkout@3ba5ee6fac7e0e30e2ea884e236f282d3a775891
 
       - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v3
