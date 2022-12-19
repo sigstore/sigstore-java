@@ -20,10 +20,10 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@d171c3b028d844f2bf14e9fdec0c58114451e4bf
+      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # tag=v3.2.0
 
       - name: Set up JDK ${{ matrix.java-version }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@1df8dbefe2a8cbc99770194893dd902763bee34b # tag=v3.9.0
         with:
           java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
@@ -36,6 +36,6 @@ jobs:
       - name: Unpack sigstore-java distribution
         run: tar -xvf ${{ github.workspace }}/sigstore-conformance/build/distributions/sigstore-conformance-*.tar --strip-components 1
 
-      - uses: trailofbits/sigstore-conformance@0748d63c53810e36cc3f4bbe4114301080f0d844
+      - uses: trailofbits/sigstore-conformance@0748d63c53810e36cc3f4bbe4114301080f0d844 # tag=v0.0.3
         with:
           entrypoint: ${{ github.workspace }}/bin/sigstore-conformance

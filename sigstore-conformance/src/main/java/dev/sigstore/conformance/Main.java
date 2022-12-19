@@ -15,16 +15,19 @@
  */
 package dev.sigstore.conformance;
 
-import static com.google.common.io.Files.asByteSource;
 import static dev.sigstore.encryption.certificates.Certificates.toPemString;
 
-import com.google.common.hash.Hashing;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.KeylessVerifier;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class Main {
   private static final String SIGN_COMMAND = "sign";
@@ -101,16 +104,20 @@ public class Main {
             .build();
     final var result = signer.signFile(args.artifact);
     Files.write(args.signature, result.getSignature());
-    final var pemBytes = toPemString(result.getCertPath()).getBytes();
+    final var pemBytes = toPemString(result.getCertPath()).getBytes(StandardCharsets.UTF_8);
     Files.write(args.certificate, pemBytes);
   }
 
   private static class VerifyArguments {
     public Path signature;
     public Path certificate;
-    public String certificateIdentity;
-    public String certificateOidcIssuer;
     public Path artifact;
+
+    @SuppressWarnings("unused") // remove when verifier actually verifies these
+    public String certificateIdentity;
+
+    @SuppressWarnings("unused") // remove when verifier actually verifies these
+    public String certificateOidcIssuer;
   }
 
   private static VerifyArguments parseVerifyArguments(Arguments args) {
@@ -129,9 +136,20 @@ public class Main {
 
   private static void executeVerify(VerifyArguments args) throws Exception {
     final var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    final var artifactByteSource = asByteSource(args.artifact.toFile());
-    final byte[] artifactDigest = artifactByteSource.hash(Hashing.sha256()).asBytes();
+    final byte[] artifactDigest = sha256(args.artifact);
     verifier.verifyOnline(
         artifactDigest, Files.readAllBytes(args.certificate), Files.readAllBytes(args.signature));
+  }
+
+  private static byte[] sha256(Path path) throws IOException, NoSuchAlgorithmException {
+    MessageDigest digest = MessageDigest.getInstance("SHA-256");
+    try (InputStream in = Files.newInputStream(path)) {
+      byte[] buffer = new byte[1024];
+      int count;
+      while ((count = in.read(buffer)) > 0) {
+        digest.update(buffer, 0, count);
+      }
+    }
+    return digest.digest();
   }
 }
