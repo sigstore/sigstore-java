@@ -131,12 +131,12 @@ public class RekorVerifier {
     }
 
     var calcuatedRootHash = Hex.toHexString(currentHash);
-    if (!calcuatedRootHash.equals(inclusionProof.rootHash())) {
+    if (!calcuatedRootHash.equals(inclusionProof.getRootHash())) {
       throw new RekorVerificationException(
           "Calculated inclusion proof root hash does not match provided root hash\n"
               + calcuatedRootHash
               + "\n"
-              + inclusionProof.rootHash());
+              + inclusionProof.getRootHash());
     }
   }
 

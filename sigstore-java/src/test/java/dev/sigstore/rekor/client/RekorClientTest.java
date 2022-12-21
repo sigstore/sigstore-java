@@ -159,7 +159,7 @@ public class RekorClientTest {
     assertEquals(resp.getEntry().getLogID(), entry.get().getLogID());
     assertTrue(entry.get().getVerification().getInclusionProof().isPresent());
     assertNotNull(entry.get().getVerification().getInclusionProof().get().getTreeSize());
-    assertNotNull(entry.get().getVerification().getInclusionProof().get().rootHash());
+    assertNotNull(entry.get().getVerification().getInclusionProof().get().getRootHash());
     assertNotNull(entry.get().getVerification().getInclusionProof().get().getLogIndex());
     assertTrue(entry.get().getVerification().getInclusionProof().get().getHashes().size() > 0);
   }
