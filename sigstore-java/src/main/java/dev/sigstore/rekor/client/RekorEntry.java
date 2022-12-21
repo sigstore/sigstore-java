@@ -59,7 +59,7 @@ public interface RekorEntry {
      *
      * @return SHA256 hash value expressed in hexadecimal format
      */
-    String rootHash();
+    String getRootHash();
 
     /** The size of the merkle tree at the time the inclusion proof was generated. */
     Long getTreeSize();
