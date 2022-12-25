@@ -43,5 +43,6 @@ val sigstoreClientClasspath by configurations.creating {
         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, LibraryElements.JAR)
         attribute(Usage.USAGE_ATTRIBUTE, Usage.JAVA_RUNTIME)
         attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, JavaVersion.current().majorVersion.toInt())
     }
 }

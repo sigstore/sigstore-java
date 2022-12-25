@@ -9,6 +9,9 @@ dependencies {
     compileOnly(project(":sigstore-java"))
     implementation("com.fasterxml.jackson.core:jackson-databind:2.14.1")
 
+    sigstoreJavaRuntime(project(":sigstore-java")) {
+        because("Test code needs access locally-built sigstore-java as a Maven repository")
+    }
     testImplementation(project(":sigstore-testkit"))
 }
 
