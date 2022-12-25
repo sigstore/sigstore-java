@@ -17,13 +17,14 @@
 package dev.sigstore.gradle
 
 import dev.sigstore.testkit.BaseGradleTest
+import dev.sigstore.testkit.TestedGradle
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 class OidcDslTest: BaseGradleTest() {
     @ParameterizedTest
     @MethodSource("gradleVersionAndSettings")
-    fun `configure GitHub OIDC client explicitly`(gradleVersion: String, configurationCache: ConfigurationCache) {
+    fun `configure GitHub OIDC client explicitly`(gradle: TestedGradle) {
         writeBuildGradle(
             """
             plugins {
@@ -44,8 +45,8 @@ class OidcDslTest: BaseGradleTest() {
             }
             """.trimIndent()
         )
-        enableConfigurationCache(gradleVersion, configurationCache)
-        prepare(gradleVersion, "printConfig", "-s")
+        enableConfigurationCache(gradle)
+        prepare(gradle.version, "printConfig", "-s")
             .build()
     }
 }

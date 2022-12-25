@@ -17,17 +17,18 @@
 package dev.sigstore.gradle
 
 import dev.sigstore.testkit.BaseGradleTest
+import dev.sigstore.testkit.TestedGradle
+import dev.sigstore.testkit.TestedSigstoreJava
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 @EnabledIfOidcExists
 class SigstorePublishSignTest : BaseGradleTest() {
     @ParameterizedTest
-    @MethodSource("gradleVersionAndSettings")
-    fun `sign file`(gradleVersion: String, configurationCache: ConfigurationCache) {
+    @MethodSource("gradleAndSigstoreJavaVersions")
+    fun `sign file`(gradle: TestedGradle, sigstoreJava: TestedSigstoreJava) {
         writeBuildGradle(
             """
             plugins {
@@ -35,9 +36,7 @@ class SigstorePublishSignTest : BaseGradleTest() {
                 id("maven-publish")
                 id("dev.sigstore.sign")
             }
-            repositories {
-                mavenCentral()
-            }
+            ${declareRepositoryAndDependency(sigstoreJava)}
 
             group = "dev.sigstore.test"
             java {
@@ -66,8 +65,8 @@ class SigstorePublishSignTest : BaseGradleTest() {
             rootProject.name = 'sigstore-test'
             """.trimIndent()
         )
-        enableConfigurationCache(gradleVersion, configurationCache)
-        prepare(gradleVersion, "publishAllPublicationsToTmpRepository", "-s")
+        enableConfigurationCache(gradle)
+        prepare(gradle.version, "publishAllPublicationsToTmpRepository", "-s")
             .build()
 
         assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0.pom.sigstore"))
@@ -83,8 +82,8 @@ class SigstorePublishSignTest : BaseGradleTest() {
             .content()
             .basicSigstoreStructure()
 
-        if (configurationCache == ConfigurationCache.ON) {
-            val result = prepare(gradleVersion, "publishAllPublicationsToTmpRepository", "-s")
+        if (gradle.configurationCache == ConfigurationCache.ON) {
+            val result = prepare(gradle.version, "publishAllPublicationsToTmpRepository", "-s")
                 .build()
 
             assertThat(result.output)

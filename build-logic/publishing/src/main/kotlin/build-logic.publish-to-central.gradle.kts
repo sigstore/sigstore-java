@@ -3,6 +3,7 @@ import org.gradle.api.publish.internal.PublicationInternal
 plugins {
     id("java-library")
     id("maven-publish")
+    id("build-logic.publish-to-tmp-maven-repo")
 }
 
 val repoUrl = "https://github.com/sigstore/sigstore-java"

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.Arguments.arguments
+import java.io.File
 import java.nio.file.Path
 
 open class BaseGradleTest {
@@ -38,17 +39,44 @@ open class BaseGradleTest {
     companion object {
         val isCI = System.getenv().containsKey("CI") || System.getProperties().containsKey("CI")
 
+        val EXTRA_LOCAL_REPOS  = System.getProperty("sigstore.test.local.maven.repo").split(File.pathSeparatorChar)
+
+        val SIGSTORE_JAVA_CURRENT_VERSION =
+            TestedSigstoreJava.Version(
+                System.getProperty("sigstore.test.current.version")
+            )
+
         @JvmStatic
         fun gradleVersionAndSettings(): Iterable<Arguments> {
             if (!isCI) {
                 // Make the test faster, and skip extra tests with the configuration cache to reduce OIDC flows
                 // Gradle 7.2 fails with "No service of type ObjectFactory available in default services"
-                return listOf(arguments("7.3", ConfigurationCache.OFF))
+                return listOf(arguments(TestedGradle("7.3", ConfigurationCache.ON)))
             }
             return mutableListOf<Arguments>().apply {
-                add(arguments("7.3", ConfigurationCache.ON))
-                add(arguments("7.5.1", ConfigurationCache.ON))
-                add(arguments("7.5.1", ConfigurationCache.OFF))
+                add(arguments(TestedGradle("7.3", ConfigurationCache.ON)))
+                add(arguments(TestedGradle("7.5.1", ConfigurationCache.ON)))
+                add(arguments(TestedGradle("7.5.1", ConfigurationCache.OFF)))
+            }
+        }
+
+        @JvmStatic
+        fun sigstoreJavaVersions(): Iterable<Arguments> {
+            return mutableListOf<Arguments>().apply {
+                add(arguments(SIGSTORE_JAVA_CURRENT_VERSION))
+                if (isCI) {
+                    add(arguments(TestedSigstoreJava.Default))
+                    add(arguments(TestedSigstoreJava.Version("0.2.0")))
+                }
+            }
+        }
+
+        @JvmStatic
+        fun gradleAndSigstoreJavaVersions(): Iterable<Arguments> {
+            val gradle = gradleVersionAndSettings()
+            val sigstore = sigstoreJavaVersions()
+            return gradle.flatMap { gradleVersion ->
+                sigstore.map { arguments(*gradleVersion.get(), *it.get()) }
             }
         }
     }
@@ -63,6 +91,48 @@ open class BaseGradleTest {
     fun writeSettingsGradle(@Language("Groovy") text: String) = projectDir.resolve("settings.gradle").write(text)
 
     protected fun String.normalizeEol() = replace(Regex("[\r\n]+"), "\n")
+
+    protected fun declareRepositories(sigstoreJava: TestedSigstoreJava) =
+        """
+        repositories {${
+            if (sigstoreJava == SIGSTORE_JAVA_CURRENT_VERSION || sigstoreJava is TestedSigstoreJava.Default) {
+                EXTRA_LOCAL_REPOS.joinToString("\n") {
+                    """
+
+                maven {
+                   url = uri("${
+                        File(it).toURI().toASCIIString().replace(Regex("""[\\"$]""")) { "\\" + it.value }
+                   }")
+                }
+                """.trimIndent().prependIndent("            ")
+                }
+            } else {
+                ""
+            }
+        }
+            mavenCentral()
+        }
+        """.trimIndent()
+
+    protected fun declareDependency(sigstoreJava: TestedSigstoreJava) =
+        """
+        dependencies {
+            ${
+                when (sigstoreJava) {
+                    TestedSigstoreJava.Default -> ""
+                    is TestedSigstoreJava.Version ->
+                        "sigstoreClient(\"dev.sigstore:sigstore-java:${sigstoreJava.version}\")"
+                }
+            }
+        }
+        """.trimIndent()
+
+    protected fun declareRepositoryAndDependency(sigstoreJava: TestedSigstoreJava) =
+        """
+        ${declareRepositories(sigstoreJava)}
+        ${declareDependency(sigstoreJava)}
+        """.trimIndent()
+
 
     protected fun createSettings(extra: String = "") {
         projectDir.resolve("settings.gradle").write(
@@ -95,14 +165,13 @@ open class BaseGradleTest {
             .forwardOutput()
 
     protected fun enableConfigurationCache(
-        gradleVersion: String,
-        configurationCache: ConfigurationCache
+        gradle: TestedGradle,
     ) {
-        if (configurationCache != ConfigurationCache.ON) {
+        if (gradle.configurationCache != ConfigurationCache.ON) {
             return
         }
-        if (GradleVersion.version(gradleVersion) < GradleVersion.version("7.0")) {
-            Assertions.fail<Unit>("Gradle version $gradleVersion does not support configuration cache")
+        if (GradleVersion.version(gradle.version) < GradleVersion.version("7.0")) {
+            Assertions.fail<Unit>("Gradle version $gradle does not support configuration cache")
         }
         // Gradle 6.5 expects values ON, OFF, WARN, so we add the option for 7.0 only
         projectDir.resolve("gradle.properties").toFile().appendText(
