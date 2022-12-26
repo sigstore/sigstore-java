@@ -1,6 +1,8 @@
 .gradle
 /build
 /*/build
+/out
+/*/out
 /http
 
 # For occasional use of https://github.com/melix/includegit-gradle-plugin
