@@ -16,25 +16,21 @@
  */
 package dev.sigstore.sign.work
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import dev.sigstore.KeylessSigner
+import dev.sigstore.bundle.BundleFactory
 import dev.sigstore.oidc.client.OidcClient
 import dev.sigstore.sign.OidcClientConfiguration
-import dev.sigstore.sign.bundle.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.slf4j.LoggerFactory
-import java.util.*
 
 abstract class SignWorkParameters : WorkParameters {
     abstract val inputFile: RegularFileProperty
     abstract val outputSignature: RegularFileProperty
     abstract val oidcClient: Property<OidcClientConfiguration>
 }
-
-private val jsonMapper = ObjectMapper().writerWithDefaultPrettyPrinter()
 
 abstract class SignWorkAction : WorkAction<SignWorkParameters> {
     companion object {
@@ -53,32 +49,7 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
         }.build()
 
         val result = signer.signFile(inputFile.toPath())
-        val signature = SigstoreBundle(
-            mediaType = BundleMediaTypes.V1_JSON.value,
-            timestampProof = RekorEntry(
-                logIndex = result.entry.logIndex,
-                logId = result.entry.logID,
-                integratedTime = result.entry.integratedTime,
-                signedEntryTimestamp = Base64.getDecoder().decode(result.entry.verification.signedEntryTimestamp),
-            ),
-            attestation = AttestationBlob(
-                payloadHash = HashValue(
-                    // See https://github.com/sigstore/sigstore-java/issues/85
-                    algorithm = HashAlgorithm.sha256,
-                    // https://github.com/sigstore/sigstore-java/issues/86
-                    hash = result.digest.chunked(2)
-                        .map { it.toInt(16).toByte() }
-                        .toByteArray(),
-                ),
-                signature = result.signature,
-            ),
-            verificationMaterial = X509CertVerificationMaterial(
-                chain = result.certPath.encoded,
-            )
-        )
-        jsonMapper.writeValue(
-            parameters.outputSignature.get().asFile,
-            signature
-        )
+        val bundleJson = BundleFactory.createBundle(result)
+        parameters.outputSignature.get().asFile.writeText(bundleJson)
     }
 }

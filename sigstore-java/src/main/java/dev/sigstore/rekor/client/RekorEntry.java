@@ -63,6 +63,9 @@ public interface RekorEntry {
 
     /** The size of the merkle tree at the time the inclusion proof was generated. */
     Long getTreeSize();
+
+    /** The checkpoint (signed tree head) that the inclusion proof is based on. */
+    String getCheckpoint();
   }
 
   /** Returns the content of the log entry. */

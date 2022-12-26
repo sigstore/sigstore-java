@@ -66,7 +66,8 @@ open class BaseGradleTest {
                 add(arguments(SIGSTORE_JAVA_CURRENT_VERSION))
                 if (isCI) {
                     add(arguments(TestedSigstoreJava.Default))
-                    add(arguments(TestedSigstoreJava.Version("0.2.0")))
+                    // 0.3.0 is the minimal version that supports generating Sigstore Bundle
+                    add(arguments(TestedSigstoreJava.Version("0.3.0")))
                 }
             }
         }
@@ -185,7 +186,7 @@ open class BaseGradleTest {
 
     protected fun <SELF : AbstractCharSequenceAssert<SELF, ACTUAL>, ACTUAL : CharSequence> AbstractCharSequenceAssert<SELF, ACTUAL>.basicSigstoreStructure() =
         contains(
-            """"mediaType" : "application/vnd.dev.sigstore.bundle.v1+json"""",
-            """"algorithm" : "sha256"""",
+            """"mediaType": "application/vnd.dev.sigstore.bundle+json;version\u003d0.1"""",
+            """"algorithm": "SHA2_256"""",
         )
 }
