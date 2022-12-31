@@ -88,7 +88,6 @@ class UpdaterTest {
     symlinkAllowingHandler.addAliasCheck(
         new SymlinkAllowedResourceAliasChecker(symlinkAllowingHandler));
     remote.setHandler(symlinkAllowingHandler);
-    remote.setHandler(symlinkAllowingHandler);
     remote.start();
     remoteUrl = "http://" + connector.getHost() + ":" + connector.getLocalPort();
     System.out.println("TUF local server listening on: " + remoteUrl);
