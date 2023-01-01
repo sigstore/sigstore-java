@@ -3,7 +3,7 @@ import com.google.protobuf.gradle.id
 plugins {
     id("build-logic.java-published-library")
     id("build-logic.test-junit5")
-    id("org.jsonschema2dataclass") version "4.5.0"
+    id("org.jsonschema2dataclass") version "5.0.0"
     id("com.google.protobuf") version "0.9.1"
 }
 
@@ -93,14 +93,18 @@ spotless {
 }
 
 jsonSchema2Pojo {
-    source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
-    targetDirectoryPrefix.set(file("$buildDir/generated/sources/rekor-model/"))
-    targetPackage.set("dev.sigstore.rekor")
-    generateBuilders.set(true)
-    annotationStyle.set("gson")
+    executions {
+        create("rekor") {
+            source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
+            targetDirectoryPrefix.set(file("$buildDir/generated/sources/rekor-model/"))
+            targetPackage.set("dev.sigstore.rekor")
+            generateBuilders.set(true)
+            annotationStyle.set("gson")
+        }
+    }
 }
 
 // TODO: keep until these code gen plugins explicitly declare dependencies
 tasks.named("sourcesJar") {
-    dependsOn("generateJsonSchema2DataClass0")
+    dependsOn("generateJsonSchema2DataClassConfigRekor")
 }
