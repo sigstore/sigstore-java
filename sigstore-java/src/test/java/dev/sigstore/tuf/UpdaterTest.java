@@ -82,8 +82,7 @@ class UpdaterTest {
     symlinkAllowingHandler.setHandler(resourceHandler);
     symlinkAllowingHandler.setBaseResource(resourceBase);
     // the @TempDir locations on OS X are under /var/.. which is a symlink to /private/var and are
-    // not followed by
-    // default in Jetty for security reasons.
+    // not followed by default in Jetty for security reasons.
     symlinkAllowingHandler.clearAliasChecks();
     symlinkAllowingHandler.addAliasCheck(
         new SymlinkAllowedResourceAliasChecker(symlinkAllowingHandler));
