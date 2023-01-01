@@ -46,6 +46,8 @@ import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
 import org.jetbrains.annotations.NotNull;
@@ -67,11 +69,24 @@ class UpdaterTest {
     ServerConnector connector = new ServerConnector(remote);
     connector.setHost("127.0.0.1");
     remote.addConnector(connector);
-    ResourceHandler handler = new ResourceHandler();
-    handler.setBaseResource(Resource.newResource(localMirrorPath.toUri()));
-    handler.setDirectoriesListed(true);
-    handler.setAcceptRanges(true);
-    remote.setHandler(handler);
+
+    ResourceHandler resourceHandler = new ResourceHandler();
+    Resource resourceBase = Resource.newResource(localMirrorPath.toAbsolutePath());
+    resourceHandler.setBaseResource(resourceBase);
+    resourceHandler.setDirectoriesListed(true);
+    resourceHandler.setDirAllowed(true);
+    resourceHandler.setAcceptRanges(true);
+    ContextHandler symlinkAllowingHandler = new ContextHandler();
+    symlinkAllowingHandler.setContextPath("/");
+    symlinkAllowingHandler.setAllowNullPathInfo(true);
+    symlinkAllowingHandler.setHandler(resourceHandler);
+    symlinkAllowingHandler.setBaseResource(resourceBase);
+    // the @TempDir locations on OS X are under /var/.. which is a symlink to /private/var and are
+    // not followed by default in Jetty for security reasons.
+    symlinkAllowingHandler.clearAliasChecks();
+    symlinkAllowingHandler.addAliasCheck(
+        new SymlinkAllowedResourceAliasChecker(symlinkAllowingHandler));
+    remote.setHandler(symlinkAllowingHandler);
     remote.start();
     remoteUrl = "http://" + connector.getHost() + ":" + connector.getLocalPort();
     System.out.println("TUF local server listening on: " + remoteUrl);
