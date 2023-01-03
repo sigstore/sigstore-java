@@ -50,7 +50,7 @@ class BundleFactoryInternal {
                 .setMessageDigest(
                     HashOutput.newBuilder()
                         .setAlgorithm(HashAlgorithm.SHA2_256)
-                        .setDigest(ByteString.fromHex(signingResult.getDigest()))));
+                        .setDigest(ByteString.copyFrom(signingResult.getDigest()))));
   }
 
   private static VerificationMaterial.Builder buildVerificationMaterial(

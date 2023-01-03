@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
-import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -71,9 +70,7 @@ public class KeylessTest {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     for (var result : results) {
       verifier.verifyOnline(
-          Hex.decode(result.getDigest()),
-          Certificates.toPemBytes(result.getCertPath()),
-          result.getSignature());
+          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
     }
   }
 
@@ -88,9 +85,7 @@ public class KeylessTest {
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
     for (var result : results) {
       verifier.verifyOnline(
-          Hex.decode(result.getDigest()),
-          Certificates.toPemBytes(result.getCertPath()),
-          result.getSignature());
+          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
     }
   }
 
@@ -108,9 +103,7 @@ public class KeylessTest {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     for (var result : results) {
       verifier.verifyOnline(
-          Hex.decode(result.getDigest()),
-          Certificates.toPemBytes(result.getCertPath()),
-          result.getSignature());
+          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
     }
   }
 
@@ -129,9 +122,7 @@ public class KeylessTest {
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
     for (var result : results) {
       verifier.verifyOnline(
-          Hex.decode(result.getDigest()),
-          Certificates.toPemBytes(result.getCertPath()),
-          result.getSignature());
+          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
     }
   }
 
@@ -150,7 +141,7 @@ public class KeylessTest {
 
       var hr = RekorTypes.getHashedRekord(result.getEntry());
       // check if ht rekor entry has the digest we sent
-      Assertions.assertEquals(Hex.toHexString(artifactDigest), result.getDigest());
+      Assertions.assertArrayEquals(artifactDigest, result.getDigest());
       // check if the rekor entry has the signature we sent
       Assertions.assertArrayEquals(
           Base64.getDecoder().decode(hr.getSignature().getContent()), result.getSignature());
