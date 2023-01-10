@@ -77,8 +77,7 @@ public class RekorClient {
     URI rekorPutEndpoint = serverUrl.resolve(REKOR_ENTRIES_PATH);
 
     HttpRequest req =
-        HttpClients.newHttpTransport(httpParams)
-            .createRequestFactory()
+        HttpClients.newRequestFactory(httpParams)
             .buildPostRequest(
                 new GenericUrl(rekorPutEndpoint),
                 ByteArrayContent.fromString(
@@ -105,9 +104,7 @@ public class RekorClient {
   public Optional<RekorEntry> getEntry(String UUID) throws IOException {
     URI getEntryURI = serverUrl.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
     HttpRequest req =
-        HttpClients.newHttpTransport(httpParams)
-            .createRequestFactory()
-            .buildGetRequest(new GenericUrl(getEntryURI));
+        HttpClients.newRequestFactory(httpParams).buildGetRequest(new GenericUrl(getEntryURI));
     req.getHeaders().set("Accept", "application/json");
     HttpResponse response;
     try {
@@ -146,8 +143,7 @@ public class RekorClient {
 
     String contentString = GSON.get().toJson(data);
     HttpRequest req =
-        HttpClients.newHttpTransport(httpParams)
-            .createRequestFactory()
+        HttpClients.newRequestFactory(httpParams)
             .buildPostRequest(
                 new GenericUrl(rekorSearchEndpoint),
                 ByteArrayContent.fromString("application/json", contentString));
