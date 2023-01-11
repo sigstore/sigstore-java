@@ -121,7 +121,12 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
     @TaskAction
     protected fun sign() {
         workerExecutor
-            .classLoaderIsolation { classpath.from(sigstoreClientClasspath) }
+            .processIsolation {
+                classpath.from(sigstoreClientClasspath)
+                forkOptions {
+                    environment(System.getenv())
+                }
+            }
             .run {
                 for (signature in signatures) {
                     submit(SignWorkAction::class.java) {
