@@ -6,6 +6,6 @@ jobs:
     name: "Validation"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # tag=v3.2.0
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
       # allstar complains if we don't use tags here (https://github.com/ossf/scorecard/issues/2477)
       - uses: gradle/wrapper-validation-action@v1
