@@ -122,7 +122,10 @@ public class FulcioClient {
               .setPublicKeyRequest(publicKeyRequest)
               .build();
 
-      var certs = client.createSigningCertificate(req);
+      var certs =
+          client
+              .withDeadlineAfter(httpParams.getTimeout(), TimeUnit.SECONDS)
+              .createSigningCertificate(req);
 
       if (certs.getCertificateCase() == SIGNED_CERTIFICATE_DETACHED_SCT) {
         if (certs.getSignedCertificateDetachedSct().getSignedCertificateTimestamp().isEmpty()

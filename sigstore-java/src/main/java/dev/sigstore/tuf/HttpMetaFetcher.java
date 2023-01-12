@@ -65,11 +65,9 @@ public class HttpMetaFetcher implements MetaFetcher {
       throws IOException, MetaFileExceedsMaxException {
     GenericUrl nextVersionUrl = new GenericUrl(mirror + "/" + filename);
     var req =
-        HttpClients.newHttpTransport(ImmutableHttpParams.builder().build())
-            .createRequestFactory(
-                request ->
-                    request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser()))
+        HttpClients.newRequestFactory(ImmutableHttpParams.builder().build())
             .buildGetRequest(nextVersionUrl);
+    req.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser());
     req.getHeaders().setAccept("application/json; api-version=2.0");
     req.getHeaders().setContentType("application/json");
     req.setThrowExceptionOnExecuteError(false);

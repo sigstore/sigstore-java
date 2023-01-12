@@ -83,13 +83,8 @@ public class GithubActionsOidcClient implements OidcClient {
     }
     var url = new GenericUrl(urlBase + "&audience=" + audience);
     try {
-      var req =
-          HttpClients.newHttpTransport(httpParams)
-              .createRequestFactory(
-                  request -> {
-                    request.setParser(new GsonFactory().createJsonObjectParser());
-                  })
-              .buildGetRequest(url);
+      var req = HttpClients.newRequestFactory(httpParams).buildGetRequest(url);
+      req.setParser(new GsonFactory().createJsonObjectParser());
       req.getHeaders().setAuthorization("Bearer " + bearer);
       req.getHeaders().setAccept("application/json; api-version=2.0");
       req.getHeaders().setContentType("application/json");
