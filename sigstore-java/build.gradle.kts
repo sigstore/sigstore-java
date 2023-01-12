@@ -23,7 +23,7 @@ dependencies {
     implementation("dev.sigstore:protobuf-specs:0.0.1") {
         because("It generates Sigstore Bundle file")
     }
-    implementation("com.google.protobuf:protobuf-java-util:3.13.0") {
+    implementation("com.google.protobuf:protobuf-java-util:3.21.12") {
         because("It converts protobuf to json")
     }
 
