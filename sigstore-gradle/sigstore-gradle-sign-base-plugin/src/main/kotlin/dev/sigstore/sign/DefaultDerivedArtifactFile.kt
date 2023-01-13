@@ -17,9 +17,11 @@
 package dev.sigstore.sign
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.Task
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.publish.internal.PublicationInternal
+import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.TaskProvider
 import java.io.File
 
@@ -31,5 +33,17 @@ internal class DefaultDerivedArtifactFile(
         fileProvider.get().asFile
 
     override fun shouldBePublished(): Boolean =
-        task.get().run { enabled && onlyIf.isSatisfiedBy(this) }
+        task.get().run { enabled && onlyIfSatisfied() }
+
+    /**
+     * Gradle 7.6 changed the type of `onlyIf` from `Spec<in Task>` to `SelfDescribingSpec<in Task>`,
+     * so we need to use reflection to support slightly older Gradle versions in runtime.
+     * @see [NoSuchMethodError org.gradle.api.DefaultTask.getOnlyIf when trying to run plugin compiled with Gradle 7.6 with Gradle 7.5.1](https://github.com/gradle/gradle/issues/23520)
+     */
+    private fun Task.onlyIfSatisfied() : Boolean {
+        val getOnlyIf = DefaultTask::class.java.getMethod("getOnlyIf")
+        @Suppress("UNCHECKED_CAST")
+        val onlyIf = getOnlyIf.invoke(this) as Spec<in Task>
+        return onlyIf.isSatisfiedBy(this)
+    }
 }
