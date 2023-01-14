@@ -12,6 +12,10 @@
     {
       "matchPackagePrefixes": ["org.bouncycastle"],
       "groupName": "bouncycastle"
+    },
+    {
+      "matchPackagePrefixes": ["io.grpc", "com.google.protobuf"],
+      "groupName": "protobuf_grpc"
     }
   ]
 }
