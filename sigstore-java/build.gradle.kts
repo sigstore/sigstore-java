@@ -28,7 +28,7 @@ dependencies {
     }
 
     // grpc deps
-    implementation(platform("io.grpc:grpc-bom:1.51.1"))
+    implementation(platform("io.grpc:grpc-bom:1.52.1"))
     implementation("io.grpc:grpc-protobuf")
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
