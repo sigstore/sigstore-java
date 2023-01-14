@@ -45,4 +45,6 @@ abstract class WebOidc @Inject constructor() : OidcClientConfiguration, Serializ
             .setClientId(clientId.get())
             .setIssuer(issuer.get())
             .build()
+
+    override fun key(): Any = Pair(clientId.get(), issuer.get())
 }

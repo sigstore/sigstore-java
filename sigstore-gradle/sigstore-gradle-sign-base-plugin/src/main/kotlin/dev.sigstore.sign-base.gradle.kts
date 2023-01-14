@@ -15,12 +15,20 @@
  *
  */
 import dev.sigstore.sign.SigstoreSignExtension
+import dev.sigstore.sign.services.SigstoreSigningService
 
 // https://github.com/gradle/gradle/pull/16627
 inline fun <reified T: Named> AttributeContainer.attribute(attr: Attribute<T>, value: String) =
     attribute(attr, objects.named<T>(value))
 
 val sigstoreSign = extensions.create("sigstoreSign", SigstoreSignExtension::class, project)
+
+gradle.sharedServices.registerIfAbsent(SigstoreSigningService.SERVICE_NAME, SigstoreSigningService::class) {
+    parameters {
+        // Prevents concurrent execution of tasks that use the service, so we ensure there's only one signing task active at a time
+        maxParallelUsages.set(1)
+    }
+}
 
 val sigstoreClient by configurations.creating {
     description = "Declares sigstore client dependencies"

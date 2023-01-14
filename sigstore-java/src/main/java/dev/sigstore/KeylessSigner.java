@@ -19,12 +19,16 @@ import com.google.api.client.util.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.CheckReturnValue;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.fulcio.client.*;
 import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcException;
+import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.WebOidcClient;
 import dev.sigstore.rekor.client.*;
 import java.io.IOException;
@@ -37,18 +41,49 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A full sigstore keyless signing flow. */
-public class KeylessSigner {
+/**
+ * A full sigstore keyless signing flow.
+ *
+ * <p>Note: the implementation is thread-safe assuming the clients (Fulcio, OIDC, Rekor) are
+ * thread-safe
+ */
+public class KeylessSigner implements AutoCloseable {
+  /**
+   * The instance of the {@link KeylessSigner} will try to reuse a previously acquired certificate
+   * if the expiration time on the certificate is more than {@code minSigningCertificateLifetime}
+   * time away. Otherwise, it will make a new request (OIDC, Fulcio) to obtain a new updated
+   * certificate to use for signing. This is a default value for the remaining lifetime of the
+   * signing certificate that is considered good enough.
+   */
+  public static final Duration DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME = Duration.ofMinutes(5);
+
   private final FulcioClient fulcioClient;
   private final FulcioVerifier fulcioVerifier;
   private final RekorClient rekorClient;
   private final RekorVerifier rekorVerifier;
   private final OidcClient oidcClient;
   private final Signer signer;
+  private final Duration minSigningCertificateLifetime;
+
+  /** The code signing certificate from Fulcio. */
+  @GuardedBy("lock")
+  private @Nullable SigningCertificate signingCert;
+
+  /**
+   * Representation {@link #signingCert} in PEM bytes format. This is used to avoid serializing the
+   * certificate for each use.
+   */
+  @GuardedBy("lock")
+  private byte @Nullable [] signingCertPemBytes;
+
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   private KeylessSigner(
       FulcioClient fulcioClient,
@@ -56,15 +91,29 @@ public class KeylessSigner {
       RekorClient rekorClient,
       RekorVerifier rekorVerifier,
       OidcClient oidcClient,
-      Signer signer) {
+      Signer signer,
+      Duration minSigningCertificateLifetime) {
     this.fulcioClient = fulcioClient;
     this.fulcioVerifier = fulcioVerifier;
     this.rekorClient = rekorClient;
     this.rekorVerifier = rekorVerifier;
     this.oidcClient = oidcClient;
     this.signer = signer;
+    this.minSigningCertificateLifetime = minSigningCertificateLifetime;
   }
 
+  @Override
+  public void close() {
+    lock.writeLock().lock();
+    try {
+      signingCert = null;
+      signingCertPemBytes = null;
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  @CheckReturnValue
   public static Builder builder() {
     return new Builder();
   }
@@ -76,40 +125,71 @@ public class KeylessSigner {
     private RekorVerifier rekorVerifier;
     private OidcClient oidcClient;
     private Signer signer;
+    private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
 
+    @CanIgnoreReturnValue
     public Builder fulcioClient(FulcioClient fulcioClient, FulcioVerifier fulcioVerifier) {
       this.fulcioClient = fulcioClient;
       this.fulcioVerifier = fulcioVerifier;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder rekorClient(RekorClient rekorClient, RekorVerifier rekorVerifier) {
       this.rekorClient = rekorClient;
       this.rekorVerifier = rekorVerifier;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder oidcClient(OidcClient oidcClient) {
       this.oidcClient = oidcClient;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder signer(Signer signer) {
       this.signer = signer;
       return this;
     }
 
-    public KeylessSigner build() {
-      Preconditions.checkNotNull(fulcioClient);
-      Preconditions.checkNotNull(fulcioVerifier);
-      Preconditions.checkNotNull(rekorClient);
-      Preconditions.checkNotNull(rekorVerifier);
-      Preconditions.checkNotNull(oidcClient);
-      Preconditions.checkNotNull(signer);
-      return new KeylessSigner(
-          fulcioClient, fulcioVerifier, rekorClient, rekorVerifier, oidcClient, signer);
+    /**
+     * The instance of the {@link KeylessSigner} will try to reuse a previously acquired certificate
+     * if the expiration time on the certificate is more than {@code minSigningCertificateLifetime}
+     * time away. Otherwise, it will make a new request (OIDC, Fulcio) to obtain a new updated
+     * certificate to use for signing. Default {@code minSigningCertificateLifetime} is {@link
+     * #DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME}".
+     *
+     * @param minSigningCertificateLifetime the minimum lifetime of the signing certificate before
+     *     renewal
+     * @return this builder
+     * @see <a href="https://docs.sigstore.dev/fulcio/overview/">Fulcio certificate validity</a>
+     */
+    @CanIgnoreReturnValue
+    public Builder minSigningCertificateLifetime(Duration minSigningCertificateLifetime) {
+      this.minSigningCertificateLifetime = minSigningCertificateLifetime;
+      return this;
     }
 
+    @CheckReturnValue
+    public KeylessSigner build() {
+      Preconditions.checkNotNull(fulcioClient, "fulcioClient");
+      Preconditions.checkNotNull(fulcioVerifier, "fulcioVerifier");
+      Preconditions.checkNotNull(rekorClient, "rekorClient");
+      Preconditions.checkNotNull(rekorVerifier, "rekorVerifier");
+      Preconditions.checkNotNull(oidcClient, "oidcClient");
+      Preconditions.checkNotNull(signer, "signer");
+      return new KeylessSigner(
+          fulcioClient,
+          fulcioVerifier,
+          rekorClient,
+          rekorVerifier,
+          oidcClient,
+          signer,
+          minSigningCertificateLifetime);
+    }
+
+    @CanIgnoreReturnValue
     public Builder sigstorePublicDefaults()
         throws IOException, InvalidAlgorithmParameterException, CertificateException,
             InvalidKeySpecException, NoSuchAlgorithmException {
@@ -123,9 +203,11 @@ public class KeylessSigner {
           RekorVerifier.newRekorVerifier(VerificationMaterial.Production.rekorPublicKey()));
       oidcClient(WebOidcClient.builder().build());
       signer(Signers.newEcdsaSigner());
+      minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder sigstoreStagingDefaults()
         throws IOException, InvalidAlgorithmParameterException, CertificateException,
             InvalidKeySpecException, NoSuchAlgorithmException {
@@ -141,6 +223,7 @@ public class KeylessSigner {
           RekorVerifier.newRekorVerifier(VerificationMaterial.Staging.rekorPublicKey()));
       oidcClient(WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build());
       signer(Signers.newEcdsaSigner());
+      minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
     }
   }
@@ -148,13 +231,12 @@ public class KeylessSigner {
   /**
    * Sign one or more artifact digests using the keyless signing workflow. The oidc/fulcio dance to
    * obtain a signing certificate will only occur once. The same ephemeral private key will be used
-   * to sign all artifacts. Errors may occur is the request is for an overwhelming number of
-   * artifactDigests as the certificate may expire -- this method does not current have the ability
-   * to obtain a new certificate if the one is use expires.
+   * to sign all artifacts. This method will renew certificates as they expire.
    *
    * @param artifactDigests sha256 digests of the artifacts to sign.
    * @return a list of keyless singing results.
    */
+  @CheckReturnValue
   public List<KeylessSigningResult> sign(List<byte[]> artifactDigests)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, CertificateException, IOException,
@@ -164,27 +246,31 @@ public class KeylessSigner {
       throw new IllegalArgumentException("Require one or more digests");
     }
 
-    var tokenInfo = oidcClient.getIDToken();
-    var signingCert =
-        fulcioClient.signingCertificate(
-            CertificateRequest.newCertificateRequest(
-                signer.getPublicKey(),
-                tokenInfo.getIdToken(),
-                signer.sign(
-                    tokenInfo.getSubjectAlternativeName().getBytes(StandardCharsets.UTF_8))));
-    fulcioVerifier.verifyCertChain(signingCert);
-    // TODO: this signing workflow mandates SCTs, but fulcio itself doesn't, figure out a way to
-    // allow that to be known
-    fulcioVerifier.verifySct(signingCert);
-
     var result = ImmutableList.<KeylessSigningResult>builder();
 
     for (var artifactDigest : artifactDigests) {
       var signature = signer.signDigest(artifactDigest);
 
+      // Technically speaking, it is unlikely the certificate will expire between signing artifacts
+      // However, files might be large, and it might take time to talk to Rekor
+      // so we check the certificate expiration here.
+      renewSigningCertificate();
+      SigningCertificate signingCert;
+      byte[] signingCertPemBytes;
+      lock.readLock().lock();
+      try {
+        signingCert = this.signingCert;
+        signingCertPemBytes = this.signingCertPemBytes;
+        if (signingCert == null) {
+          throw new IllegalStateException("Signing certificate is null");
+        }
+      } finally {
+        lock.readLock().unlock();
+      }
+
       var rekorRequest =
           HashedRekordRequest.newHashedRekordRequest(
-              artifactDigest, Certificates.toPemBytes(signingCert.getLeafCertificate()), signature);
+              artifactDigest, signingCertPemBytes, signature);
       var rekorResponse = rekorClient.putEntry(rekorRequest);
       rekorVerifier.verifyEntry(rekorResponse.getEntry());
 
@@ -199,12 +285,57 @@ public class KeylessSigner {
     return result.build();
   }
 
+  private void renewSigningCertificate()
+      throws InterruptedException, CertificateException, IOException, UnsupportedAlgorithmException,
+          NoSuchAlgorithmException, InvalidKeyException, SignatureException,
+          FulcioVerificationException, OidcException {
+    // Check if the certificate is still valid
+    lock.readLock().lock();
+    try {
+      if (signingCert != null) {
+        @SuppressWarnings("JavaUtilDate")
+        long lifetimeLeft =
+            signingCert.getLeafCertificate().getNotAfter().getTime() - System.currentTimeMillis();
+        if (lifetimeLeft > minSigningCertificateLifetime.toMillis()) {
+          // The current certificate is fine, reuse it
+          return;
+        }
+      }
+    } finally {
+      lock.readLock().unlock();
+    }
+
+    // Renew Fulcio certificate
+    lock.writeLock().lock();
+    try {
+      signingCert = null;
+      signingCertPemBytes = null;
+      OidcToken tokenInfo = oidcClient.getIDToken();
+      SigningCertificate signingCert =
+          fulcioClient.signingCertificate(
+              CertificateRequest.newCertificateRequest(
+                  signer.getPublicKey(),
+                  tokenInfo.getIdToken(),
+                  signer.sign(
+                      tokenInfo.getSubjectAlternativeName().getBytes(StandardCharsets.UTF_8))));
+      fulcioVerifier.verifyCertChain(signingCert);
+      // TODO: this signing workflow mandates SCTs, but fulcio itself doesn't, figure out a way to
+      // allow that to be known
+      fulcioVerifier.verifySct(signingCert);
+      this.signingCert = signingCert;
+      signingCertPemBytes = Certificates.toPemBytes(signingCert.getLeafCertificate());
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
   /**
    * Convenience wrapper around {@link #sign(List)} to sign a single digest
    *
    * @param artifactDigest sha256 digest of the artifact to sign.
    * @return a keyless singing results.
    */
+  @CheckReturnValue
   public KeylessSigningResult sign(byte[] artifactDigest)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
@@ -218,6 +349,7 @@ public class KeylessSigner {
    * @param artifacts list of the artifacts to sign.
    * @return a map of artifacts and their keyless singing results.
    */
+  @CheckReturnValue
   public Map<Path, KeylessSigningResult> signFiles(List<Path> artifacts)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
@@ -244,6 +376,7 @@ public class KeylessSigner {
    * @param artifact the artifacts to sign.
    * @return a keyless singing results.
    */
+  @CheckReturnValue
   public KeylessSigningResult signFile(Path artifact)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,

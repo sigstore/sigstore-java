@@ -48,7 +48,6 @@ abstract class SigstoreSignExtension(private val project: Project) {
 
     fun sign(publications: DomainObjectCollection<Publication>) {
         publications.all {
-            project.logger.lifecycle("Signing $this")
             sign(this)
         }
         publications.whenObjectRemoved {

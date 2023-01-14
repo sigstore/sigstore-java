@@ -29,7 +29,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Verifier for fulcio {@link dev.sigstore.fulcio.client.SigningCertificate}. */
 public class FulcioVerifier {
-  @Nullable private final CTVerifier ctVerifier;
+  private final @Nullable CTVerifier ctVerifier;
   private final TrustAnchor fulcioRoot;
 
   /**
