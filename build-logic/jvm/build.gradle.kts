@@ -11,7 +11,7 @@ repositories {
 dependencies {
     implementation(embeddedKotlinDsl())
     implementation("com.diffplug.spotless:com.diffplug.spotless.gradle.plugin:6.12.1")
-    implementation("com.github.vlsi.gradle-extensions:com.github.vlsi.gradle-extensions.gradle.plugin:1.84")
+    implementation("com.github.vlsi.gradle-extensions:com.github.vlsi.gradle-extensions.gradle.plugin:1.86")
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin")
     implementation("org.jetbrains.dokka:org.jetbrains.dokka.gradle.plugin:$embeddedKotlinVersion")
     implementation("com.github.autostyle:com.github.autostyle.gradle.plugin:3.2")
