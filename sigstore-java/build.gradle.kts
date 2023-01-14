@@ -48,7 +48,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.9.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
-    testImplementation("org.mockito:mockito-core:4.11.0")
+    testImplementation("org.mockito:mockito-core:5.0.0")
     testImplementation("no.nav.security:mock-oauth2-server:0.5.7")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.69.0")
