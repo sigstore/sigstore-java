@@ -23,14 +23,19 @@ import dev.sigstore.sign.services.SigstoreSigningService
 import dev.sigstore.sign.work.SignWorkAction
 import org.gradle.api.Buildable
 import org.gradle.api.DefaultTask
+import org.gradle.api.JavaVersion
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.file.*
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.*
+import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
 import org.gradle.work.DisableCachingByDefault
@@ -91,6 +96,10 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
     @get:Internal
     abstract val oidcClient: Property<OidcClientConfiguration>
 
+    @get:Nested
+    @get:Optional
+    abstract val launcher: Property<JavaLauncher>
+
     @get:Inject
     protected abstract val workerExecutor: WorkerExecutor
 
@@ -121,6 +130,13 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
         signatureDirectory.convention(
             layout.buildDirectory.dir("sigstore/$name")
         )
+
+        project.extensions.findByType<JavaPluginExtension>()?.let { java ->
+            launcher.convention(
+                project.the<JavaToolchainService>()
+                    .launcherFor(java.toolchain)
+            )
+        }
     }
 
     /**
@@ -159,10 +175,28 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
     protected fun sign() {
         // Ensure task holds a lock, so no other signign tasks executes concurrently
         signingService.get()
+        val javaLauncher = launcher.orNull
+        if (javaLauncher != null) {
+            val javaVersion = javaLauncher.metadata.languageVersion.asInt()
+            if (javaVersion < 11) {
+                throw IllegalArgumentException(
+                    "Java 11 or higher is required to run Sigstore client. " +
+                            "Got Java $javaVersion (${javaLauncher.metadata.installationPath}). " +
+                            "Please use Java 11 or newer to launch Gradle or configure toolchain for ${SigstoreSignFilesTask::class.qualifiedName} tasks."
+                )
+            }
+        } else if (!JavaVersion.current().isJava11Compatible) {
+            throw IllegalArgumentException(
+                "Java 11 or higher is required to run Sigstore client. " +
+                        "The current Java is ${JavaVersion.current()}. " +
+                        " Please use Java 11 or newer to launch Gradle or configure toolchain for ${SigstoreSignFilesTask::class.qualifiedName} tasks."
+            )
+        }
         workerExecutor
             .processIsolation {
                 classpath.from(sigstoreClientClasspath)
                 forkOptions {
+                    javaLauncher?.executablePath?.let { executable(it) }
                     for (env in passEnvironmentVariables.get()) {
                         System.getenv(env)?.let { environment(env, it) }
                     }
