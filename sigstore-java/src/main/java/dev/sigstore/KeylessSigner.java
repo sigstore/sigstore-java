@@ -40,7 +40,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.bouncycastle.util.encoders.Hex;
 
 /** A full sigstore keyless signing flow. */
 public class KeylessSigner {
@@ -191,7 +190,7 @@ public class KeylessSigner {
 
       result.add(
           ImmutableKeylessSigningResult.builder()
-              .digest(Hex.toHexString(artifactDigest))
+              .digest(artifactDigest)
               .certPath(signingCert.getCertPath())
               .signature(signature)
               .entry(rekorResponse.getEntry())
