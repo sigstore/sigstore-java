@@ -107,7 +107,7 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
     @JvmOverloads
     fun sign(file: Provider<RegularFile>, builtBy: Buildable? = null): SigstoreSignature =
         signatures.create(file.get().asFile.name) {
-            this.file.set(file)
+            this.file.setFrom(file)
             builtBy?.let { builtBy(it) }
             this.signatureDirectory.convention(this@SigstoreSignFilesTask.signatureDirectory)
         }
@@ -129,8 +129,13 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
             }
             .run {
                 for (signature in signatures) {
+                    val file = signature.file.singleFile
+                    if (!file.exists()) {
+                        continue
+                    }
+                    logger.lifecycle("Signing $file via Sigstore")
                     submit(SignWorkAction::class.java) {
-                        inputFile.set(signature.file)
+                        inputFile.set(file)
                         outputSignature.set(signature.outputSignature)
                         oidcClient.set(this@SigstoreSignFilesTask.oidcClient.get())
                     }

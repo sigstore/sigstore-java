@@ -32,9 +32,9 @@ abstract class SigstoreSignature @Inject constructor(private val name: String) :
     @Internal
     override fun getName(): String = name
 
-    @get:InputFile
+    @get:InputFiles
     @get:PathSensitive(PathSensitivity.NONE)
-    abstract val file: RegularFileProperty
+    abstract val file: ConfigurableFileCollection
 
     /**
      * Adds the given build dependencies.
@@ -73,7 +73,7 @@ abstract class SigstoreSignature @Inject constructor(private val name: String) :
 
     init {
         outputSignature.convention(
-            signatureDirectory.map { it.file(file.get().asFile.name + ".$EXTENSION") }
+            signatureDirectory.map { it.file(file.singleFile.name + ".$EXTENSION") }
         )
     }
 }
