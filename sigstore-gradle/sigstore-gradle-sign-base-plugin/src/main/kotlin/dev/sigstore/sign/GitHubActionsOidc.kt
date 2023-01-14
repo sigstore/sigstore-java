@@ -40,4 +40,6 @@ abstract class GitHubActionsOidc @Inject constructor() : OidcClientConfiguration
         GithubActionsOidcClient.builder()
             .audience(audience.get())
             .build()
+
+    override fun key(): Any = audience.get()
 }

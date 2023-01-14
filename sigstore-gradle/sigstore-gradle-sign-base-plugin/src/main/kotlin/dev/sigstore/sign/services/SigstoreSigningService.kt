@@ -14,19 +14,20 @@
  * limitations under the License.
  *
  */
-package dev.sigstore.sign
+package dev.sigstore.sign.services
 
-import org.gradle.api.Named
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 
-interface OidcClientConfiguration : Named {
-    /**
-     * Creates OidcClient. The return type is [Any]
-     * since plugin code has only `compileOny` dependency on `sigstore-java`.
-     */
-    fun build(): Any
+/**
+ * The service enables to prevent concurrent execution of signing tasks from different projects.
+ *
+ */
+abstract class SigstoreSigningService: BuildService<SigstoreSigningService.Params> {
+    companion object {
+        const val SERVICE_NAME = "sigstoreJavaSigningService"
+    }
 
-    /**
-     * Returns object that can be used to compare this configuration with another one.
-     */
-    fun key(): Any
+    interface Params: BuildServiceParameters {
+    }
 }

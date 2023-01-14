@@ -25,6 +25,7 @@ import org.gradle.api.provider.Property
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ConcurrentHashMap
 
 abstract class SignWorkParameters : WorkParameters {
     abstract val inputFile: RegularFileProperty
@@ -34,7 +35,9 @@ abstract class SignWorkParameters : WorkParameters {
 
 abstract class SignWorkAction : WorkAction<SignWorkParameters> {
     companion object {
-        val logger = LoggerFactory.getLogger(SignWorkAction::class.java)
+        private val logger = LoggerFactory.getLogger(SignWorkAction::class.java)
+
+        private val clients = ConcurrentHashMap<Any, KeylessSigner>()
     }
 
     abstract val parameters: SignWorkParameters
@@ -43,10 +46,13 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
         val inputFile = parameters.inputFile.get().asFile
         logger.info("Signing in Sigstore: {}", inputFile)
 
-        val signer = KeylessSigner.builder().apply {
-            sigstorePublicDefaults()
-            oidcClient(parameters.oidcClient.get().build() as OidcClient)
-        }.build()
+        val oidcClient = parameters.oidcClient.get()
+        val signer = clients.computeIfAbsent(oidcClient.key()) {
+            KeylessSigner.builder().apply {
+                sigstorePublicDefaults()
+                oidcClient(oidcClient.build() as OidcClient)
+            }.build()
+        }
 
         val result = signer.signFile(inputFile.toPath())
         val bundleJson = BundleFactory.createBundle(result)
