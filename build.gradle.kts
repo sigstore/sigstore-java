@@ -1,7 +1,7 @@
 plugins {
     id("build-logic.root-build")
     // It does not support participating in precompiled script plugins
-    id("com.github.vlsi.stage-vote-release") version "1.84"
+    id("com.github.vlsi.stage-vote-release") version "1.86"
     // The Kotlin Gradle plugin was loaded multiple times in different subprojects, which is not supported and may break the build.
     `embedded-kotlin` apply false
 }
