@@ -15,10 +15,28 @@
  */
 package dev.sigstore.tuf;
 
-/** Thrown when a metadata resources was unexpectedly missing. */
-public class MetaNotFoundException extends TufException {
+/**
+ * Thrown when the Meta File exceeds the max allowable file size as configured in the {@link
+ * Updater}
+ */
+public class FileExceedsMaxLengthException extends TufException {
 
-  public MetaNotFoundException(String message) {
-    super(message);
+  private String fileUrl;
+  private int maxSize;
+
+  public FileExceedsMaxLengthException(String fileUrl, int maxSize) {
+    super(
+        String.format(
+            "The file at %s exceeds the client's max file size limit (%d)", fileUrl, maxSize));
+    this.fileUrl = fileUrl;
+    this.maxSize = maxSize;
+  }
+
+  public String getFileUrl() {
+    return fileUrl;
+  }
+
+  public int getMaxSize() {
+    return maxSize;
   }
 }

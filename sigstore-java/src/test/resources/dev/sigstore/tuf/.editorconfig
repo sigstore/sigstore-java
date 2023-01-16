@@ -1,0 +1,3 @@
+# don't add new lines to tuf json resource files as it will break integrity checks
+[*.json]
+insert_final_newline = false

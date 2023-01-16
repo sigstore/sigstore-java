@@ -15,28 +15,11 @@
  */
 package dev.sigstore.tuf;
 
-/**
- * Thrown when the Meta File exceeds the max allowable file size as configured in the {@link
- * Updater}
- */
-public class MetaFileExceedsMaxException extends TufException {
-
-  private String fileUrl;
-  private int maxSize;
-
-  public MetaFileExceedsMaxException(String fileUrl, int maxSize) {
+public class SnapshotVersionMismatchException extends TufException {
+  public SnapshotVersionMismatchException(int expectedVersion, int actualVersion) {
     super(
         String.format(
-            "The file at %s exceeds the client's max file size limit (%d)", fileUrl, maxSize));
-    this.fileUrl = fileUrl;
-    this.maxSize = maxSize;
-  }
-
-  public String getFileUrl() {
-    return fileUrl;
-  }
-
-  public int getMaxSize() {
-    return maxSize;
+            "Snapshot version (%d) did not match Timestamp resource (%d)",
+            actualVersion, expectedVersion));
   }
 }

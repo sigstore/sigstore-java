@@ -45,7 +45,7 @@ class FileSystemTufStoreTest {
     TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
     tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
-    assertEquals(1, repoBase.toFile().list().length);
+    assertEquals(2, repoBase.toFile().list().length); // root.json plus the targets dir.
     assertTrue(repoBase.resolve("root.json").toFile().exists());
   }
 

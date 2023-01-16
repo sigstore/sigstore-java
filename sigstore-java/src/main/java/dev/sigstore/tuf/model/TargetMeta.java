@@ -29,7 +29,7 @@ import org.immutables.value.Value;
 public interface TargetMeta extends TufMeta {
 
   /** List of Delegated roles that can specify their own set of targets within a file space. */
-  Delegations getDelegations();
+  Optional<Delegations> getDelegations();
 
   /** Maps target name (e.g. 'fulcio.crt.pem') to {@code TargetData}. */
   Map<String, TargetData> getTargets();

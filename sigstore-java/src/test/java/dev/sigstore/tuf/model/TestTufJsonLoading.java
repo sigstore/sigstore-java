@@ -128,7 +128,7 @@ public class TestTufJsonLoading {
     assertEquals(ZonedDateTime.parse("2023-01-12T18:22:03Z"), signedMeta.getExpiresAsDate());
     assertEquals("1.0", signedMeta.getSpecVersion());
     assertEquals(4, signedMeta.getVersion());
-    Delegations delegations = signedMeta.getDelegations();
+    Delegations delegations = signedMeta.getDelegations().get();
     assertNotNull(delegations);
     Map<String, Key> keys = delegations.getKeys();
     assertEquals(3, keys.size());

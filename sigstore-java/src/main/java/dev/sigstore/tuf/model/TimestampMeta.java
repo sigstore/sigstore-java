@@ -31,4 +31,8 @@ public interface TimestampMeta extends TufMeta {
 
   /** Will only contain one element called snapshot.json */
   Map<String, SnapshotMeta.SnapshotTarget> getMeta();
+
+  default SnapshotMeta.SnapshotTarget getSnapshotMeta() {
+    return getMeta().get(Role.Name.SNAPSHOT.toString() + ".json");
+  }
 }

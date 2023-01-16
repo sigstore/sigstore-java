@@ -33,11 +33,11 @@ public interface MetaFetcher {
   /**
    * Fetch the {@link Root} at the specified {@code version}.
    *
-   * @throws MetaFileExceedsMaxException when the retrieved file is larger than the maximum allowed
-   *     by the client
+   * @throws FileExceedsMaxLengthException when the retrieved file is larger than the maximum
+   *     allowed by the client
    */
   Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
-      throws IOException, MetaFileExceedsMaxException;
+      throws IOException, FileExceedsMaxLengthException;
 
   /**
    * Fetches the specified role meta from the source
@@ -46,9 +46,12 @@ public interface MetaFetcher {
    * @param roleType this should be the type you expect in return
    * @return the fully de-serialized role if it was present at the source
    * @throws IOException in case of IO errors
-   * @throws MetaFileExceedsMaxException if the role meta at source exceeds client specified max
+   * @throws FileExceedsMaxLengthException if the role meta at source exceeds client specified max
    *     size
    */
   <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(Role.Name name, Class<T> roleType)
-      throws IOException, MetaFileExceedsMaxException;
+      throws IOException, FileExceedsMaxLengthException;
+
+  byte[] fetchResource(String filename, int maxLength)
+      throws IOException, FileExceedsMaxLengthException;
 }
