@@ -95,8 +95,6 @@ public class Updater {
 
     // 5.3.2) load the trust metadata file (root.json), get version of root.json and the role
     // signature threshold value
-    // TODO review from asraa@ do we need to verify the local root against our trusted root from the
-    // client?
     Optional<Root> localRoot = localStore.loadTrustedRoot();
     Root trustedRoot;
     if (localRoot.isPresent()) {
