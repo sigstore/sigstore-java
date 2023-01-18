@@ -274,15 +274,18 @@ public class Updater {
       throws IOException, FileNotFoundException, InvalidHashesException,
           SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException {
-    // 1) download the snapshot.json bytes up to few 10s of K max.
-    // TODO:asraa@ to review whether we need to be using the snapshot size from the timestamp file
-    // to limit download.
-    // TODO(patrick@chainguard.dev): Looks like sigstore TUF moved to using consistent snapshots for
-    // this meta file.
+    // 1) download the snapshot.json bytes up to timestamp's snapshot length.
+    // TODO(patrick@chainguard.dev): Looks like sigstore TUF moved to using
+    // consistent snapshots for this meta file.
     // Update to pull from
-    // "{timestamp.getSignedMeta().getSnapshotMeta().getVersion()}.snapshot.json". Presumably
-    // we should also write that file to disk as well as update the 'snapshot.json'
-    var snapshotResult = fetcher.getMeta(Role.Name.SNAPSHOT, Snapshot.class);
+    //    "{timestamp.getSignedMeta().getSnapshotMeta().getVersion()}.snapshot.json".
+    // Presumably we should also write that file to disk as well as update the
+    //     'snapshot.json'
+    var snapshotResult =
+        fetcher.getMeta(
+            Role.Name.SNAPSHOT,
+            Snapshot.class,
+            timestamp.getSignedMeta().getSnapshotMeta().getLength());
     if (snapshotResult.isEmpty()) {
       throw new FileNotFoundException("snapshot.json", fetcher.getSource());
     }
@@ -302,8 +305,7 @@ public class Updater {
     }
     // 5) Ensure all targets and delegated targets in the trusted (old) snapshots file have versions
     // which are less than or equal to the equivalent target in the new file.  Check that no targets
-    // are missing
-    // in new file. Else fail.
+    // are missing in new file. Else fail.
     var trustedSnapshotMaybe = localStore.loadSnapshot();
     if (trustedSnapshotMaybe.isPresent()) {
       var trustedSnapshot = trustedSnapshotMaybe.get();
@@ -362,8 +364,12 @@ public class Updater {
       throws IOException, FileNotFoundException, InvalidHashesException,
           SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, FileExceedsMaxLengthException {
-    // 1) download the targets.json to max bytes
-    var targetsResultMaybe = fetcher.getMeta(Role.Name.TARGETS, Targets.class);
+    // 1) download the targets.json up to targets.json length in bytes.
+    var targetsResultMaybe =
+        fetcher.getMeta(
+            Role.Name.TARGETS,
+            Targets.class,
+            snapshot.getSignedMeta().getTargetMeta("targets.json").getLength());
     if (targetsResultMaybe.isEmpty()) {
       throw new FileNotFoundException("targets.json", fetcher.getSource());
     }

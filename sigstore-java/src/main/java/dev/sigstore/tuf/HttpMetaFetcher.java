@@ -51,19 +51,27 @@ public class HttpMetaFetcher implements MetaFetcher {
   public Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
       throws IOException, FileExceedsMaxLengthException {
     String versionFileName = version + ".root.json";
-    return getMeta(versionFileName, Root.class);
+    return getMeta(versionFileName, Root.class, null);
   }
 
   @Override
   public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(Role.Name role, Class<T> t)
       throws IOException, FileExceedsMaxLengthException {
-    String fileName = role.name().toLowerCase() + ".json";
-    return getMeta(fileName, t);
+    return getMeta(role, t, null);
   }
 
-  <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(String filename, Class<T> t)
+  @Override
+  public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
+      Role.Name role, Class<T> t, Integer maxSize)
       throws IOException, FileExceedsMaxLengthException {
-    byte[] roleBytes = fetchResource(filename, MAX_META_BYTES);
+    String fileName = role.name().toLowerCase() + ".json";
+    return getMeta(fileName, t, maxSize);
+  }
+
+  <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
+      String filename, Class<T> t, Integer maxSize)
+      throws IOException, FileExceedsMaxLengthException {
+    byte[] roleBytes = fetchResource(filename, maxSize == null ? MAX_META_BYTES : maxSize);
     if (roleBytes == null) {
       return Optional.empty();
     }

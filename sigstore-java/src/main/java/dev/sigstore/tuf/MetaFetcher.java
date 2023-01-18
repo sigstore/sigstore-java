@@ -52,6 +52,21 @@ public interface MetaFetcher {
   <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(Role.Name name, Class<T> roleType)
       throws IOException, FileExceedsMaxLengthException;
 
+  /**
+   * Fetches the specified role meta from the source
+   *
+   * @param name TUF role name
+   * @param roleType this should be the type you expect in return
+   * @param maxSize max file size in bytes
+   * @return the fully de-serialized role if it was present at the source
+   * @throws IOException in case of IO errors
+   * @throws FileExceedsMaxLengthException if the role meta at source exceeds client specified max
+   *     size
+   */
+  <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
+      Role.Name name, Class<T> roleType, Integer maxSize)
+      throws IOException, FileExceedsMaxLengthException;
+
   byte[] fetchResource(String filename, int maxLength)
       throws IOException, FileExceedsMaxLengthException;
 }
