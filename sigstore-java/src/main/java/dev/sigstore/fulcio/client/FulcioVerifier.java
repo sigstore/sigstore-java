@@ -74,8 +74,7 @@ public class FulcioVerifier {
       this.ctVerifier =
           new CTVerifier(
               logId ->
-                  logInfos
-                      .stream()
+                  logInfos.stream()
                       .filter(ctLogInfo -> Arrays.equals(ctLogInfo.getID(), logId))
                       .findFirst()
                       .orElse(null));

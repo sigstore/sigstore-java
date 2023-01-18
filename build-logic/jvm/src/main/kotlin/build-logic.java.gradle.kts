@@ -15,7 +15,7 @@ java {
 
 spotless {
     java {
-        googleJavaFormat("1.6")
+        googleJavaFormat("1.15.0")
         licenseHeaderFile("$rootDir/config/licenseHeader")
         // Note if submodule needs to add more exclusions, it should list ALL of them since
         // Spotless does not have "addTargetExclude" method
