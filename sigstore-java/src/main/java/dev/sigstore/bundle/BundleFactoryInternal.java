@@ -59,10 +59,7 @@ class BundleFactoryInternal {
         .setX509CertificateChain(
             X509CertificateChain.newBuilder()
                 .addAllCertificates(
-                    signingResult
-                        .getCertPath()
-                        .getCertificates()
-                        .stream()
+                    signingResult.getCertPath().getCertificates().stream()
                         .map(
                             c -> {
                               byte[] encoded;
@@ -114,9 +111,7 @@ class BundleFactoryInternal {
             .setRootHash(ByteString.fromHex(inclusionProof.getRootHash()))
             .setTreeSize(inclusionProof.getTreeSize())
             .addAllHashes(
-                inclusionProof
-                    .getHashes()
-                    .stream()
+                inclusionProof.getHashes().stream()
                     .map(ByteString::fromHex)
                     .collect(Collectors.toList()))
             .setCheckpoint(Checkpoint.newBuilder().setEnvelope(inclusionProof.getCheckpoint())));
