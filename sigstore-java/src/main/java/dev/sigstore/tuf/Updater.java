@@ -399,8 +399,6 @@ public class Updater {
     // Skip #7 and go straight to downloading targets. It looks like delegations were removed from
     // sigstore TUF data.
     // {@see https://github.com/sigstore/sigstore/issues/562}
-    // TODO(patrick@chainguard.dev): get review from Asra on whether we should be processing
-    // delegates.
     for (Map.Entry<String, TargetMeta.TargetData> entry :
         targets.getSignedMeta().getTargets().entrySet()) {
       String targetName = entry.getKey();
