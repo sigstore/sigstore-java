@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 
 public class RekorClientTest {
 
-  private static final String REKOR_URL = "https://rekor.sigstore.dev";
+  private static final String REKOR_URL = "https://rekor.sigstage.dev";
   private RekorClient client;
 
   @BeforeEach
