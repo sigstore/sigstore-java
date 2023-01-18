@@ -10,7 +10,6 @@ on:
 
 jobs:
   conformance:
-    if: ${{ github.event.label.name == 'safe-to-test' }}
     strategy:
       matrix:
         java-version: [11, 17]
