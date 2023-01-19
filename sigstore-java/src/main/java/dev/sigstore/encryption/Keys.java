@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.*;
+import java.util.Locale;
 import java.util.logging.Logger;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -156,6 +157,7 @@ public class Keys {
     } else {
       String error =
           String.format(
+              Locale.ROOT,
               "The key provided was of type: %s. We only support RSA, EdDSA, and EC ",
               keyParameters);
       log.warning(error);

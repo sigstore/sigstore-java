@@ -33,7 +33,12 @@ import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Clock;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
@@ -173,7 +178,8 @@ public class Updater {
         trustedRoot.getSignedMeta().getKeys(),
         trustedRoot
             .getSignedMeta()
-            .getRole(Role.Name.valueOf(delegate.getSignedMeta().getType().toUpperCase())),
+            .getRole(
+                Role.Name.valueOf(delegate.getSignedMeta().getType().toUpperCase(Locale.ROOT))),
         delegate.getCanonicalSignedBytes());
   }
 
@@ -337,7 +343,9 @@ public class Updater {
     if (expectedSha256 == null && expectedSha512 == null) {
       throw new IllegalArgumentException(
           String.format(
-              "hashes parameter for %s must contain at least one of sha512 or sha256.", name));
+              Locale.ROOT,
+              "hashes parameter for %s must contain at least one of sha512 or sha256.",
+              name));
     }
     String computedSha512 = Hashing.sha512().hashBytes(data).toString();
     if (expectedSha512 != null && !computedSha512.equals(expectedSha512)) {

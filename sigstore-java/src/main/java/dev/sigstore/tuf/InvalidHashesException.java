@@ -16,6 +16,7 @@
 package dev.sigstore.tuf;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /** Thrown when a hash check fails for a given resource. */
@@ -34,8 +35,11 @@ public class InvalidHashesException extends TufException {
     @Override
     public String toString() {
       return String.format(
+          Locale.ROOT,
           "algorithm: %s, expected hash: %s, computed hash: %s",
-          algorithm, expectedHash, computedHash);
+          algorithm,
+          expectedHash,
+          computedHash);
     }
   }
 
@@ -47,8 +51,10 @@ public class InvalidHashesException extends TufException {
   InvalidHashesException(String resourceName, InvalidHash... invalidHashes) {
     super(
         String.format(
+            Locale.ROOT,
             "The hashes for %s did not match expectations:\n%s",
-            resourceName, invalidHashesToString(invalidHashes)));
+            resourceName,
+            invalidHashesToString(invalidHashes)));
   }
 
   private static String invalidHashesToString(InvalidHash... invalidHashes) {

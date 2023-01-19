@@ -15,6 +15,8 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Locale;
+
 /** Thrown when the metadata has not been signed by enough of the allowed keys. */
 public class SignatureVerificationException extends TufException {
   private final int requiredSignatures, verifiedSignatures;
@@ -22,8 +24,10 @@ public class SignatureVerificationException extends TufException {
   public SignatureVerificationException(int requiredSignatures, int verifiedSignatures) {
     super(
         String.format(
+            Locale.ROOT,
             "The role has not been signed by enough keys. [Theshold: %d, Actual: %d]",
-            requiredSignatures, verifiedSignatures));
+            requiredSignatures,
+            verifiedSignatures));
     this.requiredSignatures = requiredSignatures;
     this.verifiedSignatures = verifiedSignatures;
   }

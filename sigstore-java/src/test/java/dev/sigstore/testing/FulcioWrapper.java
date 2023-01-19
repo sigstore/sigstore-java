@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import org.junit.jupiter.api.extension.*;
 
 /**
@@ -48,8 +49,10 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     Files.writeString(
         fulcioConfig,
         String.format(
+            Locale.ROOT,
             "{\"OIDCIssuers\":{ \"%s\": { \"IssuerURL\": \"%s\", \"ClientID\": \"sigstore\", \"Type\": \"email\"}}}",
-            issuer, issuer));
+            issuer,
+            issuer));
     return fulcioConfig;
   }
 

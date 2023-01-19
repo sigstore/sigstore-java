@@ -89,7 +89,10 @@ public class RekorClient {
     if (resp.getStatusCode() != 201) {
       throw new IOException(
           String.format(
-              "bad response from rekor @ '%s' : %s", rekorPutEndpoint, resp.parseAsString()));
+              Locale.ROOT,
+              "bad response from rekor @ '%s' : %s",
+              rekorPutEndpoint,
+              resp.parseAsString()));
     }
 
     URI rekorEntryUri = serverUrl.resolve(resp.getHeaders().getLocation());

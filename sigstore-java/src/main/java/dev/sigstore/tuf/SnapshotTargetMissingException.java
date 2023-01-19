@@ -15,8 +15,14 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Locale;
+
 public class SnapshotTargetMissingException extends TufException {
   public SnapshotTargetMissingException(String targetName) {
-    super(String.format("Snapshot target [%s] was missing from updated snapshot.json", targetName));
+    super(
+        String.format(
+            Locale.ROOT,
+            "Snapshot target [%s] was missing from updated snapshot.json",
+            targetName));
   }
 }

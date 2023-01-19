@@ -18,6 +18,7 @@ package dev.sigstore.encryption.certificates.transparency;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.Locale;
 
 /** DigitallySigned structure, as defined by RFC5246 Section 4.7. */
 public class DigitallySigned {
@@ -93,7 +94,7 @@ public class DigitallySigned {
    * to {@link java.security.Signature#getInstance}.
    */
   public String getAlgorithm() {
-    return String.format("%swith%s", hashAlgorithm, signatureAlgorithm);
+    return String.format(Locale.ROOT, "%swith%s", hashAlgorithm, signatureAlgorithm);
   }
 
   /** Decode a TLS encoded DigitallySigned structure. */

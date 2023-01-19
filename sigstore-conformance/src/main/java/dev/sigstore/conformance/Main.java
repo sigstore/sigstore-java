@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 
 public class Main {
   private static final String SIGN_COMMAND = "sign";
@@ -63,7 +64,8 @@ public class Main {
     public String getNextArgument() {
       if (index >= args.length) {
         final var errorMsg =
-            String.format("Insufficient arguments; amount=%d, requested=%d", args.length, index);
+            String.format(
+                Locale.ROOT, "Insufficient arguments; amount=%d, requested=%d", args.length, index);
         throw new IllegalArgumentException(errorMsg);
       }
       return args[index++];
@@ -74,7 +76,10 @@ public class Main {
       if (!expectedArg.equals(nextArg)) {
         final var errorMsg =
             String.format(
-                "Found unexpected argument; expected=\"%s\", found=\"%s\"", expectedArg, nextArg);
+                Locale.ROOT,
+                "Found unexpected argument; expected=\"%s\", found=\"%s\"",
+                expectedArg,
+                nextArg);
         throw new IllegalArgumentException(errorMsg);
       }
     }

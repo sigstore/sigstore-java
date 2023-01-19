@@ -15,11 +15,16 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Locale;
+
 public class SnapshotTargetVersionException extends TufException {
   public SnapshotTargetVersionException(String targetName, int invalidVersion, int currentVersion) {
     super(
         String.format(
+            Locale.ROOT,
             "The updated target [%s] version [%d] is not equal to or greater than the current version [%d].",
-            targetName, invalidVersion, currentVersion));
+            targetName,
+            invalidVersion,
+            currentVersion));
   }
 }

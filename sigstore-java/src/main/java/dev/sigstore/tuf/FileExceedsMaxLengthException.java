@@ -15,6 +15,8 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Locale;
+
 /**
  * Thrown when the Meta File exceeds the max allowable file size as configured in the {@link
  * Updater}
@@ -27,7 +29,10 @@ public class FileExceedsMaxLengthException extends TufException {
   public FileExceedsMaxLengthException(String fileUrl, int maxSize) {
     super(
         String.format(
-            "The file at %s exceeds the client's max file size limit (%d)", fileUrl, maxSize));
+            Locale.ROOT,
+            "The file at %s exceeds the client's max file size limit (%d)",
+            fileUrl,
+            maxSize));
     this.fileUrl = fileUrl;
     this.maxSize = maxSize;
   }
