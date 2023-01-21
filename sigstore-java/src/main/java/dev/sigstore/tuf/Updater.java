@@ -251,13 +251,11 @@ public class Updater {
     Optional<Timestamp> localTimestampMaybe = localStore.loadTimestamp();
     if (localTimestampMaybe.isPresent()) {
       Timestamp localTimestamp = localTimestampMaybe.get();
-      if (localTimestampMaybe.get().getSignedMeta().getVersion()
-          > timestamp.getSignedMeta().getVersion()) {
+      if (localTimestamp.getSignedMeta().getVersion() > timestamp.getSignedMeta().getVersion()) {
         throw new RollbackVersionException(
             localTimestamp.getSignedMeta().getVersion(), timestamp.getSignedMeta().getVersion());
       }
-      if (localTimestampMaybe.get().getSignedMeta().getVersion()
-          == timestamp.getSignedMeta().getVersion()) {
+      if (localTimestamp.getSignedMeta().getVersion() == timestamp.getSignedMeta().getVersion()) {
         return Optional.empty();
       }
     }
@@ -339,8 +337,7 @@ public class Updater {
     if (expectedSha256 == null && expectedSha512 == null) {
       throw new IllegalArgumentException(
           String.format(
-              "Specified hashes for %s is missing either a sha256 or sha512 expected hash value",
-              name));
+              "hashes parameter for %s must contain at least one of sha512 or sha256.", name));
     }
     String computedSha512 = Hashing.sha512().hashBytes(data).toString();
     if (expectedSha512 != null && !computedSha512.equals(expectedSha512)) {

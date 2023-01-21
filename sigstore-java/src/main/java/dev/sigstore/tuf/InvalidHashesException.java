@@ -15,12 +15,15 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 /** Thrown when a hash check fails for a given resource. */
 public class InvalidHashesException extends TufException {
   static class InvalidHash {
-    String algorithm;
-    String expectedHash;
-    String computedHash;
+    final String algorithm;
+    final String expectedHash;
+    final String computedHash;
 
     InvalidHash(String algorithm, String expectedHash, String computedHash) {
       this.algorithm = algorithm;
@@ -49,11 +52,9 @@ public class InvalidHashesException extends TufException {
   }
 
   private static String invalidHashesToString(InvalidHash... invalidHashes) {
-    StringBuilder stringBuilder = new StringBuilder();
-    for (InvalidHash invalidHash : invalidHashes) {
-      stringBuilder.append(invalidHash);
-      stringBuilder.append('\n');
-    }
-    return stringBuilder.toString();
+    return Arrays.asList(invalidHashes)
+        .stream()
+        .map(invalidHash -> invalidHash.toString())
+        .collect(Collectors.joining("\n"));
   }
 }
