@@ -52,9 +52,8 @@ public class InvalidHashesException extends TufException {
   }
 
   private static String invalidHashesToString(InvalidHash... invalidHashes) {
-    return Arrays.asList(invalidHashes)
-        .stream()
-        .map(invalidHash -> invalidHash.toString())
+    return Arrays.stream(invalidHashes)
+        .map(InvalidHash::toString)
         .collect(Collectors.joining("\n"));
   }
 }
