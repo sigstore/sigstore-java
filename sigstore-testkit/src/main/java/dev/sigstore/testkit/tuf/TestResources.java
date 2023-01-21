@@ -38,9 +38,11 @@ public class TestResources {
   public static void setupRepoFiles(String repoName, Path destinationDir, String... files)
       throws IOException {
     for (String file : files) {
+      Path destinationFilePath = destinationDir.resolve(file);
+      Files.createDirectories(destinationFilePath.getParent());
       Files.copy(
           TestResources.TUF_TEST_DATA_DIRECTORY.resolve(repoName).resolve(file),
-          destinationDir.resolve(file));
+          destinationFilePath);
     }
   }
 

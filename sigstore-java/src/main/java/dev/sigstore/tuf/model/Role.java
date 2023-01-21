@@ -29,7 +29,8 @@ public interface Role {
   enum Name {
     ROOT,
     SNAPSHOT,
-    TIMESTAMP;
+    TIMESTAMP,
+    TARGETS;
 
     @Override
     public String toString() {

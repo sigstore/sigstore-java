@@ -1,6 +1,11 @@
 
 # TUF repo creation steps
 
+You'll need the TUF cli to run these commands. 
+```shell
+go install github.com/theupdateframework/go-tuf/cmd/tuf@latest
+```
+
 ```shell
 mkdir root-signing-workspace
 cd root-signing-workspace
@@ -13,8 +18,8 @@ tuf gen-key --expires=90 --scheme="ecdsa-sha2-nistp256" snapshot
 tuf gen-key --expires=90 --scheme="ecdsa-sha2-nistp256" timestamp
 echo "test file" > staged/targets/test.txt
 tuf add test.txt
-tuf snapshot
-tuf timestamp
+tuf snapshot --expires=60
+tuf timestamp --expires=30
 tuf commit 
 cp repository/1.root.json ../trusted-root.json  # this is our trusted root for synthetic
 echo "test target v2" > staged/targets/test.txt.v2
@@ -41,3 +46,6 @@ tuf payload snapshot.json > payload.snapshot.json
 tuf sign-payload --role=snapshot payload.snapshot.json > snapshot.sigs
 tuf add-signatures --signatures snapshot.sigs snapshot.json  # we've added a good sig despite the bad hash 
 ```
+
+NOTE:  It can help with readability to reformat the json files. snapshot.json and targets.json should not be reformatted
+due to hash validation checks. You can always revert a reformat to one of those files by removing all whitespace.

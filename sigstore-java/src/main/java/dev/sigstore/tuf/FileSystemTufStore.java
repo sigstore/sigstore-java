@@ -18,10 +18,7 @@ package dev.sigstore.tuf;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.annotations.VisibleForTesting;
-import dev.sigstore.tuf.model.Role;
-import dev.sigstore.tuf.model.Root;
-import dev.sigstore.tuf.model.SignedTufMeta;
-import dev.sigstore.tuf.model.Timestamp;
+import dev.sigstore.tuf.model.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -37,17 +34,31 @@ public class FileSystemTufStore implements TufLocalStore {
   private static final String SNAPSHOT_FILE_NAME = "snapshot.json";
   private static final String TIMESTAMP_FILE_NAME = "timestamp.json";
   private Path repoBaseDir;
+  private Path targetsCache;
 
   @VisibleForTesting
-  FileSystemTufStore(Path repoBaseDir) {
+  FileSystemTufStore(Path repoBaseDir, Path targetsCache) {
     this.repoBaseDir = repoBaseDir;
+    this.targetsCache = targetsCache;
   }
 
-  public static TufLocalStore newFileSystemStore(Path repoBaseDir) {
+  public static TufLocalStore newFileSystemStore(Path repoBaseDir) throws IOException {
     if (!Files.isDirectory(repoBaseDir)) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
-    return new FileSystemTufStore(repoBaseDir);
+    Path defaultTargetsCache = repoBaseDir.resolve("targets");
+    Files.createDirectory(defaultTargetsCache);
+    return newFileSystemStore(repoBaseDir, defaultTargetsCache);
+  }
+
+  static TufLocalStore newFileSystemStore(Path repoBaseDir, Path targetsCache) {
+    if (!Files.isDirectory(repoBaseDir)) {
+      throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
+    }
+    if (!Files.isDirectory(targetsCache)) {
+      throw new IllegalArgumentException(targetsCache + " must be a file system directory.");
+    }
+    return new FileSystemTufStore(repoBaseDir, targetsCache);
   }
 
   @Override
@@ -66,8 +77,28 @@ public class FileSystemTufStore implements TufLocalStore {
   }
 
   @Override
+  public Optional<Snapshot> loadSnapshot() throws IOException {
+    return loadRole(Role.Name.SNAPSHOT, Snapshot.class);
+  }
+
+  @Override
+  public Optional<Targets> loadTargets() throws IOException {
+    return loadRole(Role.Name.TARGETS, Targets.class);
+  }
+
+  @Override
+  public void storeTargetFile(String targetName, byte[] targetContents) throws IOException {
+    Files.write(targetsCache.resolve(targetName), targetContents);
+  }
+
+  @Override
+  public byte[] getTargetFile(String targetName) throws IOException {
+    return Files.readAllBytes(targetsCache.resolve(targetName));
+  }
+
+  @Override
   public <T extends SignedTufMeta> void storeMeta(T timestamp) throws IOException {
-    saveRole(timestamp);
+    storeRole(timestamp);
   }
 
   <T extends SignedTufMeta> Optional<T> loadRole(Role.Name roleName, Class<T> tClass)
@@ -79,7 +110,7 @@ public class FileSystemTufStore implements TufLocalStore {
     return Optional.of(GSON.get().fromJson(Files.readString(roleFile), tClass));
   }
 
-  <T extends SignedTufMeta> void saveRole(T role) throws IOException {
+  <T extends SignedTufMeta> void storeRole(T role) throws IOException {
     try (BufferedWriter fileWriter =
         Files.newBufferedWriter(repoBaseDir.resolve(role.getSignedMeta().getType() + ".json"))) {
       GSON.get().toJson(role, fileWriter);
@@ -99,7 +130,7 @@ public class FileSystemTufStore implements TufLocalStore {
         // The file is already backed-up. continue.
       }
     }
-    saveRole(root);
+    storeRole(root);
   }
 
   @Override

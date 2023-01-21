@@ -19,7 +19,7 @@ import java.time.ZonedDateTime;
 
 /**
  * Thrown when the local trusted role is expired and no valid un-expired new role is found on the
- * remote mirror.
+ * remote mirror. TODO: add role type to exception message.
  */
 public class RoleExpiredException extends TufException {
   private String mirrorUrl;

@@ -32,6 +32,10 @@ public interface SnapshotMeta extends TufMeta {
   /** Maps role and delegation role names (e.g. "targets.json") to snapshot metadata. */
   Map<String, SnapshotTarget> getMeta();
 
+  default SnapshotTarget getTargetMeta(String targetName) {
+    return getMeta().get(targetName);
+  }
+
   /** Snapshot data to prevent mix and match attacks. */
   @Value.Immutable
   interface SnapshotTarget {

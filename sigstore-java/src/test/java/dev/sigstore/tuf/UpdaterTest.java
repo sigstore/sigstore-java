@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.JsonSyntaxException;
 import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.testkit.tuf.TestResources;
@@ -43,6 +44,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -51,6 +53,7 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -162,7 +165,7 @@ class UpdaterTest {
     try {
       updater.updateRoot();
       fail("MetaFileExceedsMaxException expected as 2.root.json is larger than max allowable.");
-    } catch (MetaFileExceedsMaxException e) {
+    } catch (FileExceedsMaxLengthException e) {
       // expected
     }
   }
@@ -172,7 +175,7 @@ class UpdaterTest {
     setupMirror("synthetic/test-template", "2.root.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
-        MetaNotFoundException.class,
+        FileNotFoundException.class,
         () -> {
           updater.updateTimestamp(updater.updateRoot());
         });
@@ -193,7 +196,7 @@ class UpdaterTest {
   }
 
   @Test
-  public void testTimestampUpdate_throwsRolebackVersionException()
+  public void testTimestampUpdate_throwsRollbackVersionException()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     bootstrapLocalStore(localStorePath, "synthetic/test-template", "root.json", "timestamp.json");
     setupMirror("synthetic/timestamp-rollback-version", "2.root.json", "timestamp.json");
@@ -206,6 +209,17 @@ class UpdaterTest {
       assertEquals(3, e.getCurrentVersion(), "expected timestamp version did not match");
       assertEquals(1, e.getFoundVersion(), "found timestamp version did not match");
     }
+  }
+
+  @Test
+  public void testTimestampUpdate_noUpdate()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    bootstrapLocalStore(localStorePath, "synthetic/test-template", "2.root.json", "timestamp.json");
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    assertTrue(
+        updater.updateTimestamp(updater.updateRoot()).isEmpty(),
+        "We expect the updater to return an empty timestamp if there are no updates");
   }
 
   @Test
@@ -254,6 +268,441 @@ class UpdaterTest {
         3,
         updater.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
         "timestamp version did not match expectations.");
+  }
+
+  @Test
+  public void testSnapshotUpdate_snapshotMetaMissing()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    assertThrows(
+        FileNotFoundException.class,
+        () -> updater.updateSnapshot(root, timestamp.get()),
+        "Expected remote with no snapshot.json to throw FileNotFoundException.");
+  }
+
+  @Test
+  public void testSnapshotUpdate_invalidHash()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/snapshot-invalid-hash", "2.root.json", "timestamp.json", "snapshot.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    assertThrows(
+        InvalidHashesException.class,
+        () -> {
+          updater.updateSnapshot(root, timestamp.get());
+        },
+        "snapshot.json edited and should fail hash test.");
+  }
+
+  @Test
+  public void testSnapshotUpdate_timestampSnapshotVersionMismatch()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/snapshot-version-mismatch", "2.root.json", "timestamp.json", "snapshot.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    assertThrows(
+        SnapshotVersionMismatchException.class,
+        () -> {
+          updater.updateSnapshot(root, timestamp.get());
+        },
+        "snapshot version should not match the timestamp metadata.");
+  }
+
+  @Test
+  public void testSnapshotUpdate_snapshotTargetMissing()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    bootstrapLocalStore(
+        localStorePath,
+        "synthetic/test-template",
+        "2.root.json",
+        "1.timestamp.json",
+        "snapshot.json");
+    setupMirror(
+        "synthetic/snapshot-target-missing", "2.root.json", "timestamp.json", "snapshot.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    assertThrows(
+        SnapshotTargetMissingException.class,
+        () -> {
+          updater.updateSnapshot(root, timestamp.get());
+        },
+        "All targets from previous versions of snapshot should be contained in future versions of snapshot.");
+  }
+
+  @Test
+  public void testSnapshotUpdate_snapshotTargetVersionRollback()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    bootstrapLocalStore(
+        localStorePath,
+        "synthetic/test-template",
+        "2.root.json",
+        "1.timestamp.json",
+        "snapshot.json");
+    setupMirror(
+        "synthetic/snapshot-target-version-rollback",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    assertThrows(
+        SnapshotTargetVersionException.class,
+        () -> {
+          updater.updateSnapshot(root, timestamp.get());
+        },
+        "The new snapshot.json has a targets.json version that is lower than the current target and so we expect a SnapshotTargetVersionException.");
+  }
+
+  @Test
+  public void testSnapshotUpdate_success()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json", "snapshot.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    Root root = updater.updateRoot();
+    Timestamp timestamp = updater.updateTimestamp(root).get();
+    Snapshot result = updater.updateSnapshot(root, timestamp);
+    assertNotNull(result);
+  }
+
+  @Test
+  public void testSnapshotUpdate_expired()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("synthetic/snapshot-expired", "2.root.json", "timestamp.json", "snapshot.json");
+    // snapshot expires 2022-11-19T18:07:27Z
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath,
+            UPDATER_SYNTHETIC_TRUSTED_ROOT,
+            "2022-11-20T18:07:27Z"); // one day after
+    Root root = updater.updateRoot();
+    Timestamp timestamp = updater.updateTimestamp(root).get();
+    try {
+      updater.updateSnapshot(root, timestamp);
+      fail("Expects a RoleExpiredException as the repo snapshot.json should be expired.");
+    } catch (RoleExpiredException e) {
+      // pass
+    }
+  }
+
+  @Test
+  public void testTargetsUpdate_targetMetaMissing()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json", "snapshot.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    assertThrows(
+        FileNotFoundException.class,
+        () -> updater.updateTargets(root, snapshot),
+        "Expected remote with no target.json to throw FileNotFoundException.");
+  }
+
+  @Test
+  public void testTargetsUpdate_invalidHash()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/targets-invalid-hash",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    assertThrows(
+        InvalidHashesException.class,
+        () -> updater.updateTargets(root, snapshot),
+        "targets.json has been modified to have an invalid hash.");
+  }
+
+  @Test
+  public void testTargetsUpdate_snapshotVersionMismatch()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/targets-snapshot-version-mismatch",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    assertThrows(
+        SnapshotVersionMismatchException.class,
+        () -> updater.updateTargets(root, snapshot),
+        "targets version should not match the snapshot targets metadata.");
+  }
+
+  @Test
+  public void testTargetsUpdate_targetExpired()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    // targets expires 2022-11-19T18:07:27Z
+    setupMirror(
+        "synthetic/targets-expired",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json");
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath,
+            UPDATER_SYNTHETIC_TRUSTED_ROOT,
+            "2022-11-20T18:07:27Z"); // one day after
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    assertThrows(
+        RoleExpiredException.class,
+        () -> updater.updateTargets(root, snapshot),
+        "targets are out of date and should cause RoleExpiredException.");
+  }
+
+  @Test
+  public void testTargetsUpdate_success()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    // targets expires 2022-11-19T18:07:27Z
+    setupMirror(
+        "synthetic/test-template",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json");
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath,
+            UPDATER_SYNTHETIC_TRUSTED_ROOT,
+            "2022-11-20T18:07:27Z"); // one day after
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    var targets = updater.updateTargets(root, snapshot);
+    assertNotNull(targets);
+    assertNotNull(updater.getLocalStore().loadTargets());
+    assertEquals(
+        targets.getSignedMeta(), updater.getLocalStore().loadTargets().get().getSignedMeta());
+  }
+
+  @Test
+  public void testTargetsDownload_targetMissingTargetMetadata()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/targets-download-missing-target-metadata",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    assertThrows(
+        JsonSyntaxException.class,
+        () -> updater.updateTargets(root, snapshot),
+        "targets.json data should be causing a gson error due to missing TargetData. If at some point we support nullable TargetData this test should be updated to expect TargetMetadataMissingException while calling downloadTargets().");
+  }
+
+  @Test
+  public void testTargetsDownload_targetFileNotFound()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/test-template",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    var targets = updater.updateTargets(root, snapshot);
+    assertThrows(
+        FileNotFoundException.class,
+        () -> updater.downloadTargets(targets),
+        "the target file for download should be missing from the repo and cause an exception.");
+  }
+
+  @Test
+  public void testTargetsDownload_targetInvalidLength()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/targets-download-invalid-length",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json",
+        "targets/test.txt");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    var targets = updater.updateTargets(root, snapshot);
+    assertThrows(
+        FileExceedsMaxLengthException.class,
+        () -> updater.downloadTargets(targets),
+        "The target file is expected to not match the length specified in targets.json target data.");
+  }
+
+  @Test
+  public void testTargetsDownload_targetFileInvalidHash()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/targets-download-invalid-hash",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json",
+        "targets/test.txt");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    var targets = updater.updateTargets(root, snapshot);
+    assertThrows(
+        InvalidHashesException.class,
+        () -> updater.downloadTargets(targets),
+        "The target file has been modified and should not match the expected hash");
+  }
+
+  @Test
+  public void testTargetsDownload_success()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/test-template",
+        "2.root.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json",
+        "targets/test.txt",
+        "targets/test.txt.v2",
+        "targets/test2.txt");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    var targets = updater.updateTargets(root, snapshot);
+    updater.downloadTargets(targets);
+    assertTrue(updater.getLocalStore().getTargetFile("test.txt") != null);
+    assertTrue(updater.getLocalStore().getTargetFile("test.txt.v2") != null);
+    assertTrue(updater.getLocalStore().getTargetFile("test2.txt") != null);
+  }
+
+  private static final byte[] TEST_HASH_VERIFYIER_BYTES =
+      "testdata".getBytes(StandardCharsets.UTF_8);
+  private static final String GOOD_256_HASH =
+      "810ff2fb242a5dee4220f2cb0e6a519891fb67f2f828a6cab4ef8894633b1f50";
+  private static final String GOOD_512_HASH =
+      "76f4ca48f5eea90471fc0579e2fb21078e06641a7233395825550e5629efca7f06dd30bcd387ddf2fbc114beeab3f0dd995eb5743751bd7273d0e514ecb3939b";
+
+  private static final String BAD_HASH = "bad";
+
+  private static class TestHashes implements Hashes {
+
+    private final String sha256;
+    private final String sha512;
+
+    private TestHashes(String sha256, String sha512) {
+      this.sha256 = sha256;
+      this.sha512 = sha512;
+    }
+
+    @Nullable
+    @Override
+    public String getSha256() {
+      return sha256;
+    }
+
+    @Nullable
+    @Override
+    public String getSha512() {
+      return sha512;
+    }
+  }
+
+  @Test
+  public void testVerifyHashes_noHashes() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> Updater.verifyHashes("test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(null, null)),
+        "If no hashes are provided it should cause an error.");
+  }
+
+  @Test
+  public void testVerifyHashes_bad256Null512() {
+    assertThrows(
+        InvalidHashesException.class,
+        () ->
+            Updater.verifyHashes("test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(BAD_HASH, null)),
+        "If the hash doesn't match we expect an error.");
+  }
+
+  @Test
+  public void testVerifyHashes_bad512Null256() {
+    assertThrows(
+        InvalidHashesException.class,
+        () ->
+            Updater.verifyHashes("test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(null, BAD_HASH)),
+        "If the hash doesn't match we expect an error.");
+  }
+
+  @Test
+  public void testVerifyHashes_badBoth() {
+    assertThrows(
+        InvalidHashesException.class,
+        () ->
+            Updater.verifyHashes(
+                "test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(BAD_HASH, BAD_HASH)),
+        "If both hashes don't match we still expect an error.");
+  }
+
+  @Test
+  public void testVerifyHashes_good256Null512() {
+    // We don't expect an exception since we'e provided a valid hash 256 value.
+    Updater.verifyHashes("test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(GOOD_256_HASH, null));
+  }
+
+  @Test
+  public void testVerifyHashes_good512Null256() {
+    // We don't expect an exception since we'e provided a valid hash 512 value.
+    Updater.verifyHashes("test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(null, GOOD_512_HASH));
+  }
+
+  @Test
+  public void testVerifyHashes_goodBoth() {
+    // We don't expect an exception since we'e provided a valid hash 512 value.
+    Updater.verifyHashes(
+        "test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(GOOD_256_HASH, GOOD_512_HASH));
+  }
+
+  @Test
+  public void testVerifyHashes_good256Bad512() {
+    assertThrows(
+        InvalidHashesException.class,
+        () ->
+            Updater.verifyHashes(
+                "test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(GOOD_256_HASH, BAD_HASH)),
+        "If one of the hashes is invalid we still produce an error.");
+  }
+
+  @Test
+  public void testVerifyHashes_good512Bad256() {
+    assertThrows(
+        InvalidHashesException.class,
+        () ->
+            Updater.verifyHashes(
+                "test", TEST_HASH_VERIFYIER_BYTES, new TestHashes(BAD_HASH, GOOD_512_HASH)),
+        "If one of the hashes is invalid we still expect an error.");
   }
 
   private void bootstrapLocalStore(
@@ -448,6 +897,13 @@ class UpdaterTest {
     return Updater.builder().setVerifiers(ALWAYS_VERIFIES).build();
   }
 
+  /**
+   * Setup a test mirror.
+   *
+   * @param repoName the directory under test/resources/dev/sigstore/tuf where the test data
+   *     resides.
+   * @param files files from the test data set to copy into the mirror
+   */
   private static void setupMirror(String repoName, String... files) throws IOException {
     TestResources.setupRepoFiles(repoName, localMirrorPath, files);
   }
@@ -474,9 +930,9 @@ class UpdaterTest {
   }
 
   @AfterEach
-  void clearLocalMirror() {
+  void clearLocalMirror() throws IOException {
     for (File file : localMirrorPath.toFile().listFiles()) {
-      file.delete();
+      FileUtils.forceDelete(file);
     }
   }
 

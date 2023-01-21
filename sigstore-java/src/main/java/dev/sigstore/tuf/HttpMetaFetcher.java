@@ -49,46 +49,65 @@ public class HttpMetaFetcher implements MetaFetcher {
 
   @Override
   public Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
-      throws IOException, MetaFileExceedsMaxException {
+      throws IOException, FileExceedsMaxLengthException {
     String versionFileName = version + ".root.json";
-    return getMeta(versionFileName, Root.class);
+    return getMeta(versionFileName, Root.class, null);
   }
 
   @Override
   public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(Role.Name role, Class<T> t)
-      throws IOException, MetaFileExceedsMaxException {
-    String fileName = role.name().toLowerCase() + ".json";
-    return getMeta(fileName, t);
+      throws IOException, FileExceedsMaxLengthException {
+    return getMeta(role, t, null);
   }
 
-  <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(String filename, Class<T> t)
-      throws IOException, MetaFileExceedsMaxException {
-    GenericUrl nextVersionUrl = new GenericUrl(mirror + "/" + filename);
-    var req =
-        HttpClients.newRequestFactory(ImmutableHttpParams.builder().build())
-            .buildGetRequest(nextVersionUrl);
-    req.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser());
-    req.getHeaders().setAccept("application/json; api-version=2.0");
-    req.getHeaders().setContentType("application/json");
-    req.setThrowExceptionOnExecuteError(false);
-    var resp = req.execute();
-    if (resp.getStatusCode() == 404) {
+  @Override
+  public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
+      Role.Name role, Class<T> t, Integer maxSize)
+      throws IOException, FileExceedsMaxLengthException {
+    String fileName = role.name().toLowerCase() + ".json";
+    return getMeta(fileName, t, maxSize);
+  }
+
+  <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
+      String filename, Class<T> t, Integer maxSize)
+      throws IOException, FileExceedsMaxLengthException {
+    byte[] roleBytes = fetchResource(filename, maxSize == null ? MAX_META_BYTES : maxSize);
+    if (roleBytes == null) {
       return Optional.empty();
-    }
-    if (resp.getStatusCode() != 200) {
-      throw new TufException(
-          String.format(
-              "Unexpected return from mirror. Status code: %s, status message: %s"
-                  + resp.getStatusCode()
-                  + resp.getStatusMessage()));
-    }
-    byte[] roleBytes = resp.getContent().readNBytes(MAX_META_BYTES);
-    if (roleBytes.length == MAX_META_BYTES && resp.getContent().read() != -1) {
-      throw new MetaFileExceedsMaxException(nextVersionUrl.toString(), MAX_META_BYTES);
     }
     var result =
         new MetaFetchResult<T>(
             roleBytes, GSON.get().fromJson(new String(roleBytes, StandardCharsets.UTF_8), t));
     return Optional.of(result);
+  }
+
+  @Override
+  public byte[] fetchResource(String filename, int maxLength)
+      throws IOException, FileExceedsMaxLengthException {
+    GenericUrl fileUrl = new GenericUrl(mirror + "/" + filename);
+    var req =
+        HttpClients.newHttpTransport(ImmutableHttpParams.builder().build())
+            .createRequestFactory(
+                request ->
+                    request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser()))
+            .buildGetRequest(fileUrl);
+    req.getHeaders().setAccept("application/json; api-version=2.0");
+    req.getHeaders().setContentType("application/json");
+    req.setThrowExceptionOnExecuteError(false);
+    var resp = req.execute();
+    if (resp.getStatusCode() == 404) {
+      return null;
+    }
+    if (resp.getStatusCode() != 200) {
+      throw new TufException(
+          String.format(
+              "Unexpected return from mirror(%s). Status code: %s, status message: %s",
+              mirror, resp.getStatusCode(), resp.getStatusMessage()));
+    }
+    byte[] roleBytes = resp.getContent().readNBytes(maxLength);
+    if (roleBytes.length == maxLength && resp.getContent().read() != -1) {
+      throw new FileExceedsMaxLengthException(fileUrl.toString(), maxLength);
+    }
+    return roleBytes;
   }
 }
