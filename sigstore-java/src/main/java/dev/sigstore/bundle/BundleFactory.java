@@ -16,9 +16,9 @@
 package dev.sigstore.bundle;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.KeylessSigningResult;
 import dev.sigstore.proto.bundle.v1.Bundle;
+import java.util.List;
 
 /**
  * Generates Sigstore Bundle.
@@ -27,8 +27,6 @@ import dev.sigstore.proto.bundle.v1.Bundle;
  *     specifications</a>
  */
 public class BundleFactory {
-  private static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
-
   /**
    * Generates Sigstore Bundle JSON from {@link KeylessSigningResult}.
    *
@@ -38,7 +36,16 @@ public class BundleFactory {
   public static String createBundle(KeylessSigningResult signingResult) {
     Bundle bundle = BundleFactoryInternal.createBundleBuilder(signingResult).build();
     try {
-      return JSON_PRINTER.print(bundle);
+      String jsonBundle = BundleFactoryInternal.JSON_PRINTER.print(bundle);
+      List<String> missingFields = BundleVerifierInternal.findMissingFields(bundle);
+      if (!missingFields.isEmpty()) {
+        throw new IllegalStateException(
+            "Some of the fields were not initialized: "
+                + String.join(", ", missingFields)
+                + "; bundle JSON: "
+                + jsonBundle);
+      }
+      return jsonBundle;
     } catch (InvalidProtocolBufferException e) {
       throw new IllegalArgumentException(
           "Can't serialize signing result to Sigstore Bundle JSON", e);

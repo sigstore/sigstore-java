@@ -16,6 +16,7 @@
 package dev.sigstore.bundle;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.KeylessSigningResult;
 import dev.sigstore.proto.bundle.v1.Bundle;
 import dev.sigstore.proto.bundle.v1.VerificationMaterial;
@@ -34,6 +35,8 @@ import java.util.stream.Collectors;
  *     specifications</a>
  */
 class BundleFactoryInternal {
+  static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
+
   /**
    * Generates Sigstore Bundle Builder from {@link KeylessSigningResult}. This might be useful in
    * case you want to add additional information to the bundle.
@@ -50,7 +53,8 @@ class BundleFactoryInternal {
                 .setMessageDigest(
                     HashOutput.newBuilder()
                         .setAlgorithm(HashAlgorithm.SHA2_256)
-                        .setDigest(ByteString.copyFrom(signingResult.getDigest()))));
+                        .setDigest(ByteString.copyFrom(signingResult.getDigest())))
+                .setSignature(ByteString.copyFrom(signingResult.getSignature())));
   }
 
   private static VerificationMaterial.Builder buildVerificationMaterial(
