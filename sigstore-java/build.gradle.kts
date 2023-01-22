@@ -51,7 +51,7 @@ dependencies {
     testImplementation("org.mockito:mockito-core:5.0.0")
     testImplementation("no.nav.security:mock-oauth2-server:0.5.7")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
-    testImplementation("net.sourceforge.htmlunit:htmlunit:2.69.0")
+    testImplementation("net.sourceforge.htmlunit:htmlunit:2.70.0")
     testImplementation("org.eclipse.jetty:jetty-server:11.0.13")
 }
 
