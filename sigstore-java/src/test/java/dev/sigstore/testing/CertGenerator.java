@@ -26,6 +26,8 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
@@ -63,7 +65,7 @@ public class CertGenerator {
 
     // create a short lived cert
     Date startDate = new Date(System.currentTimeMillis());
-    var calendar = Calendar.getInstance();
+    var calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale.ROOT);
     calendar.setTime(startDate);
     calendar.add(Calendar.MINUTE, 20);
     var endDate = calendar.getTime();

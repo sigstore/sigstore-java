@@ -16,6 +16,7 @@
 package dev.sigstore.tuf;
 
 import java.time.ZonedDateTime;
+import java.util.Locale;
 
 /**
  * Thrown when the local trusted role is expired and no valid un-expired new role is found on the
@@ -30,9 +31,12 @@ public class RoleExpiredException extends TufException {
       String mirrorUrl, ZonedDateTime updateTime, ZonedDateTime roleExpirationTime) {
     super(
         String.format(
+            Locale.ROOT,
             "Trusted metadata is expired but no new versions are available at the "
                 + "mirror URL:(%s)\n update start time: %tc\n expired time: %tc)",
-            mirrorUrl, updateTime, roleExpirationTime));
+            mirrorUrl,
+            updateTime,
+            roleExpirationTime));
     this.mirrorUrl = mirrorUrl;
     this.updateTime = updateTime;
     this.roleExpirationTime = roleExpirationTime;

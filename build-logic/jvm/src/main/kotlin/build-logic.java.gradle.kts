@@ -6,6 +6,7 @@ plugins {
     id("build-logic.spotless-base")
     id("build-logic.testing")
     id("build-logic.errorprone")
+    id("build-logic.forbidden-apis")
 }
 
 java {

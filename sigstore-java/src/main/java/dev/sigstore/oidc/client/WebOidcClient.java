@@ -37,6 +37,7 @@ import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * A client to obtain oidc tokens from an oauth provider via web workflow for use with sigstore. By
@@ -174,8 +175,10 @@ public class WebOidcClient implements OidcClient {
     if (Boolean.FALSE.equals(emailVerified)) {
       throw new OidcException(
           String.format(
+              Locale.ROOT,
               "identity provider '%s' reports email address '%s' has not been verified",
-              parsedIdToken.getPayload().getIssuer(), emailFromIDToken));
+              parsedIdToken.getPayload().getIssuer(),
+              emailFromIDToken));
     }
 
     return ImmutableOidcToken.builder()

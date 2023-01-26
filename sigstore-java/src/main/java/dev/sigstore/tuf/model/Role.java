@@ -16,6 +16,7 @@
 package dev.sigstore.tuf.model;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * TUF uses roles to define the set of actions a party can perform. The concept of roles allows TUF
@@ -34,7 +35,7 @@ public interface Role {
 
     @Override
     public String toString() {
-      return super.toString().toLowerCase();
+      return super.toString().toLowerCase(Locale.ROOT);
     }
   }
 

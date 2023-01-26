@@ -15,6 +15,8 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Locale;
+
 /** Thrown when the version of the latest downloaded role does not match the expectation. */
 public class RollbackVersionException extends TufException {
   private int currentVersion;
@@ -23,7 +25,10 @@ public class RollbackVersionException extends TufException {
   public RollbackVersionException(int currentVersion, int foundVersion) {
     super(
         String.format(
-            "Expected version %d or higher but found version %d", currentVersion, foundVersion));
+            Locale.ROOT,
+            "Expected version %d or higher but found version %d",
+            currentVersion,
+            foundVersion));
     this.currentVersion = currentVersion;
     this.foundVersion = foundVersion;
   }

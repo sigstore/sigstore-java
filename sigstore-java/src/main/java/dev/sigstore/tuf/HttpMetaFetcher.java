@@ -27,6 +27,7 @@ import dev.sigstore.tuf.model.SignedTufMeta;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Optional;
 
 public class HttpMetaFetcher implements MetaFetcher {
@@ -64,7 +65,7 @@ public class HttpMetaFetcher implements MetaFetcher {
   public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
       Role.Name role, Class<T> t, Integer maxSize)
       throws IOException, FileExceedsMaxLengthException {
-    String fileName = role.name().toLowerCase() + ".json";
+    String fileName = role.name().toLowerCase(Locale.ROOT) + ".json";
     return getMeta(fileName, t, maxSize);
   }
 
@@ -101,8 +102,11 @@ public class HttpMetaFetcher implements MetaFetcher {
     if (resp.getStatusCode() != 200) {
       throw new TufException(
           String.format(
+              Locale.ROOT,
               "Unexpected return from mirror(%s). Status code: %s, status message: %s",
-              mirror, resp.getStatusCode(), resp.getStatusMessage()));
+              mirror,
+              resp.getStatusCode(),
+              resp.getStatusMessage()));
     }
     byte[] roleBytes = resp.getContent().readNBytes(maxLength);
     if (roleBytes.length == maxLength && resp.getContent().read() != -1) {

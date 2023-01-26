@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -27,12 +28,13 @@ public class GsonSupplierTest {
 
   @Test
   public void testWrite() {
-    Assertions.assertEquals("\"YWJjZA==\"", gson.toJson("abcd".getBytes()));
+    Assertions.assertEquals("\"YWJjZA==\"", gson.toJson("abcd".getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test
   public void testRead() {
-    Assertions.assertArrayEquals("abcd".getBytes(), gson.fromJson("\"YWJjZA==\"", byte[].class));
+    Assertions.assertArrayEquals(
+        "abcd".getBytes(StandardCharsets.UTF_8), gson.fromJson("\"YWJjZA==\"", byte[].class));
     Assertions.assertArrayEquals(new byte[] {}, gson.fromJson("\"\"", byte[].class));
     Assertions.assertArrayEquals(new byte[] {}, gson.fromJson("null", byte[].class));
   }

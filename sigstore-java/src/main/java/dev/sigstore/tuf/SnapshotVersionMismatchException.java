@@ -15,11 +15,15 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Locale;
+
 public class SnapshotVersionMismatchException extends TufException {
   public SnapshotVersionMismatchException(int expectedVersion, int actualVersion) {
     super(
         String.format(
+            Locale.ROOT,
             "Snapshot version (%d) did not match Timestamp resource (%d)",
-            actualVersion, expectedVersion));
+            actualVersion,
+            expectedVersion));
   }
 }

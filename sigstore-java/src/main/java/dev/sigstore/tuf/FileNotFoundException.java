@@ -15,10 +15,12 @@
  */
 package dev.sigstore.tuf;
 
+import java.util.Locale;
+
 /** Thrown when a metadata resources was unexpectedly missing. */
 public class FileNotFoundException extends TufException {
 
   public FileNotFoundException(String fileName, String source) {
-    super(String.format("file (%s) was not found at source (%s).", fileName, source));
+    super(String.format(Locale.ROOT, "file (%s) was not found at source (%s).", fileName, source));
   }
 }
