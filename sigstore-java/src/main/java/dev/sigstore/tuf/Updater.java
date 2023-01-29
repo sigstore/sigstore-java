@@ -59,14 +59,14 @@ public class Updater {
   private MetaFetcher fetcher;
   private ZonedDateTime updateStartTime;
   private Path trustedRootPath;
-  private TufLocalStore localStore;
+  private MutableTufStore localStore;
 
   Updater(
       Clock clock,
       Verifiers.Supplier verifiers,
       MetaFetcher fetcher,
       Path trustedRootPath,
-      TufLocalStore localStore) {
+      MutableTufStore localStore) {
     this.clock = clock;
     this.verifiers = verifiers;
     this.trustedRootPath = trustedRootPath;
@@ -428,7 +428,7 @@ public class Updater {
   }
 
   @VisibleForTesting
-  TufLocalStore getLocalStore() {
+  MutableTufStore getLocalStore() {
     return localStore;
   }
 
@@ -438,7 +438,7 @@ public class Updater {
 
     private MetaFetcher fetcher;
     private Path trustedRootPath;
-    private TufLocalStore localStore;
+    private MutableTufStore localStore;
 
     public Builder setClock(Clock clock) {
       this.clock = clock;
@@ -450,7 +450,7 @@ public class Updater {
       return this;
     }
 
-    public Builder setLocalStore(TufLocalStore store) {
+    public Builder setLocalStore(MutableTufStore store) {
       this.localStore = store;
       return this;
     }

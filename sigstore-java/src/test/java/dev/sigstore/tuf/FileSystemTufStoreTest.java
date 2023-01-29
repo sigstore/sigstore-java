@@ -29,22 +29,22 @@ class FileSystemTufStoreTest {
 
   @Test
   void newFileSystemStore_empty(@TempDir Path repoBase) throws IOException {
-    TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    assertFalse(tufLocalStore.loadTrustedRoot().isPresent());
+    MutableTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
+    assertFalse(tufStore.loadTrustedRoot().isPresent());
   }
 
   @Test
   void newFileSystemStore_hasRepo(@TempDir Path repoBase) throws IOException {
     TestResources.setupRepoFiles(PROD_REPO, repoBase, "root.json");
-    TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    assertTrue(tufLocalStore.loadTrustedRoot().isPresent());
+    MutableTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
+    assertTrue(tufStore.loadTrustedRoot().isPresent());
   }
 
   @Test
   void setTrustedRoot_noPrevious(@TempDir Path repoBase) throws IOException {
-    TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
+    MutableTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
-    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
+    tufStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
     assertEquals(2, repoBase.toFile().list().length, "Expect 2: root.json plus the /targets dir.");
     assertTrue(repoBase.resolve("root.json").toFile().exists());
     assertTrue(repoBase.resolve("targets").toFile().isDirectory());
@@ -53,20 +53,20 @@ class FileSystemTufStoreTest {
   @Test
   void setTrustedRoot_backupPerformed(@TempDir Path repoBase) throws IOException {
     TestResources.setupRepoFiles(PROD_REPO, repoBase, "root.json");
-    TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    int version = tufLocalStore.loadTrustedRoot().get().getSignedMeta().getVersion();
+    MutableTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
+    int version = tufStore.loadTrustedRoot().get().getSignedMeta().getVersion();
     assertFalse(repoBase.resolve(version + ".root.json").toFile().exists());
-    tufLocalStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
+    tufStore.storeTrustedRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
     assertTrue(repoBase.resolve(version + ".root.json").toFile().exists());
   }
 
   @Test
   void clearMetaDueToKeyRotation(@TempDir Path repoBase) throws IOException {
     TestResources.setupRepoFiles(PROD_REPO, repoBase, "snapshot.json", "timestamp.json");
-    TufLocalStore tufLocalStore = FileSystemTufStore.newFileSystemStore(repoBase);
+    MutableTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertTrue(repoBase.resolve("snapshot.json").toFile().exists());
     assertTrue(repoBase.resolve("timestamp.json").toFile().exists());
-    tufLocalStore.clearMetaDueToKeyRotation();
+    tufStore.clearMetaDueToKeyRotation();
     assertFalse(repoBase.resolve("snapshot.json").toFile().exists());
     assertFalse(repoBase.resolve("timestamp.json").toFile().exists());
   }

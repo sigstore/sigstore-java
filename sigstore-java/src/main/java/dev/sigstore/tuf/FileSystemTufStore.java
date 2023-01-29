@@ -28,7 +28,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 /** Uses a local file system directory to store the trusted TUF metadata. */
-public class FileSystemTufStore implements TufLocalStore {
+public class FileSystemTufStore implements MutableTufStore {
 
   private static final String ROOT_FILE_NAME = "root.json";
   private static final String SNAPSHOT_FILE_NAME = "snapshot.json";
@@ -42,7 +42,7 @@ public class FileSystemTufStore implements TufLocalStore {
     this.targetsCache = targetsCache;
   }
 
-  public static TufLocalStore newFileSystemStore(Path repoBaseDir) throws IOException {
+  public static MutableTufStore newFileSystemStore(Path repoBaseDir) throws IOException {
     if (!Files.isDirectory(repoBaseDir)) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
@@ -51,7 +51,7 @@ public class FileSystemTufStore implements TufLocalStore {
     return newFileSystemStore(repoBaseDir, defaultTargetsCache);
   }
 
-  static TufLocalStore newFileSystemStore(Path repoBaseDir, Path targetsCache) {
+  static MutableTufStore newFileSystemStore(Path repoBaseDir, Path targetsCache) {
     if (!Files.isDirectory(repoBaseDir)) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
@@ -97,11 +97,11 @@ public class FileSystemTufStore implements TufLocalStore {
   }
 
   @Override
-  public <T extends SignedTufMeta> void storeMeta(T timestamp) throws IOException {
+  public void storeMeta(SignedTufMeta<?> timestamp) throws IOException {
     storeRole(timestamp);
   }
 
-  <T extends SignedTufMeta> Optional<T> loadRole(Role.Name roleName, Class<T> tClass)
+  <T extends SignedTufMeta<?>> Optional<T> loadRole(Role.Name roleName, Class<T> tClass)
       throws IOException {
     Path roleFile = repoBaseDir.resolve(roleName + ".json");
     if (!roleFile.toFile().exists()) {
@@ -110,7 +110,7 @@ public class FileSystemTufStore implements TufLocalStore {
     return Optional.of(GSON.get().fromJson(Files.readString(roleFile), tClass));
   }
 
-  <T extends SignedTufMeta> void storeRole(T role) throws IOException {
+  <T extends SignedTufMeta<?>> void storeRole(T role) throws IOException {
     try (BufferedWriter fileWriter =
         Files.newBufferedWriter(repoBaseDir.resolve(role.getSignedMeta().getType() + ".json"))) {
       GSON.get().toJson(role, fileWriter);
