@@ -17,33 +17,9 @@ package dev.sigstore.tuf;
 
 import dev.sigstore.tuf.model.*;
 import java.io.IOException;
-import java.util.Optional;
 
 /** Defines the set of actions needed to support a local repository of TUF metadata. */
-public interface TufLocalStore {
-
-  /**
-   * A generic string for identifying the local store in debug messages. A file system based
-   * implementation might return the path being used for storage, while an in-memory store may just
-   * return something like 'in-memory'.
-   */
-  String getIdentifier();
-
-  /**
-   * If the local store has a root that has been blessed safe either by the client or through update
-   * and verification, then this method returns it.
-   */
-  Optional<Root> loadTrustedRoot() throws IOException;
-
-  /** Return local trusted timestamp metadata if there is any. */
-  Optional<Timestamp> loadTimestamp() throws IOException;
-
-  /** Return the local trusted snapshot metadata if there is any. */
-  Optional<Snapshot> loadSnapshot() throws IOException;
-
-  /** Return the local trusted targets metadata if there is any. */
-  Optional<Targets> loadTargets() throws IOException;
-
+public interface MutableTufStore extends TufStore {
   /**
    * Writes a TUF target to the local target store.
    *
@@ -54,22 +30,12 @@ public interface TufLocalStore {
   void storeTargetFile(String targetName, byte[] targetContents) throws IOException;
 
   /**
-   * Reads a TUF target file from the local TUF store
-   *
-   * @param targetName the name of the target file to read (e.g. ctfe.pub)
-   * @return the content of the file as bytes
-   * @throws IOException if an error occurs
-   */
-  byte[] getTargetFile(String targetName) throws IOException;
-
-  /**
    * Generic method to store one of the {@link SignedTufMeta} resources in the local tuf store.
    *
    * @param meta the metadata to store
-   * @param <T> a subtype of {@link SignedTufMeta}
    * @throws IOException if writing the resource causes an IO error
    */
-  <T extends SignedTufMeta> void storeMeta(T meta) throws IOException;
+  void storeMeta(SignedTufMeta<?> meta) throws IOException;
 
   /**
    * Once you have ascertained that your root is trustworthy use this method to persist it to your

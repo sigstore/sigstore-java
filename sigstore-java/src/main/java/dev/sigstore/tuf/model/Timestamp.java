@@ -21,7 +21,7 @@ import org.immutables.value.Value;
 /** Signed envelope of the Timestamp metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
-public interface Timestamp extends SignedTufMeta<TufMeta> {
+public interface Timestamp extends SignedTufMeta<TimestampMeta> {
 
   @Override
   @Gson.Named("signed")
