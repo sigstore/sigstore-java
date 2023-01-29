@@ -46,6 +46,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import dev.sigstore.trust.ResourceBasedTufStore;
+import dev.sigstore.trust.TufBasedVerificationMaterial;
+import dev.sigstore.trust.UpdateableTufStore;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -119,6 +122,7 @@ public class KeylessSigner implements AutoCloseable {
   }
 
   public static class Builder {
+    dev.sigstore.trust.VerificationMaterial verificationMaterial;
     private FulcioClient fulcioClient;
     private FulcioVerifier fulcioVerifier;
     private RekorClient rekorClient;
@@ -126,6 +130,12 @@ public class KeylessSigner implements AutoCloseable {
     private OidcClient oidcClient;
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
+
+    @CanIgnoreReturnValue
+    public Builder verificationMaterial(dev.sigstore.trust.VerificationMaterial verificationMaterial) {
+      this.verificationMaterial = verificationMaterial;
+      return this;
+    }
 
     @CanIgnoreReturnValue
     public Builder fulcioClient(FulcioClient fulcioClient, FulcioVerifier fulcioVerifier) {
@@ -193,14 +203,17 @@ public class KeylessSigner implements AutoCloseable {
     public Builder sigstorePublicDefaults()
         throws IOException, InvalidAlgorithmParameterException, CertificateException,
             InvalidKeySpecException, NoSuchAlgorithmException {
+      verificationMaterial(
+          new TufBasedVerificationMaterial(
+              new UpdateableTufStore(
+                new ResourceBasedTufStore("dev/sigstore/tuf/sigstore-tuf-root"))));
+
       fulcioClient(
           FulcioClient.builder().build(),
-          FulcioVerifier.newFulcioVerifier(
-              VerificationMaterial.Production.fulioCert(),
-              VerificationMaterial.Production.ctfePublicKeys()));
+          FulcioVerifier.newFulcioVerifier(verificationMaterial));
       rekorClient(
           RekorClient.builder().build(),
-          RekorVerifier.newRekorVerifier(VerificationMaterial.Production.rekorPublicKey()));
+          RekorVerifier.newRekorVerifier(verificationMaterial));
       oidcClient(WebOidcClient.builder().build());
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
@@ -211,16 +224,18 @@ public class KeylessSigner implements AutoCloseable {
     public Builder sigstoreStagingDefaults()
         throws IOException, InvalidAlgorithmParameterException, CertificateException,
             InvalidKeySpecException, NoSuchAlgorithmException {
+      verificationMaterial(
+          new TufBasedVerificationMaterial(
+              new UpdateableTufStore(
+                  new ResourceBasedTufStore("dev/sigstore/tuf/sigstage-tuf-root"))));
       fulcioClient(
           FulcioClient.builder()
               .setServerUrl(URI.create(FulcioClient.STAGING_FULCIO_SERVER))
               .build(),
-          FulcioVerifier.newFulcioVerifier(
-              VerificationMaterial.Staging.fulioCert(),
-              VerificationMaterial.Staging.ctfePublicKeys()));
+          FulcioVerifier.newFulcioVerifier(verificationMaterial));
       rekorClient(
           RekorClient.builder().setServerUrl(URI.create(RekorClient.STAGING_REKOR_SERVER)).build(),
-          RekorVerifier.newRekorVerifier(VerificationMaterial.Staging.rekorPublicKey()));
+          RekorVerifier.newRekorVerifier(verificationMaterial));
       oidcClient(WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build());
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);

@@ -58,18 +58,15 @@ public class Updater {
   private Verifiers.Supplier verifiers;
   private MetaFetcher fetcher;
   private ZonedDateTime updateStartTime;
-  private Path trustedRootPath;
   private MutableTufStore localStore;
 
   Updater(
       Clock clock,
       Verifiers.Supplier verifiers,
       MetaFetcher fetcher,
-      Path trustedRootPath,
       MutableTufStore localStore) {
     this.clock = clock;
     this.verifiers = verifiers;
-    this.trustedRootPath = trustedRootPath;
     this.localStore = localStore;
     this.fetcher = fetcher;
   }
@@ -100,13 +97,7 @@ public class Updater {
 
     // 5.3.2) load the trust metadata file (root.json), get version of root.json and the role
     // signature threshold value
-    Optional<Root> localRoot = localStore.loadTrustedRoot();
-    Root trustedRoot;
-    if (localRoot.isPresent()) {
-      trustedRoot = localRoot.get();
-    } else {
-      trustedRoot = GSON.get().fromJson(Files.readString(trustedRootPath), Root.class);
-    }
+    Root trustedRoot = localStore.loadTrustedRoot();
     int baseVersion = trustedRoot.getSignedMeta().getVersion();
     int nextVersion = baseVersion + 1;
     // keep these for verifying the last step. 5.3.11
@@ -466,7 +457,7 @@ public class Updater {
     }
 
     public Updater build() {
-      return new Updater(clock, verifiers, fetcher, trustedRootPath, localStore);
+      return new Updater(clock, verifiers, fetcher, localStore);
     }
   }
 }
