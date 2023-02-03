@@ -15,11 +15,9 @@
  */
 package dev.sigstore.http;
 
-import com.google.api.client.http.HttpBackOffUnsuccessfulResponseHandler;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.apache.v2.ApacheHttpTransport;
-import com.google.api.client.util.ExponentialBackOff;
 import java.io.IOException;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -48,7 +46,7 @@ public class HttpClients {
               request.setConnectTimeout(httpParams.getTimeout() * 1000);
               request.setReadTimeout(httpParams.getTimeout() * 1000);
               request.setUnsuccessfulResponseHandler(
-                  new HttpBackOffUnsuccessfulResponseHandler(new ExponentialBackOff()));
+                  UnsuccessfulResponseHandler.newUnsuccessfulResponseHandler());
             });
   }
 }
