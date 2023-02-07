@@ -107,5 +107,5 @@ jobs:
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # tag=v0.1.15
         with:
           tag_name: v${{ github.event.inputs.release_version }}
-          body: See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/CHANGELOG.md) for more details.
+          body: "See [CHANGELOG.md](https://github.com/${{ env.GITHUB_REPOSITORY }}/CHANGELOG.md) for more details."
           files: ./release/*
