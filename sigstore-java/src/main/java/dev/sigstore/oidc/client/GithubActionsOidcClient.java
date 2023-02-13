@@ -25,12 +25,17 @@ import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
 import io.grpc.Internal;
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * Obtain an oidc token from the github execution environment.
  * https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
  */
 public class GithubActionsOidcClient implements OidcClient {
+
+  private static final Logger log = Logger.getLogger(GithubActionsOidcClient.class.getName());
+
+  private static final String GITHUB_ACTIONS_KEY = "GITHUB_ACTIONS";
   private static final String REQUEST_TOKEN_KEY = "ACTIONS_ID_TOKEN_REQUEST_TOKEN";
   private static final String REQUEST_URL_KEY = "ACTIONS_ID_TOKEN_REQUEST_URL";
 
@@ -67,6 +72,16 @@ public class GithubActionsOidcClient implements OidcClient {
     public GithubActionsOidcClient build() {
       return new GithubActionsOidcClient(httpParams, audience);
     }
+  }
+
+  @Override
+  public boolean isEnabled() {
+    var githubActions = System.getenv(GITHUB_ACTIONS_KEY);
+    if (githubActions == null || githubActions.isEmpty()) {
+      log.fine("Github env not detected: skipping github actions oidc");
+      return false;
+    }
+    return true;
   }
 
   @Override

@@ -113,6 +113,15 @@ public class WebOidcClient implements OidcClient {
   }
 
   /**
+   * This provider is always enabled by default, however it should be lower priority over other
+   * providers which obtain ambient credentials.
+   */
+  @Override
+  public boolean isEnabled() {
+    return true;
+  }
+
+  /**
    * Get an id token from the oidc provider with openid and email scopes
    *
    * @return an openid token with additional email scopes

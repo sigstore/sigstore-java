@@ -19,7 +19,6 @@ import static dev.sigstore.encryption.certificates.Certificates.toPemString;
 
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.KeylessVerifier;
-import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -102,11 +101,7 @@ public class Main {
   }
 
   private static void executeSign(SignArguments args) throws Exception {
-    final var signer =
-        KeylessSigner.builder()
-            .sigstorePublicDefaults()
-            .oidcClient(GithubActionsOidcClient.builder().build())
-            .build();
+    final var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     final var result = signer.signFile(args.artifact);
     Files.write(args.signature, result.getSignature());
     final var pemBytes = toPemString(result.getCertPath()).getBytes(StandardCharsets.UTF_8);

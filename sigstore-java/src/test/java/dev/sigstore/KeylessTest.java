@@ -17,7 +17,6 @@ package dev.sigstore;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.certificates.Certificates;
-import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
@@ -39,7 +38,6 @@ public class KeylessTest {
   @TempDir public static Path testRoot;
 
   public static List<byte[]> artifactDigests;
-  public static List<Path> artifacts;
 
   @BeforeAll
   public static void setupArtifact() throws IOException {
@@ -59,7 +57,7 @@ public class KeylessTest {
   }
 
   @Test
-  @EnabledIfOidcExists(provider = OidcProviderType.MANUAL)
+  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_production() throws Exception {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var results = signer.sign(artifactDigests);
@@ -74,45 +72,9 @@ public class KeylessTest {
   }
 
   @Test
-  @EnabledIfOidcExists(provider = OidcProviderType.MANUAL)
+  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
-    var results = signer.sign(artifactDigests);
-    verifySigningResult(results);
-
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
-    for (var result : results) {
-      verifier.verifyOnline(
-          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
-    }
-  }
-
-  @Test
-  @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
-  public void sign_productionWithGithubOidc() throws Exception {
-    var signer =
-        KeylessSigner.builder()
-            .sigstorePublicDefaults()
-            .oidcClient(GithubActionsOidcClient.builder().build())
-            .build();
-    var results = signer.sign(artifactDigests);
-    verifySigningResult(results);
-
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    for (var result : results) {
-      verifier.verifyOnline(
-          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
-    }
-  }
-
-  @Test
-  @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
-  public void sign_stagingWithGithubOidc() throws Exception {
-    var signer =
-        KeylessSigner.builder()
-            .sigstoreStagingDefaults()
-            .oidcClient(GithubActionsOidcClient.builder().build())
-            .build();
     var results = signer.sign(artifactDigests);
     verifySigningResult(results);
 

@@ -16,5 +16,14 @@
 package dev.sigstore.oidc.client;
 
 public interface OidcClient {
+
+  /**
+   * Determine if this client can be used in the current environment. For example, we can ignore
+   * Oidc Clients that are scoped to a specific CI environment
+   *
+   * @return true if we should use credentials from this client
+   */
+  boolean isEnabled();
+
   OidcToken getIDToken() throws OidcException;
 }

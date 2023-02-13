@@ -65,6 +65,7 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
         passEnvironmentVariables.addAll(
             "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
             "ACTIONS_ID_TOKEN_REQUEST_URL",
+            "GITHUB_ACTIONS",
         )
     }
 
