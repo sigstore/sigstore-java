@@ -26,10 +26,9 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.fulcio.client.*;
-import dev.sigstore.oidc.client.OidcClient;
+import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
-import dev.sigstore.oidc.client.WebOidcClient;
 import dev.sigstore.rekor.client.*;
 import java.io.IOException;
 import java.net.URI;
@@ -68,7 +67,7 @@ public class KeylessSigner implements AutoCloseable {
   private final FulcioVerifier fulcioVerifier;
   private final RekorClient rekorClient;
   private final RekorVerifier rekorVerifier;
-  private final OidcClient oidcClient;
+  private final OidcClients oidcClients;
   private final Signer signer;
   private final Duration minSigningCertificateLifetime;
 
@@ -90,14 +89,14 @@ public class KeylessSigner implements AutoCloseable {
       FulcioVerifier fulcioVerifier,
       RekorClient rekorClient,
       RekorVerifier rekorVerifier,
-      OidcClient oidcClient,
+      OidcClients oidcClients,
       Signer signer,
       Duration minSigningCertificateLifetime) {
     this.fulcioClient = fulcioClient;
     this.fulcioVerifier = fulcioVerifier;
     this.rekorClient = rekorClient;
     this.rekorVerifier = rekorVerifier;
-    this.oidcClient = oidcClient;
+    this.oidcClients = oidcClients;
     this.signer = signer;
     this.minSigningCertificateLifetime = minSigningCertificateLifetime;
   }
@@ -123,7 +122,7 @@ public class KeylessSigner implements AutoCloseable {
     private FulcioVerifier fulcioVerifier;
     private RekorClient rekorClient;
     private RekorVerifier rekorVerifier;
-    private OidcClient oidcClient;
+    private OidcClients oidcClients;
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
 
@@ -142,8 +141,8 @@ public class KeylessSigner implements AutoCloseable {
     }
 
     @CanIgnoreReturnValue
-    public Builder oidcClient(OidcClient oidcClient) {
-      this.oidcClient = oidcClient;
+    public Builder oidcClients(OidcClients oidcClients) {
+      this.oidcClients = oidcClients;
       return this;
     }
 
@@ -177,14 +176,14 @@ public class KeylessSigner implements AutoCloseable {
       Preconditions.checkNotNull(fulcioVerifier, "fulcioVerifier");
       Preconditions.checkNotNull(rekorClient, "rekorClient");
       Preconditions.checkNotNull(rekorVerifier, "rekorVerifier");
-      Preconditions.checkNotNull(oidcClient, "oidcClient");
+      Preconditions.checkNotNull(oidcClients, "oidcClients");
       Preconditions.checkNotNull(signer, "signer");
       return new KeylessSigner(
           fulcioClient,
           fulcioVerifier,
           rekorClient,
           rekorVerifier,
-          oidcClient,
+          oidcClients,
           signer,
           minSigningCertificateLifetime);
     }
@@ -201,7 +200,7 @@ public class KeylessSigner implements AutoCloseable {
       rekorClient(
           RekorClient.builder().build(),
           RekorVerifier.newRekorVerifier(VerificationMaterial.Production.rekorPublicKey()));
-      oidcClient(WebOidcClient.builder().build());
+      oidcClients(OidcClients.DEFAULTS);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
@@ -221,7 +220,7 @@ public class KeylessSigner implements AutoCloseable {
       rekorClient(
           RekorClient.builder().setServerUrl(URI.create(RekorClient.STAGING_REKOR_SERVER)).build(),
           RekorVerifier.newRekorVerifier(VerificationMaterial.Staging.rekorPublicKey()));
-      oidcClient(WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build());
+      oidcClients(OidcClients.STAGING_DEFAULTS);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
@@ -310,7 +309,7 @@ public class KeylessSigner implements AutoCloseable {
     try {
       signingCert = null;
       signingCertPemBytes = null;
-      OidcToken tokenInfo = oidcClient.getIDToken();
+      OidcToken tokenInfo = oidcClients.getIDToken();
       SigningCertificate signingCert =
           fulcioClient.signingCertificate(
               CertificateRequest.newCertificateRequest(
