@@ -60,13 +60,6 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
         // See https://docs.gradle.org/current/userguide/build_services.html
         @Suppress("LeakingThis")
         usesService(service)
-
-        @Suppress("LeakingThis")
-        passEnvironmentVariables.addAll(
-            "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
-            "ACTIONS_ID_TOKEN_REQUEST_URL",
-            "GITHUB_ACTIONS",
-        )
     }
 
     /**
@@ -112,9 +105,6 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
 
     @get:Inject
     protected abstract val layout: ProjectLayout
-
-    @get:Input
-    abstract val passEnvironmentVariables: SetProperty<String>
 
     init {
         outputs.upToDateWhen {
@@ -198,9 +188,8 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
                 classpath.from(sigstoreClientClasspath)
                 forkOptions {
                     javaLauncher?.executablePath?.let { executable(it) }
-                    for (env in passEnvironmentVariables.get()) {
-                        System.getenv(env)?.let { environment(env, it) }
-                    }
+                    // TODO: we pass the whole env to the fork, but maybe in the future an allow list makes sense.
+                    environment(System.getenv())
                 }
             }
             .run {
