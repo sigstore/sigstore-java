@@ -19,7 +19,6 @@ package dev.sigstore.sign.work
 import dev.sigstore.KeylessSigner
 import dev.sigstore.bundle.BundleFactory
 import dev.sigstore.oidc.client.OidcClient
-import dev.sigstore.oidc.client.OidcClients
 import dev.sigstore.sign.OidcClientConfiguration
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
@@ -51,7 +50,8 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
         val signer = clients.computeIfAbsent(oidcClient.key()) {
             KeylessSigner.builder().apply {
                 sigstorePublicDefaults()
-                oidcClients(OidcClients.of(oidcClient.build() as OidcClient))
+                @Suppress("DEPRECATION")
+                oidcClient(oidcClient.build() as OidcClient)
             }.build()
         }
 
