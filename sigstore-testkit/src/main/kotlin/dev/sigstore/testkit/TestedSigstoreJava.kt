@@ -28,9 +28,16 @@ sealed class TestedSigstoreJava {
     }
 
     /**
-     * Configures sigstore-java version for testing with Sigstore Gradle plugin.
+     * Configures taken from external repository sigstore-java version for testing with Sigstore Gradle plugin.
      */
     data class Version(
+        val version: String,
+    ): TestedSigstoreJava()
+
+    /**
+     * Configures locally-built sigstore-java version for testing with Sigstore Gradle plugin.
+     */
+    data class LocallyBuiltVersion(
         val version: String,
     ): TestedSigstoreJava()
 }

@@ -42,7 +42,7 @@ open class BaseGradleTest {
         val EXTRA_LOCAL_REPOS  = System.getProperty("sigstore.test.local.maven.repo").split(File.pathSeparatorChar)
 
         val SIGSTORE_JAVA_CURRENT_VERSION =
-            TestedSigstoreJava.Version(
+            TestedSigstoreJava.LocallyBuiltVersion(
                 System.getProperty("sigstore.test.current.version")
             )
 
@@ -96,7 +96,11 @@ open class BaseGradleTest {
     protected fun declareRepositories(sigstoreJava: TestedSigstoreJava) =
         """
         repositories {${
-            if (sigstoreJava == SIGSTORE_JAVA_CURRENT_VERSION || sigstoreJava is TestedSigstoreJava.Default) {
+            if (sigstoreJava is TestedSigstoreJava.Version) {
+                ""
+            } else {
+                // We assume that the plugin defaults to the same version of the library, so we test both
+                // Default and LocallyBuiltVersion from locally staged repo
                 EXTRA_LOCAL_REPOS.joinToString("\n") {
                     """
 
@@ -107,8 +111,6 @@ open class BaseGradleTest {
                 }
                 """.trimIndent().prependIndent("            ")
                 }
-            } else {
-                ""
             }
         }
             mavenCentral()
@@ -122,6 +124,8 @@ open class BaseGradleTest {
                 when (sigstoreJava) {
                     TestedSigstoreJava.Default -> ""
                     is TestedSigstoreJava.Version ->
+                        "sigstoreClient(\"dev.sigstore:sigstore-java:${sigstoreJava.version}\")"
+                    is TestedSigstoreJava.LocallyBuiltVersion ->
                         "sigstoreClient(\"dev.sigstore:sigstore-java:${sigstoreJava.version}\")"
                 }
             }

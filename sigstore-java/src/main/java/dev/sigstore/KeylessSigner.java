@@ -21,11 +21,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
+import com.google.errorprone.annotations.InlineMe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.fulcio.client.*;
+import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
@@ -138,6 +140,15 @@ public class KeylessSigner implements AutoCloseable {
       this.rekorClient = rekorClient;
       this.rekorVerifier = rekorVerifier;
       return this;
+    }
+
+    @CanIgnoreReturnValue
+    @Deprecated
+    @InlineMe(
+        replacement = "this.oidcClients(OidcClients.of(oidcClient))",
+        imports = "dev.sigstore.oidc.client.OidcClients")
+    public final Builder oidcClient(OidcClient oidcClient) {
+      return oidcClients(OidcClients.of(oidcClient));
     }
 
     @CanIgnoreReturnValue
