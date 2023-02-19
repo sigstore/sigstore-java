@@ -3,7 +3,8 @@
   "extends": [
     "config:base"
   ],
-  "schedule": ["every weekend"],
+  "labels": ["dependencies"],
+  "schedule": ["every 3 week"],
   "packageRules": [
     {
       "matchPackagePrefixes": ["org.immutables"],
