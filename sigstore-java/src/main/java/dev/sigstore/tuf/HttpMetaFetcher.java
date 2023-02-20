@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.common.base.Preconditions;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.tuf.model.Role;
@@ -29,6 +30,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 public class HttpMetaFetcher implements MetaFetcher {
 
@@ -58,15 +60,22 @@ public class HttpMetaFetcher implements MetaFetcher {
   @Override
   public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(Role.Name role, Class<T> t)
       throws IOException, FileExceedsMaxLengthException {
-    return getMeta(role, t, null);
+    return getMeta(getFileName(role, null), t, null);
   }
 
   @Override
   public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
-      Role.Name role, Class<T> t, Integer maxSize)
+      Role.Name role, int version, Class<T> t, Integer maxSize)
       throws IOException, FileExceedsMaxLengthException {
-    String fileName = role.name().toLowerCase(Locale.ROOT) + ".json";
-    return getMeta(fileName, t, maxSize);
+    Preconditions.checkArgument(version > 0, "version should be positive, got: %s", version);
+    return getMeta(getFileName(role, version), t, maxSize);
+  }
+
+  private static String getFileName(Role.Name role, @Nullable Integer version) {
+    String normalizeRoleName = role.name().toLowerCase(Locale.ROOT);
+    return version == null
+        ? normalizeRoleName + ".json"
+        : String.format(Locale.ROOT, "%d.%s.json", version, normalizeRoleName);
   }
 
   <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(

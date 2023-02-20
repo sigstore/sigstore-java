@@ -277,19 +277,16 @@ public class Updater {
           SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException {
     // 1) download the snapshot.json bytes up to timestamp's snapshot length.
-    // TODO(patrick@chainguard.dev): Looks like sigstore TUF moved to using
-    // consistent snapshots for this meta file.
-    // Update to pull from
-    //    "{timestamp.getSignedMeta().getSnapshotMeta().getVersion()}.snapshot.json".
-    // Presumably we should also write that file to disk as well as update the
-    //     'snapshot.json'
+    int timestampSnapshotVersion = timestamp.getSignedMeta().getSnapshotMeta().getVersion();
     var snapshotResult =
         fetcher.getMeta(
             Role.Name.SNAPSHOT,
+            timestampSnapshotVersion,
             Snapshot.class,
             timestamp.getSignedMeta().getSnapshotMeta().getLength());
     if (snapshotResult.isEmpty()) {
-      throw new FileNotFoundException("snapshot.json", fetcher.getSource());
+      throw new FileNotFoundException(
+          timestampSnapshotVersion + ".snapshot.json", fetcher.getSource());
     }
     // 2) check against timestamp.snapshot.hash
     var snapshot = snapshotResult.get();
@@ -301,7 +298,6 @@ public class Updater {
     verifyDelegate(root, snapshot.getMetaResource());
     // 4) Check snapshot.version matches timestamp.snapshot.version, else fail.
     int snapshotVersion = snapshot.getMetaResource().getSignedMeta().getVersion();
-    int timestampSnapshotVersion = timestamp.getSignedMeta().getSnapshotMeta().getVersion();
     if (snapshotVersion != timestampSnapshotVersion) {
       throw new SnapshotVersionMismatchException(timestampSnapshotVersion, snapshotVersion);
     }
@@ -368,26 +364,25 @@ public class Updater {
           SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException,
           InvalidKeyException, FileExceedsMaxLengthException {
     // 1) download the targets.json up to targets.json length in bytes.
+    SnapshotMeta.SnapshotTarget targetMeta = snapshot.getSignedMeta().getTargetMeta("targets.json");
     var targetsResultMaybe =
         fetcher.getMeta(
-            Role.Name.TARGETS,
-            Targets.class,
-            snapshot.getSignedMeta().getTargetMeta("targets.json").getLength());
+            Role.Name.TARGETS, targetMeta.getVersion(), Targets.class, targetMeta.getLength());
     if (targetsResultMaybe.isEmpty()) {
-      throw new FileNotFoundException("targets.json", fetcher.getSource());
+      throw new FileNotFoundException(
+          targetMeta.getVersion() + ".targets.json", fetcher.getSource());
     }
     var targetsResult = targetsResultMaybe.get();
     // 2) check hash against snapshot.targets.hash, else fail.
     verifyHashes(
-        "targets.json",
+        targetMeta.getVersion() + ".targets.json",
         targetsResult.getRawBytes(),
-        snapshot.getSignedMeta().getTargetMeta("targets.json").getHashes());
+        targetMeta.getHashes());
     // 3) check against threshold of keys as specified by trusted root.json
     verifyDelegate(root, targetsResult.getMetaResource());
     // 4) check targets.version == snapshot.targets.version, else fail.
     int targetsVersion = targetsResult.getMetaResource().getSignedMeta().getVersion();
-    int snapshotTargetsVersion =
-        snapshot.getSignedMeta().getTargetMeta("targets.json").getVersion();
+    int snapshotTargetsVersion = targetMeta.getVersion();
     if (targetsVersion != snapshotTargetsVersion) {
       throw new SnapshotVersionMismatchException(snapshotTargetsVersion, targetsVersion);
     }
@@ -416,9 +411,10 @@ public class Updater {
       }
       TargetMeta.TargetData targetData = entry.getValue();
       // 9) Download target up to length specified in bytes. verify against hash.
-      // TODO(patrick@chainguard.dev): Update this code to use consistent snapshots.
-      // e.g. "{targetData.getHashes().getSha512()}.{targetName}"
-      var targetBytes = fetcher.fetchResource("targets/" + targetName, targetData.getLength());
+      var targetPath =
+          String.format(
+              Locale.ROOT, "targets/%s.%s", targetData.getHashes().getSha512(), targetName);
+      var targetBytes = fetcher.fetchResource(targetPath, targetData.getLength());
       if (targetBytes == null) {
         throw new FileNotFoundException(targetName, fetcher.getSource());
       }

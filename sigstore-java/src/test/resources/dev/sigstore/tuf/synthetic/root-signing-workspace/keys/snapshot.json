@@ -9,8 +9,8 @@
 				"sha512"
 			],
 			"keyval": {
-				"private": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIK2wSevTdyo5hjw5raCP5lRE6tDezxbLBCDZ2P6L9QHloAoGCCqGSM49\nAwEHoUQDQgAEuEqDYqKSQOWNLDBTVVhevDTl9Agw9AuDjgT+W2ZQEHB3J4dnCp/B\nKpRYXKCMP9ZkO158oHlbFd5fJg3RbpasCQ==\n-----END EC PRIVATE KEY-----\n",
-				"public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEuEqDYqKSQOWNLDBTVVhevDTl9Agw\n9AuDjgT+W2ZQEHB3J4dnCp/BKpRYXKCMP9ZkO158oHlbFd5fJg3RbpasCQ==\n-----END PUBLIC KEY-----\n"
+				"private": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIOlqh3mCcsDdhGb8+BO61h7wnP2TCsyADuC/mpvK/kkzoAoGCCqGSM49\nAwEHoUQDQgAEJsV+S1syZdtx5HjiFN5YqRAqD2By4R0xDtXptW+UJlJQdfQCGAHv\nqtpac0edkcWVREhktEqIMbCaYSd75E/JRA==\n-----END EC PRIVATE KEY-----\n",
+				"public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEJsV+S1syZdtx5HjiFN5YqRAqD2By\n4R0xDtXptW+UJlJQdfQCGAHvqtpac0edkcWVREhktEqIMbCaYSd75E/JRA==\n-----END PUBLIC KEY-----\n"
 			}
 		}
 	]

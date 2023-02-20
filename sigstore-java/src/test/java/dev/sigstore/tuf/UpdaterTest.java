@@ -131,14 +131,14 @@ class UpdaterTest {
     // root expires 2023-03-09T18:02:21Z
     var updater =
         createTimeStaticUpdater(
-            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2023-03-09T18:02:22Z");
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2023-05-13T14:35:59Z");
     try {
       updater.updateRoot();
       fail("The remote repo should be expired and cause a RoleExpiredException.");
     } catch (RoleExpiredException e) {
-      assertEquals(ZonedDateTime.parse("2023-03-09T18:02:22Z"), e.getUpdateTime());
+      assertEquals(ZonedDateTime.parse("2023-05-13T14:35:59Z"), e.getUpdateTime());
       // straight from remote-repo-expired/2.root.json
-      assertEquals(ZonedDateTime.parse("2023-03-09T18:02:21Z"), e.getRoleExpirationTime());
+      assertEquals(ZonedDateTime.parse("2023-05-13T14:35:58Z"), e.getRoleExpirationTime());
     }
   }
 
@@ -229,7 +229,7 @@ class UpdaterTest {
     // timestamp expires 2022-12-10T18:07:30Z
     var updater =
         createTimeStaticUpdater(
-            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-12-10T18:07:31Z");
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2023-02-13T15:37:49Z");
     try {
       updater.updateTimestamp(updater.updateRoot());
       fail("Expects a RoleExpiredException as the repo timestamp.json should be expired.");
@@ -287,7 +287,7 @@ class UpdaterTest {
   public void testSnapshotUpdate_invalidHash()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror(
-        "synthetic/snapshot-invalid-hash", "2.root.json", "timestamp.json", "snapshot.json");
+        "synthetic/snapshot-invalid-hash", "2.root.json", "timestamp.json", "3.snapshot.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -303,7 +303,7 @@ class UpdaterTest {
   public void testSnapshotUpdate_timestampSnapshotVersionMismatch()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     setupMirror(
-        "synthetic/snapshot-version-mismatch", "2.root.json", "timestamp.json", "snapshot.json");
+        "synthetic/snapshot-version-mismatch", "2.root.json", "timestamp.json", "3.snapshot.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -323,9 +323,9 @@ class UpdaterTest {
         "synthetic/test-template",
         "2.root.json",
         "1.timestamp.json",
-        "snapshot.json");
+        "1.snapshot.json");
     setupMirror(
-        "synthetic/snapshot-target-missing", "2.root.json", "timestamp.json", "snapshot.json");
+        "synthetic/snapshot-target-missing", "2.root.json", "timestamp.json", "4.snapshot.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -344,13 +344,13 @@ class UpdaterTest {
         localStorePath,
         "synthetic/test-template",
         "2.root.json",
-        "1.timestamp.json",
-        "snapshot.json");
+        "2.timestamp.json",
+        "2.snapshot.json");
     setupMirror(
         "synthetic/snapshot-target-version-rollback",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json");
+        "3.snapshot.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -365,7 +365,7 @@ class UpdaterTest {
   @Test
   public void testSnapshotUpdate_success()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json", "snapshot.json");
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json", "3.snapshot.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     Root root = updater.updateRoot();
     Timestamp timestamp = updater.updateTimestamp(root).get();
@@ -376,7 +376,7 @@ class UpdaterTest {
   @Test
   public void testSnapshotUpdate_expired()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("synthetic/snapshot-expired", "2.root.json", "timestamp.json", "snapshot.json");
+    setupMirror("synthetic/snapshot-expired", "2.root.json", "timestamp.json", "3.snapshot.json");
     // snapshot expires 2022-11-19T18:07:27Z
     var updater =
         createTimeStaticUpdater(
@@ -396,7 +396,7 @@ class UpdaterTest {
   @Test
   public void testTargetsUpdate_targetMetaMissing()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json", "snapshot.json");
+    setupMirror("synthetic/test-template", "2.root.json", "timestamp.json", "3.snapshot.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -414,8 +414,8 @@ class UpdaterTest {
         "synthetic/targets-invalid-hash",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json");
+        "3.snapshot.json",
+        "3.targets.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -433,8 +433,8 @@ class UpdaterTest {
         "synthetic/targets-snapshot-version-mismatch",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json");
+        "3.snapshot.json",
+        "3.targets.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -453,8 +453,8 @@ class UpdaterTest {
         "synthetic/targets-expired",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json");
+        "3.snapshot.json",
+        "3.targets.json");
     var updater =
         createTimeStaticUpdater(
             localStorePath,
@@ -472,18 +472,15 @@ class UpdaterTest {
   @Test
   public void testTargetsUpdate_success()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    // targets expires 2022-11-19T18:07:27Z
     setupMirror(
         "synthetic/test-template",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json");
+        "3.snapshot.json",
+        "3.targets.json");
     var updater =
         createTimeStaticUpdater(
-            localStorePath,
-            UPDATER_SYNTHETIC_TRUSTED_ROOT,
-            "2022-11-20T18:07:27Z"); // one day after
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-20T18:07:27Z");
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
     var snapshot = updater.updateSnapshot(root, timestamp.get());
@@ -501,8 +498,8 @@ class UpdaterTest {
         "synthetic/targets-download-missing-target-metadata",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json");
+        "3.snapshot.json",
+        "3.targets.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -520,8 +517,8 @@ class UpdaterTest {
         "synthetic/test-template",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json");
+        "3.snapshot.json",
+        "3.targets.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -540,9 +537,9 @@ class UpdaterTest {
         "synthetic/targets-download-invalid-length",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json",
-        "targets/test.txt");
+        "3.snapshot.json",
+        "3.targets.json",
+        "targets/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -561,9 +558,9 @@ class UpdaterTest {
         "synthetic/targets-download-invalid-hash",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json",
-        "targets/test.txt");
+        "3.snapshot.json",
+        "3.targets.json",
+        "targets/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);
@@ -582,11 +579,11 @@ class UpdaterTest {
         "synthetic/test-template",
         "2.root.json",
         "timestamp.json",
-        "snapshot.json",
-        "targets.json",
-        "targets/test.txt",
-        "targets/test.txt.v2",
-        "targets/test2.txt");
+        "3.snapshot.json",
+        "3.targets.json",
+        "targets/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt",
+        "targets/32005f02eac21b4cf161a02495330b6c14b548622b5f7e19d59ecfa622de650603ecceea39ed86cc322749a813503a72ad14ce5462c822b511eaf2f2cd2ad8f2.test.txt.v2",
+        "targets/53904bc6216230bf8da0ec42d34004a3f36764de698638641870e37d270e4fd13e1079285f8bca73c2857a279f6f7fbc82038274c3eb48ec5bb2da9b2e30491a.test2.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var root = updater.updateRoot();
     var timestamp = updater.updateTimestamp(root);

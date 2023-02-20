@@ -22,6 +22,7 @@ tuf snapshot --expires=60
 tuf timestamp --expires=30
 tuf commit 
 cp repository/1.root.json ../trusted-root.json  # this is our trusted root for synthetic
+cp repository/timestamp.json repository/1.timestamp.json # backup an old timestamp.json for some testcases
 echo "test target v2" > staged/targets/test.txt.v2
 tuf add test.txt.v2
 tuf snapshot
@@ -37,14 +38,6 @@ tuf commit
 tuf set-threshold root 2
 tuf commit
 cp -R repository ../test-template # Now we have a decent synthetic test repo to use for most tests.
-echo "another target" > staged/targets/test2.txt
-tuf add test2.txt
-tuf snapshot
-tuf timestamp
-jq -r '.signed.targets."sample.file".length |= 29' staged/targets.json # modify the file so the hash doesn't match
-tuf payload snapshot.json > payload.snapshot.json  
-tuf sign-payload --role=snapshot payload.snapshot.json > snapshot.sigs
-tuf add-signatures --signatures snapshot.sigs snapshot.json  # we've added a good sig despite the bad hash 
 ```
 
 NOTE:  It can help with readability to reformat the json files. snapshot.json and targets.json should not be reformatted
