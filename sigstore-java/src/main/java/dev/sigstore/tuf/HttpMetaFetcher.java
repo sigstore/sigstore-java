@@ -67,7 +67,7 @@ public class HttpMetaFetcher implements MetaFetcher {
   public <T extends SignedTufMeta> Optional<MetaFetchResult<T>> getMeta(
       Role.Name role, int version, Class<T> t, Integer maxSize)
       throws IOException, FileExceedsMaxLengthException {
-    Preconditions.checkArgument(version > 0, version + " should be a positive value.");
+    Preconditions.checkArgument(version > 0, "version should be positive, got: %s", version);
     return getMeta(getFileName(role, version), t, maxSize);
   }
 
