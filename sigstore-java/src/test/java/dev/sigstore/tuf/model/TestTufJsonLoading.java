@@ -35,8 +35,7 @@ public class TestTufJsonLoading {
     Root trustRoot;
     try (Reader reader =
         Resources.asCharSource(
-                Resources.getResource("dev/sigstore/tuf/sigstore-tuf-root/root.json"),
-                Charset.defaultCharset())
+                Resources.getResource("dev/sigstore/tuf/model/root.json"), Charset.defaultCharset())
             .openStream(); ) {
       trustRoot = GSON.get().fromJson(reader, Root.class);
     }
@@ -72,7 +71,7 @@ public class TestTufJsonLoading {
     Snapshot snapshot;
     try (Reader reader =
         Resources.asCharSource(
-                Resources.getResource("dev/sigstore/tuf/sigstore-tuf-root/snapshot.json"),
+                Resources.getResource("dev/sigstore/tuf/model/snapshot.json"),
                 Charset.defaultCharset())
             .openStream(); ) {
       snapshot = GSON.get().fromJson(reader, Snapshot.class);
@@ -110,7 +109,7 @@ public class TestTufJsonLoading {
     Targets targets;
     try (Reader reader =
         Resources.asCharSource(
-                Resources.getResource("dev/sigstore/tuf/sigstore-tuf-root/targets.json"),
+                Resources.getResource("dev/sigstore/tuf/model/targets.json"),
                 Charset.defaultCharset())
             .openStream(); ) {
       targets = GSON.get().fromJson(reader, Targets.class);
@@ -162,6 +161,7 @@ public class TestTufJsonLoading {
     TargetMeta.Custom custom = targetData.getCustom().get();
     assertNotNull(custom);
     assertEquals("Expired", custom.getSigstoreMeta().getStatus());
+    assertEquals("https://fulcio.dev", custom.getSigstoreMeta().getUri().get());
     assertEquals("Fulcio", custom.getSigstoreMeta().getUsage());
     assertEquals(
         "f360c53b2e13495a628b9b8096455badcb6d375b185c4816d95a5d746ff29908",

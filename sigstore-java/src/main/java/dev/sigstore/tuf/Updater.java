@@ -85,7 +85,8 @@ public class Updater {
     var timestampMaybe = updateTimestamp(root);
     if (timestampMaybe.isPresent()) {
       var snapshot = updateSnapshot(root, timestampMaybe.get());
-      updateTargets(root, snapshot);
+      var targets = updateTargets(root, snapshot);
+      downloadTargets(targets);
     }
   }
 
@@ -411,15 +412,15 @@ public class Updater {
       }
       TargetMeta.TargetData targetData = entry.getValue();
       // 9) Download target up to length specified in bytes. verify against hash.
-      var targetPath =
-          String.format(
-              Locale.ROOT, "targets/%s.%s", targetData.getHashes().getSha512(), targetName);
-      var targetBytes = fetcher.fetchResource(targetPath, targetData.getLength());
+      var versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
+
+      var targetBytes =
+          fetcher.fetchResource("targets/" + versionedTargetName, targetData.getLength());
       if (targetBytes == null) {
         throw new FileNotFoundException(targetName, fetcher.getSource());
       }
       verifyHashes(entry.getKey(), targetBytes, targetData.getHashes());
-      localStore.storeTargetFile(targetName, targetBytes);
+      localStore.storeTargetFile(versionedTargetName, targetBytes);
     }
   }
 
