@@ -67,6 +67,14 @@ public interface TargetMeta extends TufMeta {
     String getStatus();
 
     /**
+     * The URI of the endpoint that the TUF distributed key maps to. For instance if {@link
+     * #getUsage()} were 'Fulcio' the prod key would have 'https://fulcio.sigstore.dev" as the URI.
+     * This mapping can be used by clients to determine the right target public key material for a
+     * given Fulcio/Rekor/CTFE endpoint.
+     */
+    Optional<String> getUri();
+
+    /**
      * Sigstore usage of this target. Ties the file to a specific part of the Sigstore stack. Valid
      * values are "Fulcio", "CTFE", "Rekor", and "unknown".
      */

@@ -44,6 +44,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jetty.server.Server;
@@ -590,9 +591,67 @@ class UpdaterTest {
     var snapshot = updater.updateSnapshot(root, timestamp.get());
     var targets = updater.updateTargets(root, snapshot);
     updater.downloadTargets(targets);
-    assertTrue(updater.getLocalStore().getTargetFile("test.txt") != null);
-    assertTrue(updater.getLocalStore().getTargetFile("test.txt.v2") != null);
-    assertTrue(updater.getLocalStore().getTargetFile("test2.txt") != null);
+    assertTrue(
+        updater
+                .getLocalStore()
+                .getTargetFile(
+                    "860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt")
+            != null);
+    assertTrue(
+        updater
+                .getLocalStore()
+                .getTargetFile(
+                    "32005f02eac21b4cf161a02495330b6c14b548622b5f7e19d59ecfa622de650603ecceea39ed86cc322749a813503a72ad14ce5462c822b511eaf2f2cd2ad8f2.test.txt.v2")
+            != null);
+    assertTrue(
+        updater
+                .getLocalStore()
+                .getTargetFile(
+                    "53904bc6216230bf8da0ec42d34004a3f36764de698638641870e37d270e4fd13e1079285f8bca73c2857a279f6f7fbc82038274c3eb48ec5bb2da9b2e30491a.test2.txt")
+            != null);
+  }
+
+  // End to end sanity test on the actual prod sigstore repo.
+  @Test
+  public void testUpdate_fromProdData()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "real/prod",
+        "1.root.json",
+        "2.root.json",
+        "3.root.json",
+        "4.root.json",
+        "5.root.json",
+        "69.snapshot.json",
+        "5.targets.json",
+        "timestamp.json",
+        "snapshot.json",
+        "targets.json",
+        "root.json",
+        "targets/0ae7705e02db33e814329746a4a0e5603c5bdcd91c96d072158d71011a2695788866565a2fec0fe363eb72cbcaeda39e54c5fe8d416daf9f3101fdba4217ef35.rekor.pub",
+        "targets/0f99f47dbc26c5f1e3cba0bfd9af4245a26e5cb735d6ef005792ec7e603f66fdb897de985973a6e50940ca7eff5e1849719e967b5ad2dac74a29115a41cf6f21.fulcio_intermediate_v1.crt.pem",
+        "targets/4b20747d1afe2544238ad38cc0cc3010921b177d60ac743767e0ef675b915489bd01a36606c0ff83c06448622d7160f0d866c83d20f0c0f44653dcc3f9aa0bd4.ctfe.pub",
+        "targets/308fd1d1d95d7f80aa33b837795251cc3e886792982275e062409e13e4e236ffc34d676682aa96fdc751414de99c864bf132dde71581fa651c6343905e3bf988.artifact.pub",
+        "targets/0713252a7fd17f7f3ab12f88a64accf2eb14b8ad40ca711d7fe8b4ecba3b24db9e9dffadb997b196d3867b8f9ff217faf930d80e4dab4e235c7fc3f07be69224.fulcio.crt.pem",
+        "targets/e83fa4f427b24ee7728637fad1b4aa45ebde2ba02751fa860694b1bb16059a490328f9985e51cc70e4d237545315a1bc866dc4fdeef2f6248d99cc7a6077bf85.ctfe_2022.pub",
+        "targets/f2e33a6dc208cee1f51d33bbea675ab0f0ced269617497985f9a0680689ee7073e4b6f8fef64c91bda590d30c129b3070dddce824c05bc165ac9802f0705cab6.fulcio_v1.crt.pem");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
+    updater.update();
+
+    Root oldRoot = TestResources.loadRoot(UPDATER_REAL_TRUSTED_ROOT);
+    MutableTufStore localStore = updater.getLocalStore();
+    Optional<Root> newRoot = localStore.loadTrustedRoot();
+    assertTrue(newRoot.isPresent(), "trusted root should be present in the store");
+    assertRootVersionIncreased(oldRoot, newRoot.get());
+    Optional<Targets> targets = localStore.loadTargets();
+    assertTrue(targets.isPresent(), "a list of targets should be available in the store");
+    Map<String, TargetMeta.TargetData> targetsData = targets.get().getSignedMeta().getTargets();
+    for (String file : targetsData.keySet()) {
+      TargetMeta.TargetData fileData = targetsData.get(file);
+      byte[] fileBytes = localStore.getTargetFile(fileData.getHashes().getSha512() + "." + file);
+      assertNotNull(fileBytes, "each file from targets data should be present");
+      assertEquals(fileData.getLength(), fileBytes.length, "file length should match metadata");
+    }
   }
 
   private static final byte[] TEST_HASH_VERIFYIER_BYTES =
