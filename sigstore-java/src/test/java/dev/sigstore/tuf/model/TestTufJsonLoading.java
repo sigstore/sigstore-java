@@ -35,8 +35,7 @@ public class TestTufJsonLoading {
     Root trustRoot;
     try (Reader reader =
         Resources.asCharSource(
-                Resources.getResource("dev/sigstore/tuf/model/root.json"),
-                Charset.defaultCharset())
+                Resources.getResource("dev/sigstore/tuf/model/root.json"), Charset.defaultCharset())
             .openStream(); ) {
       trustRoot = GSON.get().fromJson(reader, Root.class);
     }
