@@ -1,0 +1,28 @@
+# This builds a SLSA provenance statement based on BYOB.
+# For now it is under heavy development and is not yes suited for releases.
+---
+name: SLSA Provenance
+on:
+  - workflow_dispatch
+
+permissions: read-all
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  ISSUE_REPOSITORY: ${{ github.repository }}
+jobs:
+  usetrw:
+    permissions:
+      contents: write
+      id-token: write
+      actions: read
+      packages: write
+    uses: AdamKorcz/java-slsa-generator/.github/workflows/gradle-trw.yml@main
+    with:
+      rekor-log-public: true
+      artifact-list: |
+        ./sigstore-java/build/local-maven-repo/dev/sigstore/sigstore-java/GRADLE_VERSION/sigstore-java-GRADLE_VERSION.module,
+        ./sigstore-java/build/libs/sigstore-java-GRADLE_VERSION.jar,
+        ./sigstore-java/build/local-maven-repo/dev/sigstore/sigstore-java/GRADLE_VERSION/sigstore-java-GRADLE_VERSION.pom,
+        ./sigstore-java/build/local-maven-repo/dev/sigstore/sigstore-java/GRADLE_VERSION/sigstore-java-GRADLE_VERSION-sources.jar,
+        ./sigstore-java/build/libs/sigstore-java-GRADLE_VERSION-javadoc.jar
