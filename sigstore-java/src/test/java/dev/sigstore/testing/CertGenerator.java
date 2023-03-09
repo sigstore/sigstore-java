@@ -101,6 +101,10 @@ public class CertGenerator {
         new ASN1ObjectIdentifier("1.3.6.1.4.1.57264.1.1"),
         false,
         "https://fakeaccounts.test.com".getBytes(StandardCharsets.UTF_8));
+    certificate.addExtension(
+        new ASN1ObjectIdentifier(("1.3.6.1.4.1.99999.42.42")),
+        false,
+        "test value".getBytes(StandardCharsets.UTF_8));
 
     // sign cert
     ContentSigner signer =

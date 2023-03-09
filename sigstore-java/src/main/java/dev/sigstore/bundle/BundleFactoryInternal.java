@@ -83,26 +83,30 @@ class BundleFactoryInternal {
 
   private static VerificationMaterial.Builder buildVerificationMaterial(
       KeylessSignature signingResult) {
-    return VerificationMaterial.newBuilder()
-        .setX509CertificateChain(
-            X509CertificateChain.newBuilder()
-                .addAllCertificates(
-                    signingResult.getCertPath().getCertificates().stream()
-                        .map(
-                            c -> {
-                              byte[] encoded;
-                              try {
-                                encoded = c.getEncoded();
-                              } catch (CertificateEncodingException e) {
-                                throw new IllegalArgumentException(
-                                    "Cannot encode certificate " + c, e);
-                              }
-                              return X509Certificate.newBuilder()
-                                  .setRawBytes(ByteString.copyFrom(encoded))
-                                  .build();
-                            })
-                        .collect(Collectors.toList())))
-        .addTlogEntries(buildTlogEntries(signingResult.getEntry()));
+    var builder =
+        VerificationMaterial.newBuilder()
+            .setX509CertificateChain(
+                X509CertificateChain.newBuilder()
+                    .addAllCertificates(
+                        signingResult.getCertPath().getCertificates().stream()
+                            .map(
+                                c -> {
+                                  byte[] encoded;
+                                  try {
+                                    encoded = c.getEncoded();
+                                  } catch (CertificateEncodingException e) {
+                                    throw new IllegalArgumentException(
+                                        "Cannot encode certificate " + c, e);
+                                  }
+                                  return X509Certificate.newBuilder()
+                                      .setRawBytes(ByteString.copyFrom(encoded))
+                                      .build();
+                                })
+                            .collect(Collectors.toList())));
+    if (signingResult.getEntry().isPresent()) {
+      builder.addTlogEntries(buildTlogEntries(signingResult.getEntry().get()));
+    }
+    return builder;
   }
 
   private static TransparencyLogEntry.Builder buildTlogEntries(RekorEntry entry) {

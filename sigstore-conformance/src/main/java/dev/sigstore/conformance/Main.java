@@ -134,6 +134,8 @@ public class Main {
     return verifyArgs;
   }
 
+  // TODO: fix this up to use new verifier
+  @SuppressWarnings("deprecation")
   private static void executeVerify(VerifyArguments args) throws Exception {
     final var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     final byte[] artifactDigest = sha256(args.artifact);

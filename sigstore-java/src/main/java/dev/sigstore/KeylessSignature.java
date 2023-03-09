@@ -17,6 +17,7 @@ package dev.sigstore;
 
 import dev.sigstore.rekor.client.RekorEntry;
 import java.security.cert.CertPath;
+import java.util.Optional;
 import org.immutables.value.Value;
 
 @Value.Immutable
@@ -31,5 +32,9 @@ public interface KeylessSignature {
   byte[] getSignature();
 
   /** The entry in the rekor transparency log */
-  RekorEntry getEntry();
+  Optional<RekorEntry> getEntry();
+
+  static ImmutableKeylessSignature.Builder builder() {
+    return ImmutableKeylessSignature.builder();
+  }
 }
