@@ -16,12 +16,14 @@
 package dev.sigstore;
 
 import com.google.common.hash.Hashing;
+import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -68,6 +70,7 @@ public class KeylessTest {
     for (var result : results) {
       verifier.verifyOnline(
           result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
+      checkBundleSerialization(result);
     }
   }
 
@@ -82,6 +85,7 @@ public class KeylessTest {
     for (var result : results) {
       verifier.verifyOnline(
           result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
+      checkBundleSerialization(result);
     }
   }
 
@@ -109,5 +113,14 @@ public class KeylessTest {
           Base64.getDecoder().decode(hr.getSignature().getPublicKey().getContent()),
           Certificates.toPemBytes(result.getCertPath().getCertificates().get(0)));
     }
+  }
+
+  private void checkBundleSerialization(KeylessSigningResult keylessSigningResult)
+      throws Exception {
+    var bundleJson = BundleFactory.createBundle(keylessSigningResult);
+    var keylessSigningResultFromBundle = BundleFactory.readBundle(new StringReader(bundleJson));
+    var bundleJson2 = BundleFactory.createBundle(keylessSigningResultFromBundle);
+    Assertions.assertEquals(bundleJson, bundleJson2);
+    Assertions.assertEquals(keylessSigningResult, keylessSigningResultFromBundle);
   }
 }

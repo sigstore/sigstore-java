@@ -18,6 +18,7 @@ package dev.sigstore.bundle;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dev.sigstore.KeylessSigningResult;
 import dev.sigstore.proto.bundle.v1.Bundle;
+import java.io.Reader;
 import java.util.List;
 
 /**
@@ -50,5 +51,18 @@ public class BundleFactory {
       throw new IllegalArgumentException(
           "Can't serialize signing result to Sigstore Bundle JSON", e);
     }
+  }
+
+  /**
+   * Read a bundle json and convert it back into a keyless signing result for use within this
+   * library
+   *
+   * @param jsonReader a reader to a valid bundle json file
+   * @return the converted signing result object
+   * @throws BundleParseException if all or parts of the bundle were not convertible to library
+   *     types
+   */
+  public static KeylessSigningResult readBundle(Reader jsonReader) throws BundleParseException {
+    return BundleFactoryInternal.readBundle(jsonReader);
   }
 }

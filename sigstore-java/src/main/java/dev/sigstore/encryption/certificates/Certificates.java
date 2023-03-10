@@ -55,6 +55,11 @@ public class Certificates {
     return fromPem(new String(cert, StandardCharsets.UTF_8));
   }
 
+  public static Certificate fromDer(byte[] cert) throws CertificateException {
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    return cf.generateCertificate(new ByteArrayInputStream(cert));
+  }
+
   /** Convert a CertPath to a PEM encoded certificate chain. */
   public static String toPemString(CertPath certs) throws IOException {
     var certWriter = new StringWriter();

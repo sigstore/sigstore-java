@@ -17,15 +17,39 @@ package dev.sigstore.bundle;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.ImmutableKeylessSigningResult;
 import dev.sigstore.KeylessSigningResult;
+import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.bundle.v1.Bundle;
 import dev.sigstore.proto.bundle.v1.VerificationMaterial;
-import dev.sigstore.proto.common.v1.*;
-import dev.sigstore.proto.rekor.v1.*;
+import dev.sigstore.proto.common.v1.HashAlgorithm;
+import dev.sigstore.proto.common.v1.HashOutput;
+import dev.sigstore.proto.common.v1.LogId;
+import dev.sigstore.proto.common.v1.MessageSignature;
+import dev.sigstore.proto.common.v1.X509Certificate;
+import dev.sigstore.proto.common.v1.X509CertificateChain;
+import dev.sigstore.proto.rekor.v1.Checkpoint;
+import dev.sigstore.proto.rekor.v1.InclusionPromise;
+import dev.sigstore.proto.rekor.v1.InclusionProof;
+import dev.sigstore.proto.rekor.v1.KindVersion;
+import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
+import dev.sigstore.rekor.client.ImmutableInclusionProof;
+import dev.sigstore.rekor.client.ImmutableRekorEntry;
+import dev.sigstore.rekor.client.ImmutableVerification;
 import dev.sigstore.rekor.client.RekorEntry;
+import java.io.IOException;
+import java.io.Reader;
+import java.security.cert.CertPath;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import org.bouncycastle.util.encoders.Hex;
 
 /**
  * Generates Sigstore Bundle. Implementation note: the class is package-private to avoid exposing
@@ -111,7 +135,7 @@ class BundleFactoryInternal {
     }
     transparencyLogEntry.setInclusionProof(
         InclusionProof.newBuilder()
-            .setLogIndex(entry.getLogIndex())
+            .setLogIndex(inclusionProof.getLogIndex())
             .setRootHash(ByteString.fromHex(inclusionProof.getRootHash()))
             .setTreeSize(inclusionProof.getTreeSize())
             .addAllHashes(
@@ -119,5 +143,86 @@ class BundleFactoryInternal {
                     .map(ByteString::fromHex)
                     .collect(Collectors.toList()))
             .setCheckpoint(Checkpoint.newBuilder().setEnvelope(inclusionProof.getCheckpoint())));
+  }
+
+  static KeylessSigningResult readBundle(Reader jsonReader) throws BundleParseException {
+    Bundle.Builder bundleBuilder = Bundle.newBuilder();
+    try {
+      JsonFormat.parser().merge(jsonReader, bundleBuilder);
+    } catch (IOException ioe) {
+      throw new BundleParseException("Could not read bundle json", ioe);
+    }
+    Bundle bundle = bundleBuilder.build();
+
+    var bundleEntry = bundle.getVerificationMaterial().getTlogEntries(0);
+    var bundleInclusionProof = bundleEntry.getInclusionProof();
+
+    ImmutableInclusionProof inclusionProof = null;
+    if (bundleEntry.hasInclusionProof()) {
+      inclusionProof =
+          ImmutableInclusionProof.builder()
+              .logIndex(bundleInclusionProof.getLogIndex())
+              .rootHash(Hex.toHexString(bundleInclusionProof.getRootHash().toByteArray()))
+              .treeSize(bundleInclusionProof.getTreeSize())
+              .checkpoint(bundleInclusionProof.getCheckpoint().getEnvelope())
+              .addAllHashes(
+                  bundleInclusionProof.getHashesList().stream()
+                      .map(ByteString::toByteArray)
+                      .map(Hex::toHexString)
+                      .collect(Collectors.toList()))
+              .build();
+    }
+
+    var verification =
+        ImmutableVerification.builder()
+            .signedEntryTimestamp(
+                Base64.getEncoder()
+                    .encodeToString(
+                        bundleEntry.getInclusionPromise().getSignedEntryTimestamp().toByteArray()))
+            .inclusionProof(Optional.ofNullable(inclusionProof))
+            .build();
+
+    var rekorEntry =
+        ImmutableRekorEntry.builder()
+            .integratedTime(bundleEntry.getIntegratedTime())
+            .logID(Hex.toHexString(bundleEntry.getLogId().getKeyId().toByteArray()))
+            .logIndex(bundleEntry.getLogIndex())
+            .body(
+                Base64.getEncoder()
+                    .encodeToString(bundleEntry.getCanonicalizedBody().toByteArray()))
+            .verification(verification)
+            .build();
+
+    var hashAlgorithm = bundle.getMessageSignature().getMessageDigest().getAlgorithm();
+    if (hashAlgorithm != HashAlgorithm.SHA2_256) {
+      throw new BundleParseException(
+          "Cannot read message digests of type "
+              + hashAlgorithm
+              + ", only "
+              + HashAlgorithm.SHA2_256
+              + " is supported");
+    }
+    try {
+      return ImmutableKeylessSigningResult.builder()
+          .digest(bundle.getMessageSignature().getMessageDigest().getDigest().toByteArray())
+          .certPath(
+              toCertPath(
+                  bundle.getVerificationMaterial().getX509CertificateChain().getCertificatesList()))
+          .signature(bundle.getMessageSignature().getSignature().toByteArray())
+          .entry(rekorEntry)
+          .build();
+    } catch (CertificateException ce) {
+      throw new BundleParseException("Could not parse bundle certificate chain", ce);
+    }
+  }
+
+  private static CertPath toCertPath(List<X509Certificate> certificates)
+      throws CertificateException {
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    List<Certificate> converted = new ArrayList<>(certificates.size());
+    for (var cert : certificates) {
+      converted.add(Certificates.fromDer(cert.getRawBytes().toByteArray()));
+    }
+    return cf.generateCertPath(converted);
   }
 }
