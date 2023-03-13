@@ -16,7 +16,7 @@
 package dev.sigstore.bundle;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import dev.sigstore.KeylessSigningResult;
+import dev.sigstore.KeylessSignature;
 import dev.sigstore.proto.bundle.v1.Bundle;
 import java.io.Reader;
 import java.util.List;
@@ -29,12 +29,12 @@ import java.util.List;
  */
 public class BundleFactory {
   /**
-   * Generates Sigstore Bundle JSON from {@link KeylessSigningResult}.
+   * Generates Sigstore Bundle JSON from {@link KeylessSignature}.
    *
    * @param signingResult Keyless signing result.
    * @return Sigstore Bundle in JSON format
    */
-  public static String createBundle(KeylessSigningResult signingResult) {
+  public static String createBundle(KeylessSignature signingResult) {
     Bundle bundle = BundleFactoryInternal.createBundleBuilder(signingResult).build();
     try {
       String jsonBundle = BundleFactoryInternal.JSON_PRINTER.print(bundle);
@@ -62,7 +62,7 @@ public class BundleFactory {
    * @throws BundleParseException if all or parts of the bundle were not convertible to library
    *     types
    */
-  public static KeylessSigningResult readBundle(Reader jsonReader) throws BundleParseException {
+  public static KeylessSignature readBundle(Reader jsonReader) throws BundleParseException {
     return BundleFactoryInternal.readBundle(jsonReader);
   }
 }

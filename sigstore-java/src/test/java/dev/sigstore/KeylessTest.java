@@ -89,7 +89,7 @@ public class KeylessTest {
     }
   }
 
-  private void verifySigningResult(List<KeylessSigningResult> results)
+  private void verifySigningResult(List<KeylessSignature> results)
       throws IOException, RekorTypeException {
 
     Assertions.assertEquals(artifactDigests.size(), results.size());
@@ -115,12 +115,11 @@ public class KeylessTest {
     }
   }
 
-  private void checkBundleSerialization(KeylessSigningResult keylessSigningResult)
-      throws Exception {
-    var bundleJson = BundleFactory.createBundle(keylessSigningResult);
-    var keylessSigningResultFromBundle = BundleFactory.readBundle(new StringReader(bundleJson));
-    var bundleJson2 = BundleFactory.createBundle(keylessSigningResultFromBundle);
+  private void checkBundleSerialization(KeylessSignature keylessSignature) throws Exception {
+    var bundleJson = BundleFactory.createBundle(keylessSignature);
+    var keylessSignatureFromBundle = BundleFactory.readBundle(new StringReader(bundleJson));
+    var bundleJson2 = BundleFactory.createBundle(keylessSignatureFromBundle);
     Assertions.assertEquals(bundleJson, bundleJson2);
-    Assertions.assertEquals(keylessSigningResult, keylessSigningResultFromBundle);
+    Assertions.assertEquals(keylessSignature, keylessSignatureFromBundle);
   }
 }

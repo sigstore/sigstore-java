@@ -20,7 +20,7 @@ import java.security.cert.CertPath;
 import org.immutables.value.Value;
 
 @Value.Immutable
-public interface KeylessSigningResult {
+public interface KeylessSignature {
   /** The sha256 hash digest of the artifact */
   byte[] getDigest();
 

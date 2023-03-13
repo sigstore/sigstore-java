@@ -26,7 +26,7 @@ import java.lang.InterruptedException;
 import java.security.SignatureException;
 
 import dev.sigstore.KeylessSigner;
-import dev.sigstore.KeylessSigningResult;
+import dev.sigstore.KeylessSignature;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
 import dev.sigstore.oidc.client.OidcException;
@@ -37,7 +37,7 @@ public class KeylessSigningFuzzer{
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
       KeylessSigner signer = KeylessSigner.builder().sigstorePublicDefaults().build();
-      KeylessSigningResult result = signer.sign(data.consumeRemainingAsBytes());
+      KeylessSignature result = signer.sign(data.consumeRemainingAsBytes());
 
       result.getDigest();
       result.getCertPath();

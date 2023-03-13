@@ -247,7 +247,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a list of keyless singing results.
    */
   @CheckReturnValue
-  public List<KeylessSigningResult> sign(List<byte[]> artifactDigests)
+  public List<KeylessSignature> sign(List<byte[]> artifactDigests)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, CertificateException, IOException,
           FulcioVerificationException, RekorVerificationException, InterruptedException {
@@ -256,7 +256,7 @@ public class KeylessSigner implements AutoCloseable {
       throw new IllegalArgumentException("Require one or more digests");
     }
 
-    var result = ImmutableList.<KeylessSigningResult>builder();
+    var result = ImmutableList.<KeylessSignature>builder();
 
     for (var artifactDigest : artifactDigests) {
       var signature = signer.signDigest(artifactDigest);
@@ -285,7 +285,7 @@ public class KeylessSigner implements AutoCloseable {
       rekorVerifier.verifyEntry(rekorResponse.getEntry());
 
       result.add(
-          ImmutableKeylessSigningResult.builder()
+          ImmutableKeylessSignature.builder()
               .digest(artifactDigest)
               .certPath(signingCert.getCertPath())
               .signature(signature)
@@ -346,7 +346,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a keyless singing results.
    */
   @CheckReturnValue
-  public KeylessSigningResult sign(byte[] artifactDigest)
+  public KeylessSignature sign(byte[] artifactDigest)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
           OidcException, InvalidKeyException, InterruptedException {
@@ -360,7 +360,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a map of artifacts and their keyless singing results.
    */
   @CheckReturnValue
-  public Map<Path, KeylessSigningResult> signFiles(List<Path> artifacts)
+  public Map<Path, KeylessSignature> signFiles(List<Path> artifacts)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
           OidcException, InvalidKeyException, InterruptedException {
@@ -373,7 +373,7 @@ public class KeylessSigner implements AutoCloseable {
       digests.add(artifactByteSource.hash(Hashing.sha256()).asBytes());
     }
     var signingResult = sign(digests);
-    var result = ImmutableMap.<Path, KeylessSigningResult>builder();
+    var result = ImmutableMap.<Path, KeylessSignature>builder();
     for (int i = 0; i < artifacts.size(); i++) {
       result.put(artifacts.get(i), signingResult.get(i));
     }
@@ -387,7 +387,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a keyless singing results.
    */
   @CheckReturnValue
-  public KeylessSigningResult signFile(Path artifact)
+  public KeylessSignature signFile(Path artifact)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
           OidcException, InvalidKeyException, InterruptedException {
