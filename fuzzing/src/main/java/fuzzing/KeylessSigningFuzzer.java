@@ -13,27 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-
-import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.cert.CertificateException;
-import java.security.spec.InvalidKeySpecException;
-import java.security.NoSuchAlgorithmException;
-import java.security.InvalidKeyException;
-import java.lang.InterruptedException;
-import java.security.SignatureException;
-
-import dev.sigstore.KeylessSigner;
 import dev.sigstore.KeylessSignature;
+import dev.sigstore.KeylessSigner;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.rekor.client.RekorVerificationException;
+import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 
-
-public class KeylessSigningFuzzer{
+public class KeylessSigningFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
       KeylessSigner signer = KeylessSigner.builder().sigstorePublicDefaults().build();
@@ -43,18 +40,19 @@ public class KeylessSigningFuzzer{
       result.getCertPath();
       result.getSignature();
       result.getEntry();
-    } catch (IOException e) {
-    } catch (InvalidAlgorithmParameterException e) {
-    } catch (CertificateException e) {
-    } catch (InvalidKeySpecException e) {
-    } catch (NoSuchAlgorithmException e) {
-    } catch (InvalidKeyException e) {
-    } catch (InterruptedException e) {
-    } catch (SignatureException e) {
-    } catch (FulcioVerificationException e) {
-    } catch (UnsupportedAlgorithmException e) {
-    } catch (OidcException e) {
-    } catch (RekorVerificationException e) {
+    } catch (IOException
+        | InvalidAlgorithmParameterException
+        | CertificateException
+        | InvalidKeySpecException
+        | NoSuchAlgorithmException
+        | InvalidKeyException
+        | InterruptedException
+        | SignatureException
+        | RekorVerificationException
+        | OidcException
+        | UnsupportedAlgorithmException
+        | FulcioVerificationException e) {
+      // known exceptions
     }
   }
 }
