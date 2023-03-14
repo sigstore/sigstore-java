@@ -51,7 +51,7 @@ public class KeylessSignerTest {
 
   public static List<byte[]> artifactHashes;
   public static List<Path> artifacts;
-  public static List<KeylessSigningResult> signingResults;
+  public static List<KeylessSignature> signingResults;
   public static KeylessSigner signer;
 
   @BeforeAll
@@ -74,7 +74,7 @@ public class KeylessSignerTest {
               .asBytes();
       artifactHashes.add(hash);
       artifacts.add(artifact);
-      signingResults.add(Mockito.mock(KeylessSigningResult.class));
+      signingResults.add(Mockito.mock(KeylessSignature.class));
     }
 
     // make sure our mock signing results are not equal
@@ -96,7 +96,7 @@ public class KeylessSignerTest {
 
   @Test
   public void sign_files() throws Exception {
-    var signingResultsMap = new HashMap<Path, KeylessSigningResult>();
+    var signingResultsMap = new HashMap<Path, KeylessSignature>();
     for (int i = 0; i < signingResults.size(); i++) {
       signingResultsMap.put(artifacts.get(i), signingResults.get(i));
     }

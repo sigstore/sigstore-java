@@ -17,8 +17,8 @@ package dev.sigstore.bundle;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.ImmutableKeylessSigningResult;
-import dev.sigstore.KeylessSigningResult;
+import dev.sigstore.ImmutableKeylessSignature;
+import dev.sigstore.KeylessSignature;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.bundle.v1.Bundle;
 import dev.sigstore.proto.bundle.v1.VerificationMaterial;
@@ -62,13 +62,13 @@ class BundleFactoryInternal {
   static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
 
   /**
-   * Generates Sigstore Bundle Builder from {@link KeylessSigningResult}. This might be useful in
-   * case you want to add additional information to the bundle.
+   * Generates Sigstore Bundle Builder from {@link KeylessSignature}. This might be useful in case
+   * you want to add additional information to the bundle.
    *
    * @param signingResult Keyless signing result.
    * @return Sigstore Bundle in protobuf builder format
    */
-  static Bundle.Builder createBundleBuilder(KeylessSigningResult signingResult) {
+  static Bundle.Builder createBundleBuilder(KeylessSignature signingResult) {
     return Bundle.newBuilder()
         .setMediaType("application/vnd.dev.sigstore.bundle+json;version=0.1")
         .setVerificationMaterial(buildVerificationMaterial(signingResult))
@@ -82,7 +82,7 @@ class BundleFactoryInternal {
   }
 
   private static VerificationMaterial.Builder buildVerificationMaterial(
-      KeylessSigningResult signingResult) {
+      KeylessSignature signingResult) {
     return VerificationMaterial.newBuilder()
         .setX509CertificateChain(
             X509CertificateChain.newBuilder()
@@ -145,7 +145,7 @@ class BundleFactoryInternal {
             .setCheckpoint(Checkpoint.newBuilder().setEnvelope(inclusionProof.getCheckpoint())));
   }
 
-  static KeylessSigningResult readBundle(Reader jsonReader) throws BundleParseException {
+  static KeylessSignature readBundle(Reader jsonReader) throws BundleParseException {
     Bundle.Builder bundleBuilder = Bundle.newBuilder();
     try {
       JsonFormat.parser().merge(jsonReader, bundleBuilder);
@@ -203,7 +203,7 @@ class BundleFactoryInternal {
               + " is supported");
     }
     try {
-      return ImmutableKeylessSigningResult.builder()
+      return ImmutableKeylessSignature.builder()
           .digest(bundle.getMessageSignature().getMessageDigest().getDigest().toByteArray())
           .certPath(
               toCertPath(
