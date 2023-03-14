@@ -68,6 +68,9 @@ public class Keys {
           "sigstore public keys must be only a single PEM encoded public key");
     }
     // special handling for PKCS1 (rsa) public key
+    if (section == null) {
+      throw new InvalidKeySpecException("Invalid key");
+    }
     if (section.getType().equals("RSA PUBLIC KEY")) {
       ASN1Sequence sequence = ASN1Sequence.getInstance(section.getContent());
       ASN1Integer modulus = ASN1Integer.getInstance(sequence.getObjectAt(0));
