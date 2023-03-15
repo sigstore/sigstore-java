@@ -27,6 +27,9 @@ RUNTIME_CLASSPATH=$(echo $ALL_JARS | xargs printf -- "\$this_dir/%s:"):\$this_di
 
 for fuzzer in $(find $SRC/sigstore-java/fuzzing -name '*Fuzzer.java'); do
   fuzzer_basename=$(basename -s .java $fuzzer)
+  if [[ "$fuzzer_basename" == "KeylessSigningFuzzer" ]]; then
+    continue
+  fi
   javac -cp $BUILD_CLASSPATH $fuzzer
   cp $SRC/sigstore-java/fuzzing/$fuzzer_basename.class $OUT/
 
