@@ -16,8 +16,10 @@
 package dev.sigstore;
 
 import com.google.api.client.util.Preconditions;
+import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
+import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.fulcio.client.SigningCertificate;
@@ -25,6 +27,7 @@ import dev.sigstore.rekor.client.*;
 import java.io.IOException;
 import java.net.URI;
 import java.security.*;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
@@ -109,16 +112,28 @@ public class KeylessVerifier {
    * @param certChain the certificate chain obtained from a fulcio instance
    * @param signature the signature on the artifact
    * @throws KeylessVerificationException if the signing information could not be verified
-   * @throws IOException if an error occurred communicating with remote rekor
    */
+  @Deprecated
   public void verifyOnline(byte[] artifactDigest, byte[] certChain, byte[] signature)
-      throws KeylessVerificationException, IOException {
-    SigningCertificate signingCert;
+      throws KeylessVerificationException {
     try {
-      signingCert = SigningCertificate.from(Certificates.fromPemChain(certChain));
+      verify(
+          KeylessVerificationRequest.builder()
+              .keylessSignature(
+                  KeylessSignature.builder()
+                      .signature(signature)
+                      .certPath(Certificates.fromPemChain(certChain))
+                      .digest(artifactDigest)
+                      .build())
+              .verificationOptions(VerificationOptions.builder().isOnline(true).build())
+              .build());
     } catch (CertificateException ex) {
       throw new KeylessVerificationException("Certificate was not valid: " + ex.getMessage(), ex);
     }
+  }
+
+  public void verify(KeylessVerificationRequest request) throws KeylessVerificationException {
+    var signingCert = SigningCertificate.from(request.getKeylessSignature().getCertPath());
     var leafCert = signingCert.getLeafCertificate();
 
     // verify the certificate chains up to a trusted root (fulcio)
@@ -137,35 +152,53 @@ public class KeylessVerifier {
           "Fulcio certificate SCT was not valid: " + ex.getMessage(), ex);
     }
 
-    // rebuild the hashedRekord so we can query the log for it
-    var hashedRekordRequest =
-        HashedRekordRequest.newHashedRekordRequest(
-            artifactDigest, Certificates.toPemBytes(leafCert), signature);
-    Optional<RekorEntry> rekorEntry;
-
-    // attempt to grab the rekord from the rekor instance
-    rekorEntry = rekorClient.getEntry(hashedRekordRequest);
-    if (rekorEntry.isEmpty()) {
-      throw new KeylessVerificationException("Rekor entry was not found");
+    // verify the certificate identity if options are present
+    if (request.getVerificationOptions().getCertificateIdentities().size() > 0) {
+      try {
+        new FulcioCertificateVerifier()
+            .verifyCertificateMatches(
+                leafCert, request.getVerificationOptions().getCertificateIdentities());
+      } catch (FulcioVerificationException fve) {
+        throw new KeylessVerificationException(
+            "Could not verify certificate identities: " + fve.getMessage(), fve);
+      }
     }
+
+    var artifactDigest = request.getKeylessSignature().getDigest();
+    var signature = request.getKeylessSignature().getSignature();
+
+    var rekorEntry =
+        request.getVerificationOptions().isOnline()
+            ? getEntryFromRekor(artifactDigest, leafCert, signature)
+            : request
+                .getKeylessSignature()
+                .getEntry()
+                .orElseThrow(
+                    () ->
+                        new KeylessVerificationException(
+                            "No rekor entry was provided for offline verification"));
 
     // verify the rekor entry is signed by the log keys
     try {
-      rekorVerifier.verifyEntry(rekorEntry.get());
+      rekorVerifier.verifyEntry(rekorEntry);
     } catch (RekorVerificationException ex) {
       throw new KeylessVerificationException("Rekor entry signature was not valid");
     }
 
-    // in online mode, currently, we verify the inclusion proof (this can maybe be optional)
-    try {
-      rekorVerifier.verifyInclusionProof(rekorEntry.get());
-    } catch (RekorVerificationException ex) {
-      throw new KeylessVerificationException("Rekor entry inclusion proof was not valid");
+    // verify any inclusion proof
+    if (rekorEntry.getVerification().getInclusionProof().isPresent()) {
+      try {
+        rekorVerifier.verifyInclusionProof(rekorEntry);
+      } catch (RekorVerificationException ex) {
+        throw new KeylessVerificationException("Rekor entry inclusion proof was not valid");
+      }
+    } else if (request.getVerificationOptions().isOnline()) {
+      throw new KeylessVerificationException("Fetched rekor entry did not contain inclusion proof");
     }
 
     // check if the time of entry inclusion in the log (a stand-in for signing time) is within the
     // validity period for the certificate
-    var entryTime = Date.from(Instant.ofEpochSecond(rekorEntry.get().getIntegratedTime()));
+    var entryTime = Date.from(Instant.ofEpochSecond(rekorEntry.getIntegratedTime()));
     try {
       leafCert.checkValidity(entryTime);
     } catch (CertificateNotYetValidException e) {
@@ -187,5 +220,32 @@ public class KeylessVerifier {
       throw new KeylessVerificationException(
           "Signature could not be processed: " + ex.getMessage(), ex);
     }
+  }
+
+  private RekorEntry getEntryFromRekor(
+      byte[] artifactDigest, Certificate leafCert, byte[] signature)
+      throws KeylessVerificationException {
+    // rebuild the hashedRekord so we can query the log for it
+    HashedRekordRequest hashedRekordRequest = null;
+    try {
+      hashedRekordRequest =
+          HashedRekordRequest.newHashedRekordRequest(
+              artifactDigest, Certificates.toPemBytes(leafCert), signature);
+    } catch (IOException e) {
+      throw new KeylessVerificationException(
+          "Could not convert certificate to PEM when recreating hashrekord", e);
+    }
+    Optional<RekorEntry> rekorEntry;
+
+    // attempt to grab the rekord from the rekor instance
+    try {
+      rekorEntry = rekorClient.getEntry(hashedRekordRequest);
+      if (rekorEntry.isEmpty()) {
+        throw new KeylessVerificationException("Rekor entry was not found");
+      }
+    } catch (IOException ioe) {
+      throw new KeylessVerificationException("Could not retreive rekor entry", ioe);
+    }
+    return rekorEntry.get();
   }
 }
