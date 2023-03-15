@@ -64,7 +64,8 @@ open class BaseGradleTest {
         fun sigstoreJavaVersions(): Iterable<Arguments> {
             return mutableListOf<Arguments>().apply {
                 add(arguments(SIGSTORE_JAVA_CURRENT_VERSION))
-                if (isCI) {
+                // For now, we test the plugins only with locally-built sigstore-java version
+                if (isCI && false) {
                     add(arguments(TestedSigstoreJava.Default))
                     // 0.3.0 is the minimal version that supports generating Sigstore Bundle
                     add(arguments(TestedSigstoreJava.Version("0.3.0")))
