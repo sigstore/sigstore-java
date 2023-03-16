@@ -61,17 +61,17 @@ public class FulcioCertificateVerifier {
     var san = extractSan(cert);
     var issuer = getExtensionValueRawUtf8(cert, FULCIO_ISSUER_OID);
     if (!Objects.equals(certId.getSubjectAlternativeName(), san)) {
-      log.info("san did not match (" + san + "," + certId.getSubjectAlternativeName() + ")");
+      log.fine("san did not match (" + san + "," + certId.getSubjectAlternativeName() + ")");
       return false;
     }
     if (!Objects.equals(certId.getIssuer(), issuer)) {
-      log.info("issuer did not match (" + issuer + "," + certId.getIssuer() + ")");
+      log.fine("issuer did not match (" + issuer + "," + certId.getIssuer() + ")");
       return false;
     }
     for (var otherOid : certId.getOther().keySet()) {
       var entry = getExtensionValueRawUtf8(cert, otherOid);
       if (!Objects.equals(entry, certId.getOther().get(otherOid))) {
-        log.info(
+        log.fine(
             otherOid + " did not match (" + entry + "," + certId.getOther().get(otherOid) + ")");
         return false;
       }

@@ -16,6 +16,8 @@
 package dev.sigstore;
 
 import com.google.api.client.util.Preconditions;
+import com.google.common.hash.Hashing;
+import com.google.common.io.Files;
 import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
@@ -26,6 +28,7 @@ import dev.sigstore.fulcio.client.SigningCertificate;
 import dev.sigstore.rekor.client.*;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -34,7 +37,9 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Optional;
+import org.bouncycastle.util.encoders.Hex;
 
 /** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
 public class KeylessVerifier {
@@ -118,6 +123,7 @@ public class KeylessVerifier {
       throws KeylessVerificationException {
     try {
       verify(
+          artifactDigest,
           KeylessVerificationRequest.builder()
               .keylessSignature(
                   KeylessSignature.builder()
@@ -132,9 +138,41 @@ public class KeylessVerifier {
     }
   }
 
-  public void verify(KeylessVerificationRequest request) throws KeylessVerificationException {
+  /** Convenience wrapper around {@link #verify(byte[], KeylessVerificationRequest)}. */
+  public void verify(Path artifact, KeylessVerificationRequest request)
+      throws KeylessVerificationException {
+    try {
+      byte[] artifactDigest =
+          Files.asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
+      verify(artifactDigest, request);
+    } catch (IOException e) {
+      throw new KeylessVerificationException("Could not hash provided artifact path: " + artifact);
+    }
+  }
+
+  /**
+   * Verify that the inputs can attest to the validity of a signature using sigstore's keyless
+   * infrastructure. If no exception is thrown, it should be assumed verification has passed.
+   *
+   * @param artifactDigest the sha256 digest of the artifact that is being verified
+   * @param request the keyless verification data and options
+   * @throws KeylessVerificationException if the signing information could not be verified
+   */
+  public void verify(byte[] artifactDigest, KeylessVerificationRequest request)
+      throws KeylessVerificationException {
     var signingCert = SigningCertificate.from(request.getKeylessSignature().getCertPath());
     var leafCert = signingCert.getLeafCertificate();
+
+    // this ensures the provided artifact digest matches what may have come from a bundle (in
+    // keyless signature)
+    if (!Arrays.equals(artifactDigest, request.getKeylessSignature().getDigest())) {
+      throw new KeylessVerificationException(
+          "Provided artifact sha256 digest does not match digest used for verification"
+              + "\nprovided(hex) : "
+              + Hex.toHexString(artifactDigest)
+              + "\nverification  : "
+              + Hex.toHexString(request.getKeylessSignature().getDigest()));
+    }
 
     // verify the certificate chains up to a trusted root (fulcio)
     try {
@@ -164,7 +202,6 @@ public class KeylessVerifier {
       }
     }
 
-    var artifactDigest = request.getKeylessSignature().getDigest();
     var signature = request.getKeylessSignature().getSignature();
 
     var rekorEntry =
