@@ -31,11 +31,11 @@ jobs:
       - name: Build sigstore-java
         uses: gradle/gradle-build-action@6095a76664413da4c8c134ee32e8a8ae900f0f1f # v2.4.0
         with:
-          arguments: :sigstore-conformance:build
+          arguments: :sigstore-cli:build
 
       - name: Unpack sigstore-java distribution
-        run: tar -xvf ${{ github.workspace }}/sigstore-conformance/build/distributions/sigstore-conformance-*.tar --strip-components 1
+        run: tar -xvf ${{ github.workspace }}/sigstore-cli/build/distributions/sigstore-cli-*.tar --strip-components 1
 
       - uses: trailofbits/sigstore-conformance@0748d63c53810e36cc3f4bbe4114301080f0d844 # tag=v0.0.3
         with:
-          entrypoint: ${{ github.workspace }}/bin/sigstore-conformance
+          entrypoint: ${{ github.workspace }}/bin/sigstore-cli
