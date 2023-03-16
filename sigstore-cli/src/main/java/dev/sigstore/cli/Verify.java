@@ -67,6 +67,7 @@ public class Verify implements Callable<Integer> {
 
     var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
     verifier.verify(
+        artifact,
         KeylessVerificationRequest.builder()
             .keylessSignature(
                 KeylessSignature.builder()
