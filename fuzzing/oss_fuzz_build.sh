@@ -15,7 +15,7 @@ ALL_JARS=sigstore-java.jar
 for jarfile in $(find ~/.gradle/caches/modules-2/files-2.1/ \( -iname "*.jar" ! -iname "junit*" ! -iname "spotless*" ! -iname "ktlint*" ! -iname "gradle*" ! -iname "kotlin*" \))
 do
   cp $jarfile $OUT/
-  ALL_JARS=$ALL_JARS:$(basename $jarfile)
+  ALL_JARS="$ALL_JARS $(basename $jarfile)"
 done
 
 # The classpath at build-time includes the project jars in $OUT as well as the
