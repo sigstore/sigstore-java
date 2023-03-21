@@ -13,26 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-
+import dev.sigstore.encryption.Keys;
 import java.io.IOException;
-import java.security.cert.CertificateException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 
-import dev.sigstore.encryption.certificates.Certificates;
-
-public class CertificatesFuzzer{
+public class KeysFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
+      String[] schemes = {"rsassa-pss-sha256", "ed25519", "ecdsa-sha2-nistp256"};
+      String scheme = data.pickValue(schemes);
       byte[] byteArray = data.consumeRemainingAsBytes();
 
-      Certificates.toPemBytes(Certificates.fromPem(byteArray));
-      Certificates.toPemString(Certificates.fromPem(new String(byteArray)));
-
-      Certificates.toPemBytes(Certificates.fromPemChain(byteArray));
-      Certificates.toPemString(Certificates.fromPemChain(new String(byteArray)));
-    } catch (IOException e) {
-    } catch (CertificateException e) {
+      Keys.parsePublicKey(byteArray);
+      Keys.constructTufPublicKey(byteArray, scheme);
+    } catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e) {
+      // known exceptions
     }
   }
 }
