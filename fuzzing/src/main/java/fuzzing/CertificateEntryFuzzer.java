@@ -50,8 +50,8 @@ public class CertificateEntryFuzzer {
       ce2.encode(new ByteArrayOutputStream());
       ce3.encode(new ByteArrayOutputStream());
       ce4.encode(new ByteArrayOutputStream());
-    } catch (CertificateException e) {
-    } catch (SerializationException e) {
+    } catch (CertificateException | SerializationException e) {
+      // Known exception
     }
   }
 }

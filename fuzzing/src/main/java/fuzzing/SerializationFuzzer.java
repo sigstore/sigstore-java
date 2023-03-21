@@ -39,6 +39,7 @@ public class SerializationFuzzer {
       Serialization.writeFixedBytes(new ByteArrayOutputStream(), byteArray);
       Serialization.writeNumber(new ByteArrayOutputStream(), num1, num2);
     } catch (SerializationException e) {
+      // Known exception
     }
   }
 }
