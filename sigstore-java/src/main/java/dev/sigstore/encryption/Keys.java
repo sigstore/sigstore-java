@@ -71,7 +71,7 @@ public class Keys {
             "sigstore public keys must be only a single PEM encoded public key");
       }
     } catch (DecoderException e) {
-      throw new InvalidKeySpecException("Invalid key");
+      throw new InvalidKeySpecException("Invalid key, could not parse PEM section");
     }
     // special handling for PKCS1 (rsa) public key
     if (section == null) {
