@@ -1,37 +1,27 @@
 #!/bin/bash -eu
 
-# TODO AdamKorcz: Make the build script a gradle module
+# TODO: this should be a gradle plugin
 
-./gradlew clean build -x test --refresh-dependencies
-
-CURRENT_VERSION=$(./gradlew properties --no-daemon --console=plain -q | grep "^version:" | awk '{printf $2}')
-cp sigstore-java/build/libs/sigstore-java-$CURRENT_VERSION.jar $OUT/sigstore-java.jar
-
-# Search for dependency jars from gradle local repository,
-# move them to the $OUT directory and add them to the ALL_JARS
-# variable to allow jvm to use them as class path when compiling
-# and executing the fuzzers which depends on them
-ALL_JARS=sigstore-java.jar
-for jarfile in $(find ~/.gradle/caches/modules-2/files-2.1/ \( -iname "*.jar" ! -iname "junit*" ! -iname "spotless*" ! -iname "ktlint*" ! -iname "gradle*" ! -iname "kotlin*" \))
+# build the fuzzing classes and extract dependencies into $OUT
+./gradlew :fuzzing:copyToFuzzOut -x test -PfuzzOut="$OUT"
+ALL_JARS=""
+for jarfile in $(find $OUT -name *.jar)
 do
-  cp $jarfile $OUT/
   ALL_JARS="$ALL_JARS $(basename $jarfile)"
 done
-
-# The classpath at build-time includes the project jars in $OUT as well as the
-# Jazzer API.
-BUILD_CLASSPATH=$(echo $ALL_JARS | xargs printf -- "$OUT/%s:"):$JAZZER_API_PATH
 
 # All .jar and .class files lie in the same directory as the fuzzer at runtime.
 RUNTIME_CLASSPATH=$(echo $ALL_JARS | xargs printf -- "\$this_dir/%s:"):\$this_dir
 
-for fuzzer in $(find $SRC/sigstore-java/fuzzing -name '*Fuzzer.java'); do
-  fuzzer_basename=$(basename -s .java $fuzzer)
+# Create all fuzzing targets
+for fuzzer in $(find "$OUT" -name '*Fuzzer.class' | xargs realpath --relative-to "$OUT"); do
+  fuzzer_basename=$(basename -s .class $fuzzer)
   if [[ "$fuzzer_basename" == "KeylessSigningFuzzer" ]]; then
     continue
   fi
-  javac -cp $BUILD_CLASSPATH $fuzzer
-  cp $SRC/sigstore-java/fuzzing/$fuzzer_basename.class $OUT/
+  dir_name=$(dirname $fuzzer)
+  fuzzer_package=${dir_name//\//\.}
+  fuzzer_target="${fuzzer_package}.${fuzzer_basename}"
 
   # Create an execution wrapper that executes Jazzer with the correct arguments.
   echo "#!/bin/bash
@@ -45,7 +35,7 @@ fi
 LD_LIBRARY_PATH=\"$JVM_LD_LIBRARY_PATH\":\$this_dir \
 \$this_dir/jazzer_driver --agent_path=\$this_dir/jazzer_agent_deploy.jar \
 --cp=$RUNTIME_CLASSPATH \
---target_class=$fuzzer_basename \
+--target_class=$fuzzer_target \
 --jvm_args=\"\$mem_settings\" \
 \$@" > $OUT/$fuzzer_basename
   chmod u+x $OUT/$fuzzer_basename
