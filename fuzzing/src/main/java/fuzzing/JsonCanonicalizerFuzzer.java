@@ -19,6 +19,7 @@ import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import dev.sigstore.json.canonicalizer.NumberToJSON;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class JsonCanonicalizerFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
@@ -26,11 +27,12 @@ public class JsonCanonicalizerFuzzer {
       Double value = data.consumeDouble();
       byte[] byteArray = data.consumeRemainingAsBytes();
 
-      NumberToJSON.serializeNumber(data.consumeDouble());
+      NumberToJSON.serializeNumber(value);
 
       new JsonCanonicalizer(byteArray);
-      new JsonCanonicalizer(new String(byteArray));
+      new JsonCanonicalizer(new String(byteArray, StandardCharsets.UTF_8));
     } catch (IOException e) {
+      // Known exception
     }
   }
 }
