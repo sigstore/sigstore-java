@@ -16,12 +16,10 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-
 import dev.sigstore.encryption.certificates.transparency.Serialization;
 import dev.sigstore.encryption.certificates.transparency.SerializationException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 
 public class SerializationFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {

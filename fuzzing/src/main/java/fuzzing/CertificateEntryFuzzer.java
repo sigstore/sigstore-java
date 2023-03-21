@@ -16,7 +16,8 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-
+import dev.sigstore.encryption.certificates.transparency.CertificateEntry;
+import dev.sigstore.encryption.certificates.transparency.SerializationException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.security.cert.CertificateException;
@@ -24,21 +25,21 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 
-import dev.sigstore.encryption.certificates.transparency.CertificateEntry;
-import dev.sigstore.encryption.certificates.transparency.SerializationException;
-
-public class CertificateEntryFuzzer{
+public class CertificateEntryFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
       byte[] byteArray = data.consumeRemainingAsBytes();
-      byte[] byteArray1 = Arrays.copyOfRange(byteArray, 0, byteArray.length/2);
-      byte[] byteArray2 = Arrays.copyOfRange(byteArray, byteArray.length/2, byteArray.length);
+      byte[] byteArray1 = Arrays.copyOfRange(byteArray, 0, byteArray.length / 2);
+      byte[] byteArray2 = Arrays.copyOfRange(byteArray, byteArray.length / 2, byteArray.length);
 
-      X509Certificate cert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray));
-      X509Certificate cert1 = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray1));
-      X509Certificate cert2 = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray2));
+      X509Certificate cert =
+          (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray));
+      X509Certificate cert1 =
+          (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray1));
+      X509Certificate cert2 =
+          (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray2));
 
       CertificateEntry ce1 = CertificateEntry.createForPrecertificate(byteArray1, byteArray2);
       CertificateEntry ce2 = CertificateEntry.createForPrecertificate(cert1, cert2);
