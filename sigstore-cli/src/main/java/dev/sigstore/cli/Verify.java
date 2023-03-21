@@ -16,6 +16,7 @@
 package dev.sigstore.cli;
 
 import static com.google.common.io.Files.asByteSource;
+import static com.google.common.io.Files.newReader;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.KeylessSignature;
@@ -23,11 +24,14 @@ import dev.sigstore.KeylessVerificationRequest;
 import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
 import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
 import dev.sigstore.KeylessVerifier;
+import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.Certificates;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.CertPath;
 import java.util.concurrent.Callable;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -37,53 +41,58 @@ public class Verify implements Callable<Integer> {
   @Parameters(arity = "1", paramLabel = "<artifact>", description = "artifact to verify")
   Path artifact;
 
-  @Option(
-      names = {"--signature"},
-      description = "path to signature file",
-      required = true)
-  Path signatureFile;
+  @ArgGroup(multiplicity = "1", exclusive = true)
+  SignatureFiles signatureFiles;
 
-  @Option(
-      names = {"--certificate"},
-      description = "path to certificate file",
-      required = true)
-  Path certificateFile;
+  @ArgGroup(multiplicity = "0..1", exclusive = false)
+  Policy policy;
 
-  @Option(
-      names = {"--certificate-identity"},
-      description = "subject alternative name in certificate")
-  private String certificateSan;
+  static class Policy {
+    @Option(
+        names = {"--certificate-identity"},
+        description = "subject alternative name in certificate",
+        required = true)
+    private String certificateSan;
 
-  @Option(
-      names = {"--certificate-oidc-issuer"},
-      description = "sigstore issuer in certificate")
-  private String certificateIssuer;
+    @Option(
+        names = {"--certificate-oidc-issuer"},
+        description = "sigstore issuer in certificate",
+        required = true)
+    private String certificateIssuer;
+  }
 
   @Override
   public Integer call() throws Exception {
     byte[] digest = asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
-    byte[] signature = Files.readAllBytes(signatureFile);
-    CertPath certPath = Certificates.fromPemChain(Files.readAllBytes(certificateFile));
+    KeylessSignature keylessSignature = null;
+    if (signatureFiles.sigAndCert != null) {
+      byte[] signature = Files.readAllBytes(signatureFiles.sigAndCert.signatureFile);
+      CertPath certPath =
+          Certificates.fromPemChain(Files.readAllBytes(signatureFiles.sigAndCert.certificateFile));
+      keylessSignature =
+          KeylessSignature.builder().signature(signature).certPath(certPath).digest(digest).build();
+    } else {
+      keylessSignature =
+          BundleFactory.readBundle(
+              newReader(signatureFiles.bundleFile.toFile(), StandardCharsets.UTF_8));
+    }
+
+    var verificationOptionsBuilder = VerificationOptions.builder();
+    if (policy != null) {
+      verificationOptionsBuilder.addCertificateIdentities(
+          CertificateIdentity.builder()
+              .issuer(policy.certificateIssuer)
+              .subjectAlternativeName(policy.certificateSan)
+              .build());
+    }
+    var verificationOptions = verificationOptionsBuilder.isOnline(true).build();
 
     var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
     verifier.verify(
         artifact,
         KeylessVerificationRequest.builder()
-            .keylessSignature(
-                KeylessSignature.builder()
-                    .signature(signature)
-                    .certPath(certPath)
-                    .digest(digest)
-                    .build())
-            .verificationOptions(
-                VerificationOptions.builder()
-                    .isOnline(true)
-                    .addCertificateIdentities(
-                        CertificateIdentity.builder()
-                            .issuer(certificateIssuer)
-                            .subjectAlternativeName(certificateSan)
-                            .build())
-                    .build())
+            .keylessSignature(keylessSignature)
+            .verificationOptions(verificationOptions)
             .build());
     return 0;
   }

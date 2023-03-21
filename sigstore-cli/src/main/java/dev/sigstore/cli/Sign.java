@@ -16,12 +16,14 @@
 package dev.sigstore.cli;
 
 import dev.sigstore.KeylessSigner;
+import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.Certificates;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "sign", description = "sign an artifacts")
@@ -30,24 +32,23 @@ public class Sign implements Callable<Integer> {
   @Parameters(arity = "1", paramLabel = "<artifact>", description = "artifact to sign")
   Path artifact;
 
-  @Option(
-      names = {"--signature"},
-      description = "path to signature file",
-      required = true)
-  Path signatureFile;
-
-  @Option(
-      names = {"--certificate"},
-      description = "path to certificate file",
-      required = true)
-  Path certificateFile;
+  @ArgGroup(multiplicity = "1", exclusive = true)
+  SignatureFiles signatureFiles;
 
   @Override
   public Integer call() throws Exception {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var signingResult = signer.signFile(artifact);
-    Files.write(signatureFile, signingResult.getSignature());
-    Files.write(certificateFile, Certificates.toPemBytes(signingResult.getCertPath()));
+    if (signatureFiles.sigAndCert != null) {
+      Files.write(signatureFiles.sigAndCert.signatureFile, signingResult.getSignature());
+      Files.write(
+          signatureFiles.sigAndCert.certificateFile,
+          Certificates.toPemBytes(signingResult.getCertPath()));
+    } else {
+      Files.write(
+          signatureFiles.bundleFile,
+          BundleFactory.createBundle(signingResult).getBytes(StandardCharsets.UTF_8));
+    }
     return 0;
   }
 }
