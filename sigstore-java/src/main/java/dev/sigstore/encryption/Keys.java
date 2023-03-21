@@ -37,6 +37,7 @@ import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 import org.bouncycastle.jce.spec.ECNamedCurveSpec;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
@@ -62,10 +63,15 @@ public class Keys {
     PemReader pemReader =
         new PemReader(
             new InputStreamReader(new ByteArrayInputStream(keyBytes), StandardCharsets.UTF_8));
-    PemObject section = pemReader.readPemObject();
-    if (pemReader.readPemObject() != null) {
-      throw new InvalidKeySpecException(
-          "sigstore public keys must be only a single PEM encoded public key");
+    PemObject section = null;
+    try {
+      section = pemReader.readPemObject();
+      if (pemReader.readPemObject() != null) {
+        throw new InvalidKeySpecException(
+            "sigstore public keys must be only a single PEM encoded public key");
+      }
+    } catch (DecoderException e) {
+      throw new InvalidKeySpecException("Invalid key");
     }
     // special handling for PKCS1 (rsa) public key
     if (section == null) {
