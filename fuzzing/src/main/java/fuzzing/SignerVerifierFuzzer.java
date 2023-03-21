@@ -16,15 +16,13 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 
 public class SignerVerifierFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
@@ -32,7 +30,7 @@ public class SignerVerifierFuzzer {
       Integer choice = data.consumeInt(0, 1);
       byte[] byteArray = data.consumeRemainingAsBytes();
 
-      Signer signer = (choice == 1)? Signers.newEcdsaSigner():Signers.newRsaSigner();
+      Signer signer = (choice == 1) ? Signers.newEcdsaSigner() : Signers.newRsaSigner();
       Verifier verifier = Verifiers.newVerifier(signer.getPublicKey());
 
       byte[] signature1 = signer.sign(byteArray);

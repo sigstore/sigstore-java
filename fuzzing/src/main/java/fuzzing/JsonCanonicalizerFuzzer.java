@@ -16,11 +16,9 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-
-import java.io.IOException;
-
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import dev.sigstore.json.canonicalizer.NumberToJSON;
+import java.io.IOException;
 
 public class JsonCanonicalizerFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
