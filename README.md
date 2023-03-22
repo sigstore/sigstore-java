@@ -25,28 +25,71 @@ var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
 var result = signer.sign(testArtifact);
 
 // resulting signature information
-String digest = result.getDigest(); // hex encoded sha256 digest
-byte[] digestBytes = Hex.decode(result.getDigest()); // converted to byte array
 
+// artifact digest
+byte[] digest = result.getDigest();
+
+// certificate from fulcio
 CertPath certs = result.getCertPath() // java representation of a certificate path
 byte[] certsBytes = Certificates.toPemBytes(result.getCertPath()) // converted to PEM encoded byte array
 
-byte[] sig = result.getSignature() // artifact signature
+// artifact signature
+byte[] sig = result.getSignature()
+
+// sigstore bundle format (json string)
+String bundle = BundleFactory.createBundle(result)
 ```
 
 #### Verification
+
+##### KeylessSignature from certificate and signature
 ```java
 byte[] digest = // byte array sha256 artifact digest
 byte[] certificateChain = // byte array of PEM encoded cert chain
 byte[] signature = // byte array of artifact signature
+var keylessSignature = 
+    KeylessSignature.builder()
+        .signature(signature)
+        .certPath(Certificates.fromPemChain(certPath))
+        .digest(digest)
+        .build();
+```
 
+##### KeylessSignature from bundle
+```java
+var bundleFile = // java.nio.path to some bundle file
+var keylessSignature = BundleFactory.readBundle(Files.newReader(bundleFile, StandardCharsets.UTF_8));
+```
+
+##### Configure verification options
+```java
+var verificationOptionsBuilder = 
+    VerificationOptions.builder()
+        // verify online? (connect to rekor for inclusion proof)
+        .isOnline(true)
+        // optionally add certificate policy
+        .addCertificateIdentities(
+            CertificateIdentity.builder()
+                .issuer("https://accounts.example.com"))
+                .subjectAlternativeName("test@example.com")
+                .build());
+        .build();
+```
+
+##### Do verification
+```java
+var artifact = // path to artifact file
 try {
-  var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-  verifier.verifyOnline(digest, certificateChain, signature)
-} catch (KeylessVerificationException) {
+  var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
+  verifier.verify(
+      artifact,
+      KeylessVerificationRequest.builder()
+          .keylessSignature(keylessSignature)
+          .verificationOptions(verificationOptions)
+          .build());
+} catch (KeylessVerificationException e) {
   // verification failed
 }
-
 // verification passed!
 ```
 
