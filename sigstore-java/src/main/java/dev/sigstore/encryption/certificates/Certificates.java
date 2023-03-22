@@ -93,7 +93,7 @@ public class Certificates {
           byte[] certBytes = section.getBase64DecodedBytes();
           certList.add(
               (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certBytes)));
-        } catch (IOException ioe) {
+        } catch (IOException | IllegalArgumentException ioe) {
           throw new CertificateParsingException("Error reading PEM section in cert chain", ioe);
         }
       }
