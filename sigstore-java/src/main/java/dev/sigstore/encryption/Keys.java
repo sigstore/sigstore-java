@@ -75,7 +75,7 @@ public class Keys {
     }
     // special handling for PKCS1 (rsa) public key
     if ((section == null) || (section.getContent() == null)) {
-      throw new InvalidKeySpecException("Invalid key");
+      throw new InvalidKeySpecException("Invalid key, empty PEM section");
     }
     if (section.getType().equals("RSA PUBLIC KEY")) {
       ASN1Sequence sequence = ASN1Sequence.getInstance(section.getContent());
