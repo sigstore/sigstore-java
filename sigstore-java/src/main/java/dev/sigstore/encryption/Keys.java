@@ -74,7 +74,7 @@ public class Keys {
       throw new InvalidKeySpecException("Invalid key, could not parse PEM section");
     }
     // special handling for PKCS1 (rsa) public key
-    if (section == null) {
+    if ((section == null) || (section.getContent() == null)) {
       throw new InvalidKeySpecException("Invalid key");
     }
     if (section.getType().equals("RSA PUBLIC KEY")) {
