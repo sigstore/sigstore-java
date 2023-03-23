@@ -24,8 +24,9 @@ pluginBundle {
 gradlePlugin {
     plugins {
         named("dev.sigstore.sign-base") {
-            displayName = "Sign artifacts via Sigstore"
-            description = "Plugin for signing artifacts via Sigstore"
+            displayName = "Base tasks and configurations for signing artifacts via Sigstore"
+            description = "The plugin provides tasks and configurations so you can wire your own Sigstore signing. " +
+                "If you want sign everything with standard configuration, then consider dev.sigstore.sign plugin instead"
         }
     }
 }

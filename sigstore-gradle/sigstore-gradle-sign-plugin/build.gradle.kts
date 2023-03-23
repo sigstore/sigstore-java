@@ -25,7 +25,7 @@ gradlePlugin {
     plugins {
         named("dev.sigstore.sign") {
             displayName = "Sign artifacts via Sigstore"
-            description = "Plugin for signing artifacts via Sigstore"
+            description = "The plugin signs all artifacts with Sigstore and attaches signature bundles"
         }
     }
 }
