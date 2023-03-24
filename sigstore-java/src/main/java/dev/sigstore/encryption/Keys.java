@@ -90,7 +90,17 @@ public class Keys {
     // otherwise, we are dealing with PKIX X509 encoded keys
     byte[] content = section.getContent();
     EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(content);
-    AsymmetricKeyParameter keyParameters = PublicKeyFactory.createKey(content);
+    AsymmetricKeyParameter keyParameters = null;
+
+    // Ensure PEM content can be parsed correctly
+    try {
+      keyParameters = PublicKeyFactory.createKey(content);
+    } catch (IllegalStateException e) {
+      throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
+    }
+    if (keyParameters == null) {
+      throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
+    }
 
     // get algorithm inspecting the created class
     String keyAlgorithm = extractKeyAlgorithm(keyParameters);
