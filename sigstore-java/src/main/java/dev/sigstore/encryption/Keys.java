@@ -96,10 +96,10 @@ public class Keys {
     try {
       keyParameters = PublicKeyFactory.createKey(content);
     } catch (IllegalStateException e) {
-      throw new InvalidKeySpecException("Invlid key, could not parse PEM content");
+      throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
     }
     if (keyParameters == null) {
-      throw new InvalidKeySpecException("Invlid key, could not parse PEM content");
+      throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
     }
 
     // get algorithm inspecting the created class
