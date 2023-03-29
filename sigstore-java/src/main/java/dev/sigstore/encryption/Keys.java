@@ -94,6 +94,11 @@ public class Keys {
 
     // Ensure PEM content can be parsed correctly
     try {
+      // First byte of the content byte array is the tag and
+      // cannot be less than or equals to 0
+      if (byte[0] <= 0) {
+        throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
+      } 
       keyParameters = PublicKeyFactory.createKey(content);
     } catch (IllegalStateException e) {
       throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
