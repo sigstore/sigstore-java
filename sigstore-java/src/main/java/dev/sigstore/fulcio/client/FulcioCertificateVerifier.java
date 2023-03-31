@@ -89,7 +89,7 @@ public class FulcioCertificateVerifier {
       }
       if (sans.size() > 1) {
         throw new FulcioVerificationException(
-            "Fulcio ceritifcate must only have 1 SAN, but found " + sans.size());
+            "Fulcio certificate must only have 1 SAN, but found " + sans.size());
       }
       var san = sans.stream().findFirst().get();
       var type = (Integer) san.get(0);

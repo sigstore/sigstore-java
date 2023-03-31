@@ -58,12 +58,12 @@ var keylessSignature =
 ##### KeylessSignature from bundle
 ```java
 var bundleFile = // java.nio.path to some bundle file
-var keylessSignature = BundleFactory.readBundle(Files.newReader(bundleFile, StandardCharsets.UTF_8));
+var keylessSignature = BundleFactory.readBundle(Files.newBufferedReader(bundleFile, StandardCharsets.UTF_8));
 ```
 
 ##### Configure verification options
 ```java
-var verificationOptionsBuilder = 
+var verificationOptions = 
     VerificationOptions.builder()
         // verify online? (connect to rekor for inclusion proof)
         .isOnline(true)
@@ -72,7 +72,7 @@ var verificationOptionsBuilder =
             CertificateIdentity.builder()
                 .issuer("https://accounts.example.com"))
                 .subjectAlternativeName("test@example.com")
-                .build());
+                .build())
         .build();
 ```
 
