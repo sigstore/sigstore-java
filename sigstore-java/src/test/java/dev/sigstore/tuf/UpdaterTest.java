@@ -921,6 +921,12 @@ class UpdaterTest {
     }
   }
 
+  @Test
+  public void canCreateMultipleUpdaters() throws IOException {
+    createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
+    createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
+  }
+
   static Key newKey(String keyContents) {
     return ImmutableKey.builder()
         .keyType("ecdsa-sha2-nistp256")
