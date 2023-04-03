@@ -47,7 +47,9 @@ public class FileSystemTufStore implements MutableTufStore {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
     Path defaultTargetsCache = repoBaseDir.resolve("targets");
-    Files.createDirectory(defaultTargetsCache);
+    if (!Files.exists(defaultTargetsCache)) {
+      Files.createDirectory(defaultTargetsCache);
+    }
     return newFileSystemStore(repoBaseDir, defaultTargetsCache);
   }
 
