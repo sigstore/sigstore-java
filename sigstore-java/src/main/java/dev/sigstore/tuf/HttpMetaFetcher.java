@@ -26,6 +26,7 @@ import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
@@ -41,8 +42,11 @@ public class HttpMetaFetcher implements MetaFetcher {
     this.mirror = mirror;
   }
 
-  public static HttpMetaFetcher newFetcher(URL mirror) {
-    return new HttpMetaFetcher(mirror);
+  public static HttpMetaFetcher newFetcher(URL mirror) throws MalformedURLException {
+    if (mirror.toString().endsWith("/")) {
+      return new HttpMetaFetcher(mirror);
+    }
+    return new HttpMetaFetcher(new URL(mirror.toExternalForm() + "/"));
   }
 
   @Override
@@ -94,7 +98,7 @@ public class HttpMetaFetcher implements MetaFetcher {
   @Override
   public byte[] fetchResource(String filename, int maxLength)
       throws IOException, FileExceedsMaxLengthException {
-    GenericUrl fileUrl = new GenericUrl(mirror + "/" + filename);
+    GenericUrl fileUrl = new GenericUrl(mirror + filename);
     var req =
         HttpClients.newHttpTransport(ImmutableHttpParams.builder().build())
             .createRequestFactory(
