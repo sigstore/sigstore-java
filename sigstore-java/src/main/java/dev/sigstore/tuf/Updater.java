@@ -420,7 +420,10 @@ public class Updater {
         throw new FileNotFoundException(targetName, fetcher.getSource());
       }
       verifyHashes(entry.getKey(), targetBytes, targetData.getHashes());
-      localStore.storeTargetFile(versionedTargetName, targetBytes);
+
+      // when persisting targets use the targetname without sha512 prefix
+      // https://theupdateframework.github.io/specification/latest/index.html#fetch-target
+      localStore.storeTargetFile(targetName, targetBytes);
     }
   }
 
