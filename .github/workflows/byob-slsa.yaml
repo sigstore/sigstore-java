@@ -1,5 +1,5 @@
 # This builds a SLSA provenance statement based on BYOB.
-# For now it is under heavy development and is not yes suited for releases.
+# For now it is under heavy development and is not yet suited for releases.
 ---
 name: SLSA Provenance
 on:
