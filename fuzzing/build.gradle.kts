@@ -11,7 +11,10 @@ dependencies {
     implementation("com.code-intelligence:jazzer-api:0.16.0")
 }
 
+// copy to the fuzzing builder's output directory. This is an existing directory with
+// files in it, so don't use sync
 tasks.register<Copy>("copyToFuzzOut") {
     dependsOn(tasks.build)
-    into(project.property("fuzzOut")).from(sourceSets.main.get().runtimeClasspath)
+    into(project.findProperty("fuzzOut") ?: project.layout.buildDirectory.dir("fuzzOut"))
+    from(sourceSets.main.get().runtimeClasspath)
 }
