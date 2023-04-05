@@ -186,8 +186,11 @@ class KeysTest {
   }
 
   @Test
-  void parsePublicKeyBad()
+  void parsePublicKey_failOnNullSection()
       throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
+    // This unit test is used to test the fix for a bug discovered by oss-fuzz
+    // The bug happens when a malformed byte array is passed to the method
+    // https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=57247
     byte[] byteArray = "-----BEGIN A-----\nBBBBB-----END A".getBytes(StandardCharsets.UTF_8);
     Assertions.assertThrows(InvalidKeySpecException.class, () -> Keys.parsePublicKey(byteArray));
   }
