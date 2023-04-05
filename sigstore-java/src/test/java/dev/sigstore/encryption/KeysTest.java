@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.io.Resources;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
@@ -187,14 +187,9 @@ class KeysTest {
 
   @Test
   void parsePublicKeyBad()
-      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException,
-          NoSuchProviderException {
-    try {
-      byte[] byteArray = "-----BEGIN A-----\nBBBBB-----END A".getBytes(Charset.defaultCharset());
-      Keys.parsePublicKey(byteArray);
-      fail();
-    } catch (RuntimeException e) {
-    }
+      throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
+    byte[] byteArray = "-----BEGIN A-----\nBBBBB-----END A".getBytes(StandardCharsets.UTF_8);
+    Assertions.assertThrows(InvalidKeySpecException.class, () -> Keys.parsePublicKey(byteArray));
   }
 
   @Test
