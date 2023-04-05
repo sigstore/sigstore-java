@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.io.Resources;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
@@ -179,6 +180,18 @@ class KeysTest {
               Hex.decode(
                   "302a300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
               "rsassa-pss-sha256");
+      fail();
+    } catch (RuntimeException e) {
+    }
+  }
+
+  @Test
+  void parsePublicKeyBad()
+      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException,
+          NoSuchProviderException {
+    try {
+      byte[] byteArray = "-----BEGIN A-----\nBBBBB-----END A".getBytes(Charset.defaultCharset());
+      Keys.parsePublicKey(byteArray);
       fail();
     } catch (RuntimeException e) {
     }
