@@ -96,9 +96,11 @@ abstract class SigstoreSignExtension(private val project: Project) {
         }
         publication.whenPublishableArtifactRemoved {
             val publishableArtifact = this
+            // Ignore artifacts that we have not added a signature for
+            val artifact = artifacts.remove(publishableArtifact) ?: return@whenPublishableArtifactRemoved
             signTask.configure {
-                signatures.findByName(file.name)
-                    ?.takeIf { publishableArtifact in it.builtBy  }
+                signatures.findByName(publishableArtifact.file.name)
+                    ?.takeIf { publishableArtifact in it.builtBy }
                     ?.let {
                         signatures.remove(it)
                         return@configure
@@ -106,7 +108,6 @@ abstract class SigstoreSignExtension(private val project: Project) {
                 // Slow path just in case
                 signatures.removeIf { publishableArtifact in it.builtBy }
             }
-            val artifact = artifacts.remove(publishableArtifact)
             publication.removeDerivedArtifact(artifact)
         }
     }
