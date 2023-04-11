@@ -69,7 +69,7 @@ public class SigstoreTufClient {
       }
       try {
         tufMirror(
-            new URL("https://storage.googleapis.com/sigstore-tuf-root/"),
+            new URL("https://tuf-repo-cdn.sigstore.dev/"),
             Path.of(
                 Resources.getResource("dev/sigstore/tuf/sigstore-tuf-root/root.json").getPath()));
       } catch (MalformedURLException e) {
