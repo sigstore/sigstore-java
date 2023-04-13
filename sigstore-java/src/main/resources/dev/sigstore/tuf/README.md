@@ -6,10 +6,10 @@ If the key changes, they will not automatically be reflected here
 and various signing/verification workflows will fail.
 
 We keep copies of the remote tuf repositories locally in
-1. Production from https://storage.googleapis.com/sigstore-tuf-root \
+1. Production from https://tuf-repo-cdn.sigstore.dev \
    for interfacing with *.sigstore.dev
 
-2. Staging from https://storage.googleapis.com/tuf-root-staging \
+2. Staging from https://tuf-repo-cdn.sigstage.dev \
    for interfacing with *.sigstage.dev
 
 For this client to function we need the following keys
