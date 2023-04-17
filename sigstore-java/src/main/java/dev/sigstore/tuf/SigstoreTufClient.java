@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Resources;
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.Instant;
@@ -40,9 +42,9 @@ public class SigstoreTufClient {
 
   @VisibleForTesting static final String TRUST_ROOT_FILENAME = "trusted_root.json";
 
-  private Updater updater;
+  private final Updater updater;
   private Instant lastUpdate;
-  private TrustedRoot sigstoreTrustedRoot;
+  private SigstoreTrustedRoot sigstoreTrustedRoot;
   private final Duration cacheValidity;
 
   @VisibleForTesting
@@ -117,7 +119,8 @@ public class SigstoreTufClient {
    * defined on the client.
    */
   public void update()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
+          CertificateException {
     if (lastUpdate == null
         || Duration.between(lastUpdate, Instant.now()).compareTo(cacheValidity) > 0) {
       this.forceUpdate();
@@ -126,7 +129,8 @@ public class SigstoreTufClient {
 
   /** Force an update, ignoring any cache validity. */
   public void forceUpdate()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
+          CertificateException {
     updater.update();
     lastUpdate = Instant.now();
     var trustedRootBuilder = TrustedRoot.newBuilder();
@@ -135,10 +139,10 @@ public class SigstoreTufClient {
             new String(
                 updater.getLocalStore().getTargetFile(TRUST_ROOT_FILENAME), StandardCharsets.UTF_8),
             trustedRootBuilder);
-    sigstoreTrustedRoot = trustedRootBuilder.build();
+    sigstoreTrustedRoot = SigstoreTrustedRoot.from(trustedRootBuilder.build());
   }
 
-  public TrustedRoot getSigstoreTrustedRoot() {
+  public SigstoreTrustedRoot getSigstoreTrustedRoot() {
     return sigstoreTrustedRoot;
   }
 }
