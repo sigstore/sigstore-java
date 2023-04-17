@@ -56,7 +56,7 @@ dependencies {
     testImplementation("no.nav.security:mock-oauth2-server:0.5.8")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.70.0")
-    testImplementation("org.eclipse.jetty:jetty-server:11.0.14")
+    testImplementation("org.eclipse.jetty:jetty-server:11.0.15")
 }
 
 protobuf {
