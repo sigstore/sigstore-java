@@ -8,7 +8,7 @@ repositories {
 
 dependencies {
     implementation(project(":sigstore-java"))
-    implementation("com.code-intelligence:jazzer-api:0.16.0")
+    implementation("com.code-intelligence:jazzer-api:0.16.1")
 }
 
 // copy to the fuzzing builder's output directory. This is an existing directory with
