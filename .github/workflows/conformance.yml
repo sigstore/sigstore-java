@@ -29,7 +29,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Build sigstore-java
-        uses: gradle/gradle-build-action@6095a76664413da4c8c134ee32e8a8ae900f0f1f # v2.4.0
+        uses: gradle/gradle-build-action@749f47bda3e44aa060e82d7b3ef7e40d953bd629 # v2.4.2
         with:
           arguments: :sigstore-cli:build
 
