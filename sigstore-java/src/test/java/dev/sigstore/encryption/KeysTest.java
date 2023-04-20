@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.io.Resources;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
@@ -206,6 +207,16 @@ class KeysTest {
     var base64Key =
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVqBnvab9XEVlTLW4iGKBIdrL6Sxf0x5vclZyXtR6hl79/o+RSgyr1ZQKLLCUC20imDWUgFMmfLu4UUiKNcI2uQ==";
     Assertions.assertNotNull(Keys.parsePkixPublicKey(Base64.decode(base64Key), "EC"));
+  }
+
+  @Test
+  void parsePublicKey_failOnNullSection()
+      throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
+    // This unit test is used to test the fix for a bug discovered by oss-fuzz
+    // The bug happens when a malformed byte array is passed to the method
+    // https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=57247
+    byte[] byteArray = "-----BEGIN A-----\nBBBBB-----END A".getBytes(StandardCharsets.UTF_8);
+    Assertions.assertThrows(InvalidKeySpecException.class, () -> Keys.parsePublicKey(byteArray));
   }
 
   @Test
