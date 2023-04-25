@@ -23,6 +23,8 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 
 public class Certificates {
@@ -55,9 +57,20 @@ public class Certificates {
     return fromPem(new String(cert, StandardCharsets.UTF_8));
   }
 
+  /** Convert a single der encoded cert to Certificate. */
   public static Certificate fromDer(byte[] cert) throws CertificateException {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     return cf.generateCertificate(new ByteArrayInputStream(cert));
+  }
+
+  /** Convert a lit of der encoded certs to CertPath. */
+  public static CertPath fromDer(List<byte[]> certChain) throws CertificateException {
+    List<Certificate> certificates = new ArrayList<>(certChain.size());
+    for (var cert : certChain) {
+      certificates.add(fromDer(cert));
+    }
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    return cf.generateCertPath(certificates);
   }
 
   /** Convert a CertPath to a PEM encoded certificate chain. */
@@ -115,5 +128,11 @@ public class Certificates {
   /** Convert a PEM encoded certificate chain to a {@link CertPath}. */
   public static CertPath fromPemChain(byte[] certs) throws CertificateException {
     return fromPemChain(new String(certs, StandardCharsets.UTF_8));
+  }
+
+  /** Converts a single X509Certificate to a {@link CertPath}. */
+  public static CertPath toCertPath(Certificate certificate) throws CertificateException {
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    return cf.generateCertPath(Collections.singletonList(certificate));
   }
 }

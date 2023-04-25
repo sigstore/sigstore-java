@@ -17,35 +17,42 @@ package dev.sigstore.trustroot;
 
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import java.security.cert.CertificateException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.immutables.value.Value.Immutable;
 
 @Immutable
 public interface SigstoreTrustedRoot {
 
-  List<CertificateAuthority> getCertificateAuthorities();
+  /** A list of certificate authorities associated with this trustroot. */
+  CertificateAuthorities getCAs();
 
-  List<TransparencyLog> getTLogs();
+  /** A list of binary transparency logs associated with this trustroot. */
+  TransparencyLogs getTLogs();
 
-  List<TransparencyLog> getCTLogs();
+  /** A list of certificate transparency logs associated with this trustroot. */
+  TransparencyLogs getCTLogs();
 
+  /** Create an instance from a parsed proto definition of a trustroot. */
   static SigstoreTrustedRoot from(TrustedRoot proto) throws CertificateException {
-    List<CertificateAuthority> certificateAuthorities =
-        new ArrayList<>(proto.getCertificateAuthoritiesCount());
+    var certificateAuthoritiesBuilder = ImmutableCertificateAuthorities.builder();
     for (var certAuthority : proto.getCertificateAuthoritiesList()) {
-      certificateAuthorities.add(CertificateAuthority.from(certAuthority));
+      certificateAuthoritiesBuilder.addCertificateAuthority(
+          CertificateAuthority.from(certAuthority));
     }
-    var tlogs =
-        proto.getTlogsList().stream().map(TransparencyLog::from).collect(Collectors.toList());
-    var ctlogs =
-        proto.getCtlogsList().stream().map(TransparencyLog::from).collect(Collectors.toList());
+
+    var tlogsBuilder = ImmutableTransparencyLogs.builder();
+    proto.getTlogsList().stream()
+        .map(TransparencyLog::from)
+        .forEach(tlogsBuilder::addTransparencyLog);
+
+    var ctlogsBuilder = ImmutableTransparencyLogs.builder();
+    proto.getCtlogsList().stream()
+        .map(TransparencyLog::from)
+        .forEach(ctlogsBuilder::addTransparencyLog);
 
     return ImmutableSigstoreTrustedRoot.builder()
-        .certificateAuthorities(certificateAuthorities)
-        .tLogs(tlogs)
-        .cTLogs(ctlogs)
+        .cAs(certificateAuthoritiesBuilder.build())
+        .tLogs(tlogsBuilder.build())
+        .cTLogs(ctlogsBuilder.build())
         .build();
   }
 }
