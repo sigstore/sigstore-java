@@ -16,6 +16,7 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.gargoylesoftware.htmlunit.WebClient;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
@@ -38,8 +39,8 @@ public class OidcClientFuzzer {
           Resources.toString(Resources.getResource("oidc-config.json"), Charsets.UTF_8);
       var cfg = OAuth2Config.Companion.fromJson(oauthServerConfig);
       server = new MockOAuth2Server(cfg);
-      issuer = server.issuerUrl("test-default").toString();
       server.start();
+      issuer = server.issuerUrl("test-default").toString();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -52,19 +53,21 @@ public class OidcClientFuzzer {
   }
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
-    try {
-      boolean[] choice = data.consumeBooleans(2);
-      String string = data.consumeRemainingAsString();
+    try (var webClient = new WebClient()) {
+      boolean choice1 = data.consumeBoolean();
+      boolean choice2 = data.consumeBoolean();
+      String string = data.consumeRemainingAsAsciiString();
 
       OidcClient oidcClient = null;
 
-      if (choice[0]) {
-        oidcClient = WebOidcClient.builder().setIssuer(issuer).setClientId(string).build();
+      if (choice1) {
+        oidcClient =
+            WebOidcClient.builder().setIssuer(issuer).setBrowser(webClient::getPage).build();
       } else {
         oidcClient = GithubActionsOidcClient.builder().audience(string).build();
       }
 
-      if (choice[1]) {
+      if (choice2) {
         OidcClients.of(oidcClient).getIDToken();
       } else {
         oidcClient.getIDToken();
@@ -74,3 +77,4 @@ public class OidcClientFuzzer {
     }
   }
 }
+
