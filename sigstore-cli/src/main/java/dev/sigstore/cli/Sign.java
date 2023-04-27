@@ -18,12 +18,15 @@ package dev.sigstore.cli;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.oidc.client.OidcClients;
+import dev.sigstore.oidc.client.TokenStringOidcClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "sign", description = "sign an artifacts")
@@ -35,9 +38,21 @@ public class Sign implements Callable<Integer> {
   @ArgGroup(multiplicity = "1", exclusive = true)
   SignatureFiles signatureFiles;
 
+  @Option(
+      names = {"--identity-token"},
+      description = "the OIDC identity token to use",
+      required = false)
+  String identityToken;
+
   @Override
   public Integer call() throws Exception {
-    var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
+    var signerBuilder = KeylessSigner.builder().sigstorePublicDefaults();
+    if (identityToken != null) {
+      // If we've explicitly provided an identity token, customize the signer to only use the token
+      // string OIDC client.
+      signerBuilder.oidcClients(OidcClients.of(new TokenStringOidcClient(identityToken)));
+    }
+    var signer = signerBuilder.build();
     var signingResult = signer.signFile(artifact);
     if (signatureFiles.sigAndCert != null) {
       Files.write(signatureFiles.sigAndCert.signatureFile, signingResult.getSignature());
