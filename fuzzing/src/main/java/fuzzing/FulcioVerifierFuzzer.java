@@ -16,14 +16,11 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
-import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.fulcio.client.SigningCertificate;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
@@ -38,17 +35,11 @@ public class FulcioVerifierFuzzer {
     try {
       int[] intArray = data.consumeInts(data.consumeInt(1, 10));
       byte[] byteArray = data.consumeRemainingAsBytes();
-      String string = new String(byteArray, StandardCharsets.UTF_8);
 
-      List<CertificateIdentity> ciList = new ArrayList<CertificateIdentity>();
       List<Certificate> certList = new ArrayList<Certificate>();
       List<byte[]> byteArrayList = new ArrayList<byte[]>();
 
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
-      ciList.add(
-          CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build());
-      ciList.add(
-          CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build());
       certList.add(cf.generateCertificate(new ByteArrayInputStream(byteArray)));
       certList.add(cf.generateCertificate(new ByteArrayInputStream(byteArray)));
       byteArrayList.add(byteArray);
@@ -56,10 +47,9 @@ public class FulcioVerifierFuzzer {
 
       SigningCertificate sc = SigningCertificate.from(cf.generateCertPath(certList));
       FulcioVerifier fv = FulcioVerifier.newFulcioVerifier(byteArray, byteArrayList);
-      FulcioCertificateVerifier fcv = new FulcioCertificateVerifier();
 
       for (int choice : intArray) {
-        switch (choice % 5) {
+        switch (choice % 4) {
           case 0:
             sc.getCertificates();
             break;
@@ -71,9 +61,6 @@ public class FulcioVerifierFuzzer {
             break;
           case 3:
             fv.verifyCertChain(sc);
-            break;
-          case 4:
-            fcv.verifyCertificateMatches(sc.getLeafCertificate(), ciList);
             break;
         }
       }
