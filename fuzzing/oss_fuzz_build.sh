@@ -10,6 +10,9 @@ do
   ALL_JARS="$ALL_JARS $(basename $jarfile)"
 done
 
+# Copy sample config file for fuzzer
+cp $SRC/sigstore-java/sigstore-java/src/test/resources/dev/sigstore/oidc/server/config.json $OUT/oidc-config.json
+
 # All .jar and .class files lie in the same directory as the fuzzer at runtime.
 RUNTIME_CLASSPATH=$(echo $ALL_JARS | xargs printf -- "\$this_dir/%s:"):\$this_dir
 
