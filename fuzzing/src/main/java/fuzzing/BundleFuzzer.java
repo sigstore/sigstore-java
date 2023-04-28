@@ -16,12 +16,10 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-
-import java.io.StringReader;
-
 import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.bundle.BundleParseException;
 import dev.sigstore.bundle.BundleVerifier;
+import java.io.StringReader;
 
 public class BundleFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
