@@ -18,6 +18,7 @@ dependencies {
     implementation("com.squareup.okhttp3:mockwebserver:4.9.3")
     implementation("no.nav.security:mock-oauth2-server:0.5.8")
     implementation("net.sourceforge.htmlunit:htmlunit:2.70.0")
+    implementation("commons-io:commons-io:2.11.0")
 }
 
 // copy to the fuzzing builder's output directory. This is an existing directory with

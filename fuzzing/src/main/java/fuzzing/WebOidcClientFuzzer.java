@@ -19,7 +19,6 @@ import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
@@ -28,7 +27,7 @@ import java.io.IOException;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
 
-public class OidcClientFuzzer {
+public class WebOidcClientFuzzer {
   private static MockOAuth2Server server;
   private static String issuer;
 
@@ -54,20 +53,12 @@ public class OidcClientFuzzer {
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try (var webClient = new WebClient()) {
-      boolean choice1 = data.consumeBoolean();
-      boolean choice2 = data.consumeBoolean();
-      String string = data.consumeRemainingAsAsciiString();
+      boolean choice = data.consumeBoolean();
 
-      OidcClient oidcClient = null;
+      OidcClient oidcClient =
+          WebOidcClient.builder().setIssuer(issuer).setBrowser(webClient::getPage).build();
 
-      if (choice1) {
-        oidcClient =
-            WebOidcClient.builder().setIssuer(issuer).setBrowser(webClient::getPage).build();
-      } else {
-        oidcClient = GithubActionsOidcClient.builder().audience(string).build();
-      }
-
-      if (choice2) {
+      if (choice) {
         OidcClients.of(oidcClient).getIDToken();
       } else {
         oidcClient.getIDToken();
@@ -77,4 +68,3 @@ public class OidcClientFuzzer {
     }
   }
 }
-
