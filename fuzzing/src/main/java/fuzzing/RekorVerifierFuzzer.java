@@ -32,7 +32,6 @@ public class RekorVerifierFuzzer {
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      Boolean choice = data.consumeBoolean();
       byte[] byteArray = data.consumeRemainingAsBytes();
       String string = new String(byteArray, StandardCharsets.UTF_8);
 
@@ -40,11 +39,8 @@ public class RekorVerifierFuzzer {
       RekorEntry entry = RekorResponse.newRekorResponse(uri, string).getEntry();
       RekorVerifier verifier = RekorVerifier.newRekorVerifier(byteArray);
 
-      if (choice) {
-        verifier.verifyEntry(entry);
-      } else {
-        verifier.verifyInclusionProof(entry);
-      }
+      verifier.verifyEntry(entry);
+      verifier.verifyInclusionProof(entry);
     } catch (URISyntaxException
         | InvalidKeySpecException
         | NoSuchAlgorithmException
