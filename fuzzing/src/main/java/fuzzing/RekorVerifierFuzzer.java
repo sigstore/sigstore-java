@@ -28,7 +28,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
 public class RekorVerifierFuzzer {
-  private final static String URL = "https://false.url.for.RekorTypes.fuzzing.com";
+  private static final String URL = "https://false.url.for.RekorTypes.fuzzing.com";
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
