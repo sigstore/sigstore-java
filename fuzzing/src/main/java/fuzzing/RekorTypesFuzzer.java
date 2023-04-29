@@ -24,7 +24,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 public class RekorTypesFuzzer {
-  private final static String URL = "https://false.url.for.RekorTypes.fuzzing.com";
+  private static final String URL = "https://false.url.for.RekorTypes.fuzzing.com";
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
