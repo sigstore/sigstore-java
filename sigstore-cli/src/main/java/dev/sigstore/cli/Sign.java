@@ -19,7 +19,6 @@ import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.OidcClients;
-import dev.sigstore.oidc.client.TokenStringOidcClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
