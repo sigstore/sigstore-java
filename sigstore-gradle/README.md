@@ -9,9 +9,9 @@ Signature format uses [Sigstore bundle](https://github.com/sigstore/cosign/pull/
 
 ## Requirements
 
-Java 11 (https://github.com/sigstore/sigstore-java requires Java 11)
-Gradle 7.5 (Gradle 6 could be supported once https://github.com/jsonschema2dataclass/js2d-gradle/issues/401 is released)
-Gradle configuration cache is supported.
+* Java 11 (https://github.com/sigstore/sigstore-java requires Java 11)
+* Gradle 7.5 (Gradle 6 could be supported once https://github.com/jsonschema2dataclass/js2d-gradle/issues/401 is released)
+* Gradle configuration cache is supported.
 
 ## Minimal usage
 
@@ -24,6 +24,18 @@ plugins {
 // By default, it would use GitHub Actions OIDC when available,
 // and it would resort to Web Browser OIDC otherwise.
 ```
+
+### GitHub Actions OIDC support
+
+In order for the required environment variables to be available, the workflow requires the following permissions:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+```
+
+See [GitHub documentation](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-cloud-providers#adding-permissions-settings) for details.
 
 ## Full configuration
 

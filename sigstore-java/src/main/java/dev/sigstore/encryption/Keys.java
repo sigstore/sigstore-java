@@ -74,7 +74,9 @@ public class Keys {
       throw new InvalidKeySpecException("Invalid key, could not parse PEM section");
     }
     // special handling for PKCS1 (rsa) public key
-    if ((section == null) || (section.getContent() == null)) {
+    // TODO: The length checking is not necessary after https://github.com/bcgit/bc-java/issues/1370
+    // has been merged. Remove it when bc-java is updated with the merge.
+    if ((section == null) || (section.getContent() == null) || (section.getContent().length == 0)) {
       throw new InvalidKeySpecException("Invalid key, empty PEM section");
     }
     if (section.getType().equals("RSA PUBLIC KEY")) {
@@ -109,6 +111,24 @@ public class Keys {
   }
 
   /**
+   * Takes a PKIX DER formatted public key in bytes and constructs a {@code PublicKey} with it.
+   *
+   * <p>This method is known to work with keys algorithms: RSA, EdDSA, EC.
+   *
+   * @param contents the public key bytes
+   * @param algorithm the key algorithm
+   * @return a PublicKey object
+   * @throws NoSuchAlgorithmException if we don't support the scheme provided
+   * @throws InvalidKeySpecException if the public key material is invalid
+   */
+  public static PublicKey parsePkixPublicKey(byte[] contents, String algorithm)
+      throws NoSuchAlgorithmException, InvalidKeySpecException {
+    X509EncodedKeySpec spec = new X509EncodedKeySpec(contents);
+    KeyFactory factory = KeyFactory.getInstance(algorithm);
+    return factory.generatePublic(spec);
+  }
+
+  /**
    * Valid values for scheme are:
    *
    * <ol>
@@ -127,16 +147,12 @@ public class Keys {
    */
   public static PublicKey constructTufPublicKey(byte[] contents, String scheme)
       throws NoSuchAlgorithmException, InvalidKeySpecException {
-    PublicKey publicKey = null;
     switch (scheme) {
-      case "rsassa-pss-sha256":
-        throw new RuntimeException("rsassa-pss-sha256 not currently supported");
       case "ed25519":
         {
           final KeyFactory kf = KeyFactory.getInstance("Ed25519");
           final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(contents);
-          publicKey = kf.generatePublic(keySpec);
-          break;
+          return kf.generatePublic(keySpec);
         }
       case "ecdsa-sha2-nistp256":
         {
@@ -157,11 +173,11 @@ public class Keys {
               new ECNamedCurveSpec("P-256", spec.getCurve(), spec.getG(), spec.getN());
           ECPoint point = decodePoint(params.getCurve(), contents);
           ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(point, params);
-          publicKey = kf.generatePublic(pubKeySpec);
-          break;
+          return kf.generatePublic(pubKeySpec);
         }
+      default:
+        throw new RuntimeException(scheme + " not currently supported");
     }
-    return publicKey;
   }
 
   // https://stackoverflow.com/questions/42911637/get-publickey-from-key-bytes-not-knowing-the-key-algorithm

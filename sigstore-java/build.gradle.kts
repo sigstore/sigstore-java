@@ -14,7 +14,7 @@ dependencies {
     compileOnly("org.immutables:value-annotations:2.9.3")
     annotationProcessor("org.immutables:value:2.9.3")
 
-    implementation(platform("com.google.cloud:libraries-bom:26.9.0"))
+    implementation(platform("com.google.cloud:libraries-bom:26.14.0"))
     implementation("com.google.http-client:google-http-client-apache-v2")
     implementation("com.google.http-client:google-http-client-gson")
 
@@ -46,7 +46,7 @@ dependencies {
     implementation("com.google.oauth-client:google-oauth-client-java6")
 
     testImplementation(project(":sigstore-testkit"))
-    testImplementation(platform("org.junit:junit-bom:5.9.2"))
+    testImplementation(platform("org.junit:junit-bom:5.9.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     testImplementation(platform("org.mockito:mockito-bom:5.1.1"))
@@ -56,7 +56,7 @@ dependencies {
     testImplementation("no.nav.security:mock-oauth2-server:0.5.8")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.70.0")
-    testImplementation("org.eclipse.jetty:jetty-server:11.0.14")
+    testImplementation("org.eclipse.jetty:jetty-server:11.0.15")
 }
 
 protobuf {

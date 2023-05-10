@@ -3,10 +3,8 @@ name: Conformance Tests
 on:
   push:
     branches:
-      - main
-  pull_request_target:
-    types: [labeled]
-  workflow_dispatch:
+      - '**'
+  pull_request:
 
 jobs:
   conformance:
@@ -15,12 +13,9 @@ jobs:
         java-version: [11, 17]
       fail-fast: false
 
-    permissions:
-      # Needed to access the workflow's OIDC identity.
-      id-token: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
 
       - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2 # v3.11.0
@@ -29,13 +24,13 @@ jobs:
           distribution: 'temurin'
 
       - name: Build sigstore-java
-        uses: gradle/gradle-build-action@6095a76664413da4c8c134ee32e8a8ae900f0f1f # v2.4.0
+        uses: gradle/gradle-build-action@749f47bda3e44aa060e82d7b3ef7e40d953bd629 # v2.4.2
         with:
           arguments: :sigstore-cli:build
 
       - name: Unpack sigstore-java distribution
         run: tar -xvf ${{ github.workspace }}/sigstore-cli/build/distributions/sigstore-cli-*.tar --strip-components 1
 
-      - uses: trailofbits/sigstore-conformance@0748d63c53810e36cc3f4bbe4114301080f0d844 # tag=v0.0.3
+      - uses: sigstore/sigstore-conformance@064fb32a890c30235f305281f3509c5e65e6f9e5 # tag=v0.0.4
         with:
           entrypoint: ${{ github.workspace }}/bin/sigstore-cli

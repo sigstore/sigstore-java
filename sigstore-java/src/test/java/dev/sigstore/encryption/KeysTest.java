@@ -19,10 +19,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.io.Resources;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
+import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -155,33 +157,66 @@ class KeysTest {
 
   @Test
   void parseTufPublicKey_ed25519Bad() {
-
-    try {
-      PublicKey key =
-          Keys.constructTufPublicKey(
-              Hex.decode(
-                  "302b300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
-              "ed25519");
-      fail();
-    } catch (Exception e) {
-    }
+    Assertions.assertThrows(
+        InvalidKeySpecException.class,
+        () ->
+            Keys.constructTufPublicKey(
+                Hex.decode(
+                    "302b300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
+                "ed25519"));
   }
 
   @Test
-  void parseTufPublicKey_rsa()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+  void parseTufPublicKey_rsa() throws NoSuchAlgorithmException, InvalidKeySpecException {
     // {@code step crypto keypair ed25519.pub /dev/null --kty OKP --curve Ed25519}
     // copy just the key part out of ed25519.pub removing PEM header and footer
     // {@code echo $(copied content) | base64 -d | hexdump -v -e '/1 "%02x" '}
-    try {
-      PublicKey key =
-          Keys.constructTufPublicKey(
-              Hex.decode(
-                  "302a300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
-              "rsassa-pss-sha256");
-      fail();
-    } catch (RuntimeException e) {
-    }
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () ->
+            Keys.constructTufPublicKey(
+                Hex.decode(
+                    "302a300506032b65700321008b2e369230c3b97f4627fd6a59eb054a83ec15ed929ab3d983a40ffd322a223d"),
+                "rsassa-pss-sha256"));
+  }
+
+  @Test
+  void parsePkixPublicKey_rsa() throws NoSuchAlgorithmException, InvalidKeySpecException {
+    var base64Key =
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAghWkDAnX9F5QZZ9NxIWg9vcjULtD/kkbQwlcSm22e06FrgOdiFy1fKN/Ng32qEk1ZIKyi0HFzZxzPIcvg7eaFTRb7+AQiG6eMDmUzPGr67Jp0Di2ncH9+uOZmv4PVKovvQLq7qnEwbDk0HttxUscLQ2e36Lfv/2lpGW7apVmHVMoC5kwZ3KTiAk/DUtDhD4VQjU2rBy6OneO6pm6vdNzG4Jktjc0uUKFCRRUzydGEh05PgC9vSQu/EOiU+7aQPV1ZDUGpjg9tOM0SgaTOU3YSUfGiXZNHoiS2HwLyQPaxiHR2NPVH75bwnUFBHhdMxT1rhU+yLhXaweDQW6GQ0ti8wIDAQAB";
+    Assertions.assertNotNull(Keys.parsePkixPublicKey(Base64.decode(base64Key), "RSA"));
+  }
+
+  @Test
+  void parsePkixPublicKey_rsaKeyButWrongAlgorithm() {
+    var base64Key =
+        "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAghWkDAnX9F5QZZ9NxIWg9vcjULtD/kkbQwlcSm22e06FrgOdiFy1fKN/Ng32qEk1ZIKyi0HFzZxzPIcvg7eaFTRb7+AQiG6eMDmUzPGr67Jp0Di2ncH9+uOZmv4PVKovvQLq7qnEwbDk0HttxUscLQ2e36Lfv/2lpGW7apVmHVMoC5kwZ3KTiAk/DUtDhD4VQjU2rBy6OneO6pm6vdNzG4Jktjc0uUKFCRRUzydGEh05PgC9vSQu/EOiU+7aQPV1ZDUGpjg9tOM0SgaTOU3YSUfGiXZNHoiS2HwLyQPaxiHR2NPVH75bwnUFBHhdMxT1rhU+yLhXaweDQW6GQ0ti8wIDAQAB";
+    Assertions.assertThrows(
+        InvalidKeySpecException.class,
+        () -> Keys.parsePkixPublicKey(Base64.decode(base64Key), "EC"));
+  }
+
+  @Test
+  void parsePkixPublicKey_eddsa() throws NoSuchAlgorithmException, InvalidKeySpecException {
+    var base64Key = "MCowBQYDK2VwAyEAixzZOnx34hveTZ69J5iBCkmerK5Oh7EzJqTh3YY55jI=";
+    Assertions.assertNotNull(Keys.parsePkixPublicKey(Base64.decode(base64Key), "EdDSA"));
+  }
+
+  @Test
+  void parsePkixPublicKey_ecdsa() throws NoSuchAlgorithmException, InvalidKeySpecException {
+    var base64Key =
+        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVqBnvab9XEVlTLW4iGKBIdrL6Sxf0x5vclZyXtR6hl79/o+RSgyr1ZQKLLCUC20imDWUgFMmfLu4UUiKNcI2uQ==";
+    Assertions.assertNotNull(Keys.parsePkixPublicKey(Base64.decode(base64Key), "EC"));
+  }
+
+  @Test
+  void parsePublicKey_failOnNullSection()
+      throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
+    // This unit test is used to test the fix for a bug discovered by oss-fuzz
+    // The bug happens when a malformed byte array is passed to the method
+    // https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=57247
+    byte[] byteArray = "-----BEGIN A-----\nBBBBB-----END A".getBytes(StandardCharsets.UTF_8);
+    Assertions.assertThrows(InvalidKeySpecException.class, () -> Keys.parsePublicKey(byteArray));
   }
 
   @Test

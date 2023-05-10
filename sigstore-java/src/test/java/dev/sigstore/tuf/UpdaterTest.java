@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.Hashing;
 import com.google.gson.JsonSyntaxException;
 import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
@@ -92,7 +93,7 @@ class UpdaterTest {
         new SymlinkAllowedResourceAliasChecker(symlinkAllowingHandler));
     remote.setHandler(symlinkAllowingHandler);
     remote.start();
-    remoteUrl = "http://" + connector.getHost() + ":" + connector.getLocalPort();
+    remoteUrl = "http://" + connector.getHost() + ":" + connector.getLocalPort() + "/";
     System.out.println("TUF local server listening on: " + remoteUrl);
   }
 
@@ -591,24 +592,9 @@ class UpdaterTest {
     var snapshot = updater.updateSnapshot(root, timestamp.get());
     var targets = updater.updateTargets(root, snapshot);
     updater.downloadTargets(targets);
-    assertTrue(
-        updater
-                .getLocalStore()
-                .getTargetFile(
-                    "860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt")
-            != null);
-    assertTrue(
-        updater
-                .getLocalStore()
-                .getTargetFile(
-                    "32005f02eac21b4cf161a02495330b6c14b548622b5f7e19d59ecfa622de650603ecceea39ed86cc322749a813503a72ad14ce5462c822b511eaf2f2cd2ad8f2.test.txt.v2")
-            != null);
-    assertTrue(
-        updater
-                .getLocalStore()
-                .getTargetFile(
-                    "53904bc6216230bf8da0ec42d34004a3f36764de698638641870e37d270e4fd13e1079285f8bca73c2857a279f6f7fbc82038274c3eb48ec5bb2da9b2e30491a.test2.txt")
-            != null);
+    assertTrue(updater.getLocalStore().getTargetFile("test.txt") != null);
+    assertTrue(updater.getLocalStore().getTargetFile("test.txt.v2") != null);
+    assertTrue(updater.getLocalStore().getTargetFile("test2.txt") != null);
   }
 
   // End to end sanity test on the actual prod sigstore repo.
@@ -648,9 +634,11 @@ class UpdaterTest {
     Map<String, TargetMeta.TargetData> targetsData = targets.get().getSignedMeta().getTargets();
     for (String file : targetsData.keySet()) {
       TargetMeta.TargetData fileData = targetsData.get(file);
-      byte[] fileBytes = localStore.getTargetFile(fileData.getHashes().getSha512() + "." + file);
+      byte[] fileBytes = localStore.getTargetFile(file);
       assertNotNull(fileBytes, "each file from targets data should be present");
       assertEquals(fileData.getLength(), fileBytes.length, "file length should match metadata");
+      assertEquals(
+          fileData.getHashes().getSha512(), Hashing.sha512().hashBytes(fileBytes).toString());
     }
   }
 
@@ -919,6 +907,12 @@ class UpdaterTest {
       assertEquals(
           2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
+  }
+
+  @Test
+  public void canCreateMultipleUpdaters() throws IOException {
+    createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
+    createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
   }
 
   static Key newKey(String keyContents) {
