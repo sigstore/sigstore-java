@@ -43,6 +43,9 @@ public class EcdsaVerifier implements Verifier {
   @Override
   public boolean verifyDigest(byte[] digest, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    if (digest.length > 64) {
+      throw new SignatureException("Artifact digest cannot be longer than 64 bytes for this mode");
+    }
     var verifier = Signature.getInstance("NONEwithECDSA");
     verifier.initVerify(publicKey);
     verifier.update(digest);
