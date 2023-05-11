@@ -44,7 +44,7 @@ public class EcdsaSigner implements Signer {
   public byte[] signDigest(byte[] artifactDigest)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
     if (artifactDigest.length > 64) {
-      throw new SignatureExeption("Artifact digest cannot be longer than 64 bytes for this mode");
+      throw new SignatureException("Artifact digest cannot be longer than 64 bytes for this mode");
     }
     Signature signature = Signature.getInstance("NONEwithECDSA");
     signature.initSign(keyPair.getPrivate());
