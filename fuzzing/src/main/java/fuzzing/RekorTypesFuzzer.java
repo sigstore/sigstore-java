@@ -17,6 +17,7 @@ package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import dev.sigstore.rekor.client.RekorEntry;
+import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
@@ -34,7 +35,7 @@ public class RekorTypesFuzzer {
       RekorEntry entry = RekorResponse.newRekorResponse(uri, string).getEntry();
 
       RekorTypes.getHashedRekord(entry);
-    } catch (URISyntaxException | RekorTypeException e) {
+    } catch (URISyntaxException | RekorTypeException | RekorParseException e) {
       // Known exception
     }
   }

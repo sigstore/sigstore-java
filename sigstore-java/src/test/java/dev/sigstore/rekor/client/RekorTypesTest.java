@@ -16,16 +16,14 @@
 package dev.sigstore.rekor.client;
 
 import com.google.common.io.Resources;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class RekorTypesTest {
 
-  private RekorEntry fromResource(String path) throws IOException, URISyntaxException {
+  private RekorEntry fromResource(String path) throws Exception {
     var rekorResponse = Resources.toString(Resources.getResource(path), StandardCharsets.UTF_8);
 
     return RekorResponse.newRekorResponse(new URI("https://not.used.com"), rekorResponse)

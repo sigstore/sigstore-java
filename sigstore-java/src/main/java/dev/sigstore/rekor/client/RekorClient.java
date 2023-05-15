@@ -73,7 +73,8 @@ public class RekorClient {
    * @param hashedRekordRequest the request to send to rekor
    * @return a {@link RekorResponse} with information about the log entry
    */
-  public RekorResponse putEntry(HashedRekordRequest hashedRekordRequest) throws IOException {
+  public RekorResponse putEntry(HashedRekordRequest hashedRekordRequest)
+      throws IOException, RekorParseException {
     URI rekorPutEndpoint = serverUrl.resolve(REKOR_ENTRIES_PATH);
 
     HttpRequest req =
@@ -100,11 +101,12 @@ public class RekorClient {
     return RekorResponse.newRekorResponse(rekorEntryUri, entry);
   }
 
-  public Optional<RekorEntry> getEntry(HashedRekordRequest hashedRekordRequest) throws IOException {
+  public Optional<RekorEntry> getEntry(HashedRekordRequest hashedRekordRequest)
+      throws IOException, RekorParseException {
     return getEntry(hashedRekordRequest.computeUUID());
   }
 
-  public Optional<RekorEntry> getEntry(String UUID) throws IOException {
+  public Optional<RekorEntry> getEntry(String UUID) throws IOException, RekorParseException {
     URI getEntryURI = serverUrl.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
     HttpRequest req =
         HttpClients.newRequestFactory(httpParams).buildGetRequest(new GenericUrl(getEntryURI));

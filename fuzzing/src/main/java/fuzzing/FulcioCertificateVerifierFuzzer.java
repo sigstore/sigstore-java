@@ -41,7 +41,7 @@ public class FulcioCertificateVerifierFuzzer {
 
     try {
       FulcioCertificateVerifier verifier = new FulcioCertificateVerifier();
-      List list =
+      List<CertificateIdentity> list =
           List.of(
               CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build(),
               CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build());

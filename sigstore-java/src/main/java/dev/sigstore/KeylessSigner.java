@@ -250,7 +250,8 @@ public class KeylessSigner implements AutoCloseable {
   public List<KeylessSignature> sign(List<byte[]> artifactDigests)
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, CertificateException, IOException,
-          FulcioVerificationException, RekorVerificationException, InterruptedException {
+          FulcioVerificationException, RekorVerificationException, InterruptedException,
+          RekorParseException {
 
     if (artifactDigests.size() == 0) {
       throw new IllegalArgumentException("Require one or more digests");
@@ -349,7 +350,7 @@ public class KeylessSigner implements AutoCloseable {
   public KeylessSignature sign(byte[] artifactDigest)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException {
+          OidcException, InvalidKeyException, InterruptedException, RekorParseException {
     return sign(List.of(artifactDigest)).get(0);
   }
 
@@ -363,7 +364,7 @@ public class KeylessSigner implements AutoCloseable {
   public Map<Path, KeylessSignature> signFiles(List<Path> artifacts)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException {
+          OidcException, InvalidKeyException, InterruptedException, RekorParseException {
     if (artifacts.size() == 0) {
       throw new IllegalArgumentException("Require one or more paths");
     }
@@ -390,7 +391,7 @@ public class KeylessSigner implements AutoCloseable {
   public KeylessSignature signFile(Path artifact)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException {
+          OidcException, InvalidKeyException, InterruptedException, RekorParseException {
     return signFiles(List.of(artifact)).get(artifact);
   }
 }

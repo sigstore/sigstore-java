@@ -280,8 +280,8 @@ public class KeylessVerifier {
       if (rekorEntry.isEmpty()) {
         throw new KeylessVerificationException("Rekor entry was not found");
       }
-    } catch (IOException ioe) {
-      throw new KeylessVerificationException("Could not retreive rekor entry", ioe);
+    } catch (IOException | RekorParseException e) {
+      throw new KeylessVerificationException("Could not retrieve rekor entry", e);
     }
     return rekorEntry.get();
   }

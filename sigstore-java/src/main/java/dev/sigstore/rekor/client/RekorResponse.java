@@ -51,12 +51,17 @@ public interface RekorResponse {
    * @param entryLocation the entry location from the http headers
    * @param rawResponse the body of the rekor response as a string
    * @return an immutable {@link RekorResponse} instance
+   * @throws RekorParseException if the rawResponse doesn't parse directly to a single rekor entry
    */
-  static RekorResponse newRekorResponse(URI entryLocation, String rawResponse) {
+  static RekorResponse newRekorResponse(URI entryLocation, String rawResponse)
+      throws RekorParseException {
     var type = new TypeToken<Map<String, RekorEntry>>() {}.getType();
     Map<String, RekorEntry> entryMap = GSON.get().fromJson(rawResponse, type);
+    if (entryMap == null) {
+      throw new RekorParseException("Expecting a single rekor entry in response but found none");
+    }
     if (entryMap.size() != 1) {
-      throw new IllegalArgumentException(
+      throw new RekorParseException(
           "Expecting a single rekor entry in response but found: " + entryMap.size());
     }
     var entry = entryMap.entrySet().iterator().next();
