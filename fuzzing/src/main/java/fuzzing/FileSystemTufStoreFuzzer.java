@@ -20,7 +20,6 @@ import dev.sigstore.tuf.FileSystemTufStore;
 import dev.sigstore.tuf.MutableTufStore;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.apache.commons.io.FileUtils;
@@ -50,8 +49,8 @@ public class FileSystemTufStoreFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
       int[] intArray = data.consumeInts(data.consumeInt(1, 10));
+      String string = data.consumeString(data.consumeInt(1, 10));
       byte[] byteArray = data.consumeRemainingAsBytes();
-      String string = new String(byteArray, StandardCharsets.UTF_8);
 
       for (int choice : intArray) {
         switch (choice % 7) {
