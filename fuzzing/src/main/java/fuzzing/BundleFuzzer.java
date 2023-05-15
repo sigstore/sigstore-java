@@ -32,8 +32,8 @@ public class BundleFuzzer {
       } else {
         BundleVerifier.findMissingFields(string);
       }
-    } catch (BundleParseException e) {
-    } catch (IllegalArgumentException e) {
+    } catch (BundleParseException | IllegalArgumentException e) {
+      // Known exception
     }
   }
 }
