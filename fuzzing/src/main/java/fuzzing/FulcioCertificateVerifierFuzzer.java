@@ -21,29 +21,33 @@ import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
 public class FulcioCertificateVerifierFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
+    byte[] byteArray = data.consumeRemainingAsBytes();
+    String string = new String(byteArray, Charset.defaultCharset());
+
+    X509Certificate certificate;
     try {
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
+      certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray));
+    } catch (Exception e) {
+      // Skipping this iteration if exceptions thrown during certificate creation
+      return;
+    }
 
-      byte[] byteArray = data.consumeRemainingAsBytes();
-      String string = new String(byteArray, Charset.defaultCharset());
-
+    try {
       FulcioCertificateVerifier verifier = new FulcioCertificateVerifier();
-      X509Certificate certificate =
-          (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(byteArray));
       List list =
           List.of(
               CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build(),
               CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build());
 
       verifier.verifyCertificateMatches(certificate, list);
-    } catch (CertificateException | FulcioVerificationException e) {
+    } catch (FulcioVerificationException e) {
       // Known exception
     }
   }
