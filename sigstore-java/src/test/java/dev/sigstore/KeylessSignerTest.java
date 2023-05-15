@@ -16,21 +16,10 @@
 package dev.sigstore;
 
 import com.google.common.hash.Hashing;
-import dev.sigstore.fulcio.client.FulcioVerificationException;
-import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
-import dev.sigstore.oidc.client.OidcException;
-import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.testing.matchers.ByteArrayListMatcher;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.cert.CertificateException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,11 +44,7 @@ public class KeylessSignerTest {
   public static KeylessSigner signer;
 
   @BeforeAll
-  public static void setup()
-      throws IOException, InvalidAlgorithmParameterException, CertificateException,
-          InvalidKeySpecException, NoSuchAlgorithmException, FulcioVerificationException,
-          RekorVerificationException, UnsupportedAlgorithmException, SignatureException,
-          OidcException, InvalidKeyException, InterruptedException {
+  public static void setup() throws Exception {
     artifactHashes = new ArrayList<>();
     artifacts = new ArrayList<>();
     signingResults = new ArrayList<>();

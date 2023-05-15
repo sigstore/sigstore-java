@@ -17,6 +17,7 @@ package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import dev.sigstore.rekor.client.RekorEntry;
+import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
@@ -45,6 +46,7 @@ public class RekorVerifierFuzzer {
         | InvalidKeySpecException
         | NoSuchAlgorithmException
         | IOException
+        | RekorParseException
         | RekorVerificationException e) {
       // Known exception
     }

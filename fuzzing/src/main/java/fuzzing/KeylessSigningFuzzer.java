@@ -21,6 +21,7 @@ import dev.sigstore.KeylessSigner;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
 import dev.sigstore.oidc.client.OidcException;
+import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -51,7 +52,8 @@ public class KeylessSigningFuzzer {
         | RekorVerificationException
         | OidcException
         | UnsupportedAlgorithmException
-        | FulcioVerificationException e) {
+        | FulcioVerificationException
+        | RekorParseException e) {
       // known exceptions
     }
   }
