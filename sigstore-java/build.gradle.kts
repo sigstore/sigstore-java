@@ -14,7 +14,7 @@ dependencies {
     compileOnly("org.immutables:value-annotations:2.9.3")
     annotationProcessor("org.immutables:value:2.9.3")
 
-    implementation(platform("com.google.cloud:libraries-bom:26.9.0"))
+    implementation(platform("com.google.cloud:libraries-bom:26.14.0"))
     implementation("com.google.http-client:google-http-client-apache-v2")
     implementation("com.google.http-client:google-http-client-gson")
 
@@ -37,8 +37,8 @@ dependencies {
 
     implementation("commons-codec:commons-codec:1.15")
     implementation("com.google.code.gson:gson:2.10.1")
-    implementation("org.bouncycastle:bcutil-jdk18on:1.72")
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.72")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.73")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.73")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.34.1"))
     implementation("com.google.oauth-client:google-oauth-client")
@@ -46,7 +46,7 @@ dependencies {
     implementation("com.google.oauth-client:google-oauth-client-java6")
 
     testImplementation(project(":sigstore-testkit"))
-    testImplementation(platform("org.junit:junit-bom:5.9.2"))
+    testImplementation(platform("org.junit:junit-bom:5.9.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     testImplementation(platform("org.mockito:mockito-bom:5.1.1"))
