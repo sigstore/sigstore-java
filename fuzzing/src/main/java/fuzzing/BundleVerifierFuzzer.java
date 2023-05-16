@@ -16,23 +16,14 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import dev.sigstore.bundle.BundleFactory;
-import dev.sigstore.bundle.BundleParseException;
 import dev.sigstore.bundle.BundleVerifier;
-import java.io.StringReader;
 
-public class BundleFuzzer {
+public class BundleVerifierFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      Boolean choice = data.consumeBoolean();
       String string = data.consumeRemainingAsString();
-
-      if (choice) {
-        BundleFactory.createBundle(BundleFactory.readBundle(new StringReader(string)));
-      } else {
-        BundleVerifier.findMissingFields(string);
-      }
-    } catch (BundleParseException | IllegalArgumentException e) {
+      BundleVerifier.findMissingFields(string);
+    } catch (IllegalArgumentException e) {
       // Known exception
     }
   }
