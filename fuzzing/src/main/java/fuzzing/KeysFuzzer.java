@@ -36,6 +36,10 @@ public class KeysFuzzer {
       }
     } catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e) {
       // known exceptions
+    } catch (RuntimeException e) {
+      if (!e.toString().contains("not currently supported")) {
+        throw e;
+      }
     }
   }
 }
