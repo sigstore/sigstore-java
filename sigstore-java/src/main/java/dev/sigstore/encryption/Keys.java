@@ -135,6 +135,9 @@ public class Keys {
    */
   public static PublicKey constructTufPublicKey(byte[] contents, String scheme)
       throws NoSuchAlgorithmException, InvalidKeySpecException {
+    if (contents == null || contents.length == 0) {
+      throw new InvalidKeySpecException("key contents was empty");
+    }
     switch (scheme) {
       case "ed25519":
         {
@@ -172,11 +175,15 @@ public class Keys {
 
           // code below just creates the public key from key contents using the curve parameters
           // (spec variable)
-          ECNamedCurveSpec params =
-              new ECNamedCurveSpec("P-256", spec.getCurve(), spec.getG(), spec.getN());
-          ECPoint point = decodePoint(params.getCurve(), contents);
-          ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(point, params);
-          return kf.generatePublic(pubKeySpec);
+          try {
+            ECNamedCurveSpec params =
+                new ECNamedCurveSpec("P-256", spec.getCurve(), spec.getG(), spec.getN());
+            ECPoint point = decodePoint(params.getCurve(), contents);
+            ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(point, params);
+            return kf.generatePublic(pubKeySpec);
+          } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new InvalidKeySpecException("ecdsa key was not parseable", ex);
+          }
         }
       default:
         throw new RuntimeException(scheme + " not currently supported");
