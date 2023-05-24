@@ -87,10 +87,10 @@ try {
           .keylessSignature(keylessSignature)
           .verificationOptions(verificationOptions)
           .build());
+  // verification passed!
 } catch (KeylessVerificationException e) {
   // verification failed
 }
-// verification passed!
 ```
 
 ### Exploring the API
