@@ -21,25 +21,14 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
-public class KeysFuzzer {
+public class KeysParsingFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      String[] schemes = {"rsassa-pss-sha256", "ed25519", "ecdsa-sha2-nistp256"};
-      String scheme = data.pickValue(schemes);
-      Boolean choice = data.consumeBoolean();
       byte[] byteArray = data.consumeRemainingAsBytes();
 
-      if (choice) {
-        Keys.parsePublicKey(byteArray);
-      } else {
-        Keys.constructTufPublicKey(byteArray, scheme);
-      }
+      Keys.parsePublicKey(byteArray);
     } catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e) {
       // known exceptions
-    } catch (RuntimeException e) {
-      if (!e.toString().contains("not currently supported")) {
-        throw e;
-      }
     }
   }
 }
