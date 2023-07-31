@@ -6,11 +6,9 @@ plugins {
     `embedded-kotlin` apply false
 }
 
-val buildVersion = "${findProperty("version")}${releaseParams.snapshotSuffix}"
+version = "${findProperty("version")}${releaseParams.snapshotSuffix}"
 
-println("Building Sigstore Java $buildVersion")
-
-val isReleaseVersion = rootProject.releaseParams.release.get()
+println("Building Sigstore Java $version")
 
 releaseParams {
     tlp.set("sigstore-java")
@@ -33,5 +31,5 @@ releaseParams {
 }
 
 allprojects {
-    version = project.findProperty("version") as? String ?: rootProject.version
+    version = rootProject.version
 }
