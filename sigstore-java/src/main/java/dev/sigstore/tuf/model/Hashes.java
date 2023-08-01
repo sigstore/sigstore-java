@@ -24,11 +24,11 @@ import org.immutables.value.Value;
 @Value.Immutable
 public interface Hashes {
 
-  @Nullable
   /** SHA_256 hash of the thing. * */
+  @Nullable
   String getSha256();
 
-  @Nullable
   /** SHA_512 hash of the thing. * */
+  @Nullable
   String getSha512();
 }
