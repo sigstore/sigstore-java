@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
+import com.google.gson.JsonSyntaxException;
 import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.tuf.model.*;
@@ -106,7 +107,12 @@ public class Updater {
     if (localRoot.isPresent()) {
       trustedRoot = localRoot.get();
     } else {
-      trustedRoot = GSON.get().fromJson(Files.readString(trustedRootPath), Root.class);
+      String trustedRootJson = Files.readString(trustedRootPath);
+      try {
+        trustedRoot = GSON.get().fromJson(trustedRootJson, Root.class);
+      } catch (JsonSyntaxException e) {
+        throw new MetadataFileParseException(trustedRootPath, e);
+      }
     }
     int baseVersion = trustedRoot.getSignedMeta().getVersion();
     int nextVersion = baseVersion + 1;

@@ -17,6 +17,8 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonSyntaxException;
 import dev.sigstore.rekor.HashedRekord;
 
 /** Parser for the body.spec element of {@link RekorEntry}. */
@@ -29,16 +31,22 @@ public class RekorTypes {
    * @return the parsed pojo
    * @throws RekorTypeException if the kind != hashedrekord or apiVersion != 0.0.1
    */
-  public static HashedRekord getHashedRekord(RekorEntry entry) throws RekorTypeException {
-    expect(entry, "hashedrekord", "0.0.1");
+  public static HashedRekord getHashedRekord(RekorEntry entry) throws RekorTypeException, RekorParseException {
+    RekorEntryBody bodyDecoded = entry.getBodyDecoded();
+    expect(bodyDecoded, "hashedrekord", "0.0.1");
 
-    return GSON.get().fromJson(entry.getBodyDecoded().getSpec(), HashedRekord.class);
+    JsonElement spec = bodyDecoded.getSpec();
+    try {
+      return GSON.get().fromJson(spec, HashedRekord.class);
+    } catch (JsonSyntaxException e) {
+      throw new RekorParseException("Unable to parse spec as HashedRecord " + spec, e);
+    }
   }
 
-  private static void expect(RekorEntry entry, String expectedKind, String expectedApiVersion)
+  private static void expect(RekorEntryBody bodyDecoded, String expectedKind, String expectedApiVersion)
       throws RekorTypeException {
-    var kind = entry.getBodyDecoded().getKind();
-    var apiVersion = entry.getBodyDecoded().getApiVersion();
+    var kind = bodyDecoded.getKind();
+    var apiVersion = bodyDecoded.getApiVersion();
     if (!(kind.equals(expectedKind) && apiVersion.equals(expectedApiVersion))) {
       throw new RekorTypeException(
           "Expecting type "

@@ -17,6 +17,10 @@ package dev.sigstore.tuf;
 
 /** Catch-all TUF Exception. */
 public class TufException extends RuntimeException {
+  public TufException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
   public TufException(String message) {
     super(message);
   }

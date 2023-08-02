@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Sigstore Authors.
+ * Copyright 2022 The Sigstore Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.rekor.client;
+package dev.sigstore.tuf;
 
-public class RekorParseException extends Exception {
-  public RekorParseException(String message) {
-    super(message);
+import java.nio.file.Path;
+import java.util.Locale;
+
+/** Thrown when the metadata has not been signed by enough of the allowed keys. */
+public class MetadataFileParseException extends TufException {
+  private final Path path;
+
+  public MetadataFileParseException(Path path, Throwable cause) {
+    super(
+        String.format(
+            Locale.ROOT,
+            "Unable to parse TUF metadata file %s",
+            path),
+        cause);
+    this.path = path;
   }
 
-  public RekorParseException(String message, Throwable cause) {
-    super(message, cause);
+  public Path getPath() {
+    return path;
   }
 }

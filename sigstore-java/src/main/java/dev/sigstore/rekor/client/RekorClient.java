@@ -18,6 +18,7 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.api.client.http.*;
+import com.google.gson.JsonSyntaxException;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
@@ -132,7 +133,7 @@ public class RekorClient {
    */
   public List<String> searchEntry(
       String email, String hash, String publicKeyFormat, String publicKeyContent)
-      throws IOException {
+      throws IOException, RekorParseException {
     URI rekorSearchEndpoint = serverUrl.resolve(REKOR_INDEX_SEARCH_PATH);
 
     HashMap<String, Object> publicKeyParams = null;
@@ -155,6 +156,11 @@ public class RekorClient {
     req.getHeaders().set("Accept", "application/json");
     req.getHeaders().set("Content-Type", "application/json");
     var response = req.execute();
-    return Arrays.asList(GSON.get().fromJson(response.parseAsString(), String[].class));
+    String responseJson = response.parseAsString();
+    try {
+      return Arrays.asList(GSON.get().fromJson(responseJson, String[].class));
+    } catch (JsonSyntaxException e) {
+      throw new RekorParseException("Unable to parse output of " + REKOR_INDEX_SEARCH_PATH + ": " + responseJson, e);
+    }
   }
 }

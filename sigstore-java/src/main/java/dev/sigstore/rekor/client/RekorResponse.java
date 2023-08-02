@@ -17,7 +17,8 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
-import com.google.common.reflect.TypeToken;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import java.net.URI;
 import java.util.Map;
 import org.immutables.value.Value;
@@ -55,8 +56,12 @@ public interface RekorResponse {
    */
   static RekorResponse newRekorResponse(URI entryLocation, String rawResponse)
       throws RekorParseException {
-    var type = new TypeToken<Map<String, RekorEntry>>() {}.getType();
-    Map<String, RekorEntry> entryMap = GSON.get().fromJson(rawResponse, type);
+    Map<String, RekorEntry> entryMap;
+    try {
+      entryMap = GSON.get().fromJson(rawResponse, new TypeToken<>() {});
+    } catch (JsonSyntaxException e) {
+      throw new RekorParseException("Unable to parse rekor response " + rawResponse, e);
+    }
     if (entryMap == null) {
       throw new RekorParseException("Expecting a single rekor entry in response but found none");
     }

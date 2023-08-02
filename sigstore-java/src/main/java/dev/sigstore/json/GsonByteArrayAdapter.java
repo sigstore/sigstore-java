@@ -27,7 +27,7 @@ import java.util.Base64;
 class GsonByteArrayAdapter extends TypeAdapter<byte[]> {
   @Override
   public void write(JsonWriter out, byte[] value) throws IOException {
-    out.value(new String(Base64.getEncoder().encodeToString(value)));
+    out.value(Base64.getEncoder().encodeToString(value));
   }
 
   @Override

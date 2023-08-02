@@ -18,6 +18,7 @@ package dev.sigstore;
 import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
@@ -92,7 +93,7 @@ public class KeylessTest {
   }
 
   private void verifySigningResult(List<KeylessSignature> results)
-      throws IOException, RekorTypeException {
+      throws IOException, RekorTypeException, RekorParseException {
 
     Assertions.assertEquals(artifactDigests.size(), results.size());
 

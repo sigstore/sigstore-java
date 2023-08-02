@@ -20,6 +20,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.util.*;
+import com.google.gson.JsonSyntaxException;
 import org.erdtman.jcs.JsonCanonicalizer;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
@@ -76,9 +77,19 @@ public interface RekorEntry {
    * process.
    */
   @Value.Derived
-  default RekorEntryBody getBodyDecoded() {
-    return GSON.get()
-        .fromJson(new String(Base64.getDecoder().decode(getBody()), UTF_8), RekorEntryBody.class);
+  default RekorEntryBody getBodyDecoded() throws RekorParseException {
+    byte[] rawBody;
+    try {
+      rawBody = Base64.getDecoder().decode(getBody());
+    } catch (IllegalArgumentException e) {
+      throw new RekorParseException("Unable to parse base64 body " + getBody(), e);
+    }
+    String json = new String(rawBody, UTF_8);
+    try {
+      return GSON.get().fromJson(json, RekorEntryBody.class);
+    } catch (JsonSyntaxException e) {
+      throw new RekorParseException("Unable to parse json as RekorEntryBody " + json, e);
+    }
   }
 
   /** Returns canonicalized json representing the signable contents of a rekor entry. */

@@ -18,6 +18,7 @@ package dev.sigstore.tuf;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.gson.JsonSyntaxException;
 import dev.sigstore.tuf.model.*;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -109,7 +110,12 @@ public class FileSystemTufStore implements MutableTufStore {
     if (!roleFile.toFile().exists()) {
       return Optional.empty();
     }
-    return Optional.of(GSON.get().fromJson(Files.readString(roleFile), tClass));
+    String roleJsonString = Files.readString(roleFile);
+    try {
+      return Optional.of(GSON.get().fromJson(roleJsonString, tClass));
+    } catch (JsonSyntaxException e) {
+      throw new MetadataFileParseException(roleFile, e);
+    }
   }
 
   <T extends SignedTufMeta<?>> void storeRole(T role) throws IOException {

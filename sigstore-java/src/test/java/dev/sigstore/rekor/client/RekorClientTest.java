@@ -76,7 +76,7 @@ public class RekorClientTest {
   // TODO(patrick@chainguard.dev): don't use data from prod, create the data as part of the test
   // setup in staging.
   @Test
-  public void searchEntries_nullParams() throws IOException {
+  public void searchEntries_nullParams() throws IOException, RekorParseException {
     assertEquals(ImmutableList.of(), client.searchEntry(null, null, null, null));
   }
 
@@ -122,7 +122,7 @@ public class RekorClientTest {
   }
 
   @Test
-  public void searchEntries_zeroResults() throws IOException {
+  public void searchEntries_zeroResults() throws IOException, RekorParseException {
     assertTrue(
         client
             .searchEntry(
