@@ -19,4 +19,8 @@ public class RekorParseException extends Exception {
   public RekorParseException(String message) {
     super(message);
   }
+
+  public RekorParseException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }
