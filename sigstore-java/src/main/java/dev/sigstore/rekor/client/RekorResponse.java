@@ -54,13 +54,16 @@ public interface RekorResponse {
    * @return an immutable {@link RekorResponse} instance
    * @throws RekorParseException if the rawResponse doesn't parse directly to a single rekor entry
    */
-  public static RekorResponse newRekorResponse(URI entryLocation, String rawResponse)
+  static RekorResponse newRekorResponse(URI entryLocation, String rawResponse)
       throws RekorParseException {
     var type = new TypeToken<Map<String, RekorEntry>>() {}.getType();
     Map<String, RekorEntry> entryMap;
     try {
       entryMap = GSON.get().fromJson(rawResponse, type);
-    } catch (JsonSyntaxException | NullPointerException | StringIndexOutOfBoundsException ex) {
+    } catch (JsonSyntaxException
+        | NullPointerException
+        | NumberFormatException
+        | StringIndexOutOfBoundsException ex) {
       throw new RekorParseException("Rekor entry json could not be parsed: " + rawResponse, ex);
     }
     if (entryMap == null) {
@@ -71,6 +74,10 @@ public interface RekorResponse {
           "Expecting a single rekor entry in response but found: " + entryMap.size());
     }
     var entry = entryMap.entrySet().iterator().next();
+    if (entry == null || entry.getKey() == null || entry.getValue() == null) {
+      throw new RekorParseException(
+          "Expecting single rekor entry but found an invalid entry: " + rawResponse);
+    }
     return ImmutableRekorResponse.builder()
         .entryLocation(entryLocation)
         .raw(rawResponse)
