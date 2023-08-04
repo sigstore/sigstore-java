@@ -158,6 +158,9 @@ class BundleFactoryInternal {
     }
     Bundle bundle = bundleBuilder.build();
 
+    if (bundle.getVerificationMaterial().getTlogEntriesCount() == 0) {
+      throw new BundleParseException("Could not find any tlog entries in bundle json");
+    }
     var bundleEntry = bundle.getVerificationMaterial().getTlogEntries(0);
     var bundleInclusionProof = bundleEntry.getInclusionProof();
 
