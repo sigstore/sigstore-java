@@ -22,12 +22,22 @@ import java.util.Optional;
 import org.immutables.value.Value.Immutable;
 
 @Immutable
-public interface ValidFor {
-  Instant getStart();
+public abstract class ValidFor {
+  public abstract Instant getStart();
 
-  Optional<Instant> getEnd();
+  public abstract Optional<Instant> getEnd();
 
-  static ValidFor from(TimeRange proto) {
+  public boolean contains(Instant instant) {
+    if (!getStart().isBefore(instant)) {
+      return false;
+    }
+    if (getEnd().isEmpty() || getEnd().get().isAfter(instant)) {
+      return true;
+    }
+    return false;
+  }
+
+  public static ValidFor from(TimeRange proto) {
     return ImmutableValidFor.builder()
         .start(ProtoMutators.toInstant(proto.getStart()))
         .end(

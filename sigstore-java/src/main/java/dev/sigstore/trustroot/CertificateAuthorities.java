@@ -63,7 +63,7 @@ public abstract class CertificateAuthorities {
   public CertificateAuthority current() {
     var current =
         getCertificateAuthorities().stream()
-            .filter(ca -> ca.getValidFor().getEnd().isEmpty())
+            .filter(CertificateAuthority::isCurrent)
             .collect(Collectors.toList());
     if (current.size() == 0) {
       throw new IllegalStateException("Trust root contains no current certificate authorities");

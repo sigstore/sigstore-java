@@ -19,20 +19,25 @@ import dev.sigstore.proto.ProtoMutators;
 import java.net.URI;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
+import java.time.Instant;
 import org.immutables.value.Value.Immutable;
 
 @Immutable
-public interface CertificateAuthority {
-  CertPath getCertPath();
+public abstract class CertificateAuthority {
+  public abstract CertPath getCertPath();
 
-  URI getUri();
+  public abstract URI getUri();
 
-  ValidFor getValidFor();
+  public abstract ValidFor getValidFor();
 
-  Subject getSubject();
+  public abstract Subject getSubject();
 
-  static CertificateAuthority from(dev.sigstore.proto.trustroot.v1.CertificateAuthority proto)
-      throws CertificateException {
+  public boolean isCurrent() {
+    return getValidFor().contains(Instant.now());
+  }
+
+  public static CertificateAuthority from(
+      dev.sigstore.proto.trustroot.v1.CertificateAuthority proto) throws CertificateException {
     return ImmutableCertificateAuthority.builder()
         .certPath(ProtoMutators.toCertPath(proto.getCertChain().getCertificatesList()))
         .validFor(ValidFor.from(proto.getValidFor()))
