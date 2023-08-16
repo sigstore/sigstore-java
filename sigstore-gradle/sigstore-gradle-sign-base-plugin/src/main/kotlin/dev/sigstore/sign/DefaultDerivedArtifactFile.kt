@@ -23,12 +23,22 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.publish.internal.PublicationInternal
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.internal.Factory
 import java.io.File
 
 internal class DefaultDerivedArtifactFile(
     val task: TaskProvider<DefaultTask>,
     val fileProvider: Provider<RegularFile>,
-) : PublicationInternal.DerivedArtifact {
+) : PublicationInternal.DerivedArtifact, Factory<File> {
+
+    // Gradle expects create(): Object method as well, otherwise it throws the following error.
+    // We workaround it by adding "implements Factory<File>", so Java bytecode has a bridge method
+    //     Caused by: java.lang.AbstractMethodError: Receiver class dev.sigstore.sign.DefaultDerivedArtifactFile does not define or inherit an implementation of the resolved method 'abstract java.lang.Object create()' of interface org.gradle.internal.Factory.
+    //        at org.gradle.api.publish.maven.internal.artifact.DerivedMavenArtifact.getFile(DerivedMavenArtifact.java:37)
+    //        at dev.sigstore.sign.SigstoreSignExtension$sign$3.execute(SigstoreSignExtension.kt:84)
+    //        at dev.sigstore.sign.SigstoreSignExtension$sign$3.execute(SigstoreSignExtension.kt:82)
+    //        at org.gradle.internal.Actions$FilteredAction.execute(Actions.java:243)
+    //        at org.gradle.internal.ImmutableActionSet$SingletonSet.execute(ImmutableAction
     override fun create(): File =
         fileProvider.get().asFile
 

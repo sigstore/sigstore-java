@@ -15,18 +15,15 @@ dependencies {
     testImplementation(project(":sigstore-testkit"))
 }
 
-pluginBundle {
-    website = "https://github.com/sigstore/sigstore-java"
-    vcsUrl = "https://github.com/sigstore/sigstore-java.git"
-    tags = listOf("sigstore", "sign")
-}
-
 gradlePlugin {
+    website.set("https://github.com/sigstore/sigstore-java")
+    vcsUrl.set("https://github.com/sigstore/sigstore-java.git")
     plugins {
         named("dev.sigstore.sign-base") {
             displayName = "Base tasks and configurations for signing artifacts via Sigstore"
             description = "The plugin provides tasks and configurations so you can wire your own Sigstore signing. " +
                 "If you want sign everything with standard configuration, then consider dev.sigstore.sign plugin instead"
+            tags.set(listOf("sigstore", "sign"))
         }
     }
 }
