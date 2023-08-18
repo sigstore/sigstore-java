@@ -19,7 +19,7 @@ import dev.sigstore.proto.common.v1.DistinguishedName;
 import org.immutables.value.Value.Immutable;
 
 @Immutable
-interface Subject {
+public interface Subject {
   String getOrganization();
 
   String getCommonName();

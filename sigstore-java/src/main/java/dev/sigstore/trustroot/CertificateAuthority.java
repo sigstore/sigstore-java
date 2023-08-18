@@ -17,10 +17,16 @@ package dev.sigstore.trustroot;
 
 import dev.sigstore.proto.ProtoMutators;
 import java.net.URI;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
+import java.security.cert.PKIXParameters;
+import java.security.cert.TrustAnchor;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.Collections;
 import org.immutables.value.Value.Immutable;
+import org.immutables.value.Value.Lazy;
 
 @Immutable
 public abstract class CertificateAuthority {
@@ -34,6 +40,19 @@ public abstract class CertificateAuthority {
 
   public boolean isCurrent() {
     return getValidFor().contains(Instant.now());
+  }
+
+  @Lazy
+  public TrustAnchor asTrustAnchor()
+      throws CertificateException, InvalidAlgorithmParameterException {
+    var certs = getCertPath().getCertificates();
+    X509Certificate fulcioRootObj = (X509Certificate) certs.get(certs.size() - 1);
+    TrustAnchor fulcioRootTrustAnchor = new TrustAnchor(fulcioRootObj, null);
+
+    // validate the certificate can be a trust anchor
+    new PKIXParameters(Collections.singleton(fulcioRootTrustAnchor));
+
+    return fulcioRootTrustAnchor;
   }
 
   public static CertificateAuthority from(

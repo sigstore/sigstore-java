@@ -17,6 +17,7 @@ package dev.sigstore.trustroot;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -26,7 +27,7 @@ import org.immutables.value.Value.Immutable;
 
 @Immutable
 @Value.Style(depluralize = true)
-public abstract class TransparencyLogs {
+public abstract class TransparencyLogs implements Iterable<TransparencyLog> {
 
   public abstract List<TransparencyLog> getTransparencyLogs();
 
@@ -63,5 +64,10 @@ public abstract class TransparencyLogs {
             tl ->
                 tl.getPublicKey().getValidFor().getEnd().orElse(Instant.now()).compareTo(time) >= 0)
         .findAny();
+  }
+
+  @Override
+  public Iterator<TransparencyLog> iterator() {
+    return getTransparencyLogs().iterator();
   }
 }
