@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 public class CertificatesTest {
   static final String CERT_CHAIN = "dev/sigstore/samples/certs/cert.pem";
   static final String CERT = "dev/sigstore/samples/certs/cert-single.pem";
+  static final String CERT_GH = "dev/sigstore/samples/certs/cert-githuboidc.pem";
 
   @Test
   public void testCertificateTranslation() throws IOException, CertificateException {
@@ -129,5 +130,20 @@ public class CertificatesTest {
     var certPath = Certificates.toCertPath(cert);
     Assertions.assertEquals(1, certPath.getCertificates().size());
     Assertions.assertEquals(cert, certPath.getCertificates().get(0));
+  }
+
+  @Test
+  public void appendCertPath() throws Exception {
+    var certPath =
+        Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT_CHAIN)));
+    var cert = Certificates.fromPem(Resources.toByteArray(Resources.getResource(CERT_GH)));
+
+    Assertions.assertEquals(2, certPath.getCertificates().size());
+    var appended = Certificates.appendCertPath(certPath, cert);
+
+    Assertions.assertEquals(3, appended.getCertificates().size());
+    Assertions.assertEquals(cert, appended.getCertificates().get(0));
+    Assertions.assertEquals(certPath.getCertificates().get(0), appended.getCertificates().get(1));
+    Assertions.assertEquals(certPath.getCertificates().get(1), appended.getCertificates().get(2));
   }
 }

@@ -19,28 +19,30 @@ import dev.sigstore.encryption.Keys;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import org.immutables.value.Value.Immutable;
+import org.immutables.value.Value.Lazy;
 
 @Immutable
-public interface PublicKey {
-  byte[] getRawBytes();
+public abstract class PublicKey {
+  public abstract byte[] getRawBytes();
 
-  String getKeyDetails();
+  public abstract String getKeyDetails();
 
-  ValidFor getValidFor();
+  public abstract ValidFor getValidFor();
 
-  static PublicKey from(dev.sigstore.proto.common.v1.PublicKey proto) {
+  @Lazy
+  public java.security.PublicKey toJavaPublicKey()
+      throws InvalidKeySpecException, NoSuchAlgorithmException {
+    if (!getKeyDetails().equals("PKIX_ECDSA_P256_SHA_256")) {
+      throw new InvalidKeySpecException("Unsupported key algorithm: " + getKeyDetails());
+    }
+    return Keys.parsePkixPublicKey(getRawBytes(), "EC");
+  }
+
+  public static PublicKey from(dev.sigstore.proto.common.v1.PublicKey proto) {
     return ImmutablePublicKey.builder()
         .rawBytes(proto.getRawBytes().toByteArray())
         .keyDetails(proto.getKeyDetails().name())
         .validFor(ValidFor.from(proto.getValidFor()))
         .build();
-  }
-
-  static java.security.PublicKey toJavaPublicKey(PublicKey publicKey)
-      throws InvalidKeySpecException, NoSuchAlgorithmException {
-    if (!publicKey.getKeyDetails().equals("PKIX_ECDSA_P256_SHA_256")) {
-      throw new InvalidKeySpecException("Unsupported key algorithm: " + publicKey.getKeyDetails());
-    }
-    return Keys.parsePkixPublicKey(publicKey.getRawBytes(), "EC");
   }
 }

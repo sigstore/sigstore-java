@@ -16,6 +16,7 @@
 package dev.sigstore.trustroot;
 
 import java.time.Instant;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.immutables.value.Value;
@@ -26,7 +27,7 @@ import org.immutables.value.Value.Immutable;
 @Value.Style(
     depluralize = true,
     depluralizeDictionary = {"certificateAuthority:certificateAuthorities"})
-public abstract class CertificateAuthorities {
+public abstract class CertificateAuthorities implements Iterable<CertificateAuthority> {
 
   public abstract List<CertificateAuthority> getCertificateAuthorities();
 
@@ -73,5 +74,10 @@ public abstract class CertificateAuthorities {
           "Trust root contains multiple current certificate authorities (" + current.size() + ")");
     }
     return current.get(0);
+  }
+
+  @Override
+  public Iterator<CertificateAuthority> iterator() {
+    return getCertificateAuthorities().iterator();
   }
 }

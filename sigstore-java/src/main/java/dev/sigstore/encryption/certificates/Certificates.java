@@ -16,6 +16,7 @@
 package dev.sigstore.encryption.certificates;
 
 import com.google.api.client.util.PemReader;
+import com.google.common.collect.ImmutableList;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
@@ -134,5 +135,17 @@ public class Certificates {
   public static CertPath toCertPath(Certificate certificate) throws CertificateException {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     return cf.generateCertPath(Collections.singletonList(certificate));
+  }
+
+  /** Appends an X509Certificate to a {@link CertPath} as a leaf. */
+  public static CertPath appendCertPath(CertPath root, Certificate certificate)
+      throws CertificateException {
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    List<Certificate> certs =
+        ImmutableList.<Certificate>builder()
+            .add(certificate)
+            .addAll(root.getCertificates())
+            .build();
+    return cf.generateCertPath(certs);
   }
 }

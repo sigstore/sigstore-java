@@ -100,7 +100,7 @@ class SigstoreTrustedRootTest {
         Base64.toBase64String(tlog.getLogId().getKeyId()));
     assertEquals(
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2G2Y+2tabdTV5BcGiBIx0a9fAFwrkBbmLSGtks4L3qX6yYY0zufBnhC8Ur/iy55GhWP/9A/bY2LhC30M9+RYtw==",
-        Base64.toBase64String(PublicKey.toJavaPublicKey(tlog.getPublicKey()).getEncoded()));
+        Base64.toBase64String(tlog.getPublicKey().toJavaPublicKey().getEncoded()));
 
     var oldCTLog = trustRoot.getCTLogs().all().get(0);
     assertEquals("https://ctfe.sigstore.dev/test", oldCTLog.getBaseUrl().toString());
@@ -116,7 +116,7 @@ class SigstoreTrustedRootTest {
         Base64.toBase64String(oldCTLog.getLogId().getKeyId()));
     assertEquals(
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEbfwR+RJudXscgRBRpKX1XFDy3PyudDxz/SfnRi1fT8ekpfBd2O1uoz7jr3Z8nKzxA69EUQ+eFCFI3zeubPWU7w==",
-        Base64.toBase64String(PublicKey.toJavaPublicKey(oldCTLog.getPublicKey()).getEncoded()));
+        Base64.toBase64String(oldCTLog.getPublicKey().toJavaPublicKey().getEncoded()));
 
     var currCTLog = trustRoot.getCTLogs().all().get(1);
     assertEquals("https://ctfe.sigstore.dev/2022", currCTLog.getBaseUrl().toString());
@@ -130,7 +130,7 @@ class SigstoreTrustedRootTest {
         Base64.toBase64String(currCTLog.getLogId().getKeyId()));
     assertEquals(
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEiPSlFi0CmFTfEjCUqF9HuCEcYXNKAaYalIJmBZ8yyezPjTqhxrKBpMnaocVtLJBI1eM3uXnQzQGAJdJ4gs9Fyw==",
-        Base64.toBase64String(PublicKey.toJavaPublicKey(currCTLog.getPublicKey()).getEncoded()));
+        Base64.toBase64String(currCTLog.getPublicKey().toJavaPublicKey().getEncoded()));
   }
 
   @Test
