@@ -126,9 +126,17 @@ public class SigningCertificate {
     return GSON.get().fromJson(sctJson, SctJson.class).toSct();
   }
 
-  /** Returns true if the signing certificate constains an SCT embedded in the X509 extensions. */
+  /** Returns true if the signing certificate contains scts embedded in X509 extensions. */
   boolean hasEmbeddedSct() {
     return getLeafCertificate().getExtensionValue(SCT_X509_OID) != null;
+  }
+
+  /**
+   * Returns scts if present, or empty if not. The returned byte array may contain any number of
+   * embedded scts.
+   */
+  Optional<byte[]> getEmbeddedSct() {
+    return Optional.ofNullable(getLeafCertificate().getExtensionValue(SCT_X509_OID));
   }
 
   private static class SctJson {

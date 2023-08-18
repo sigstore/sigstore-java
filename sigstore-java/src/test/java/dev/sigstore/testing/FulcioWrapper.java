@@ -44,6 +44,10 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     return URI.create("localhost:5554");
   }
 
+  public URI getGrpcURI2() {
+    return URI.create("http://localhost:5554");
+  }
+
   private Path createConfig(String issuer) throws IOException {
     fulcioConfig = Files.createTempFile("fulcio-config", ".json");
     Files.writeString(
