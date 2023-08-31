@@ -3,7 +3,7 @@ import com.google.protobuf.gradle.id
 plugins {
     id("build-logic.java-published-library")
     id("build-logic.test-junit5")
-    id("org.jsonschema2dataclass") version "5.0.0"
+    id("org.jsonschema2dataclass") version "6.0.0"
     id("com.google.protobuf") version "0.9.2"
 }
 
@@ -106,11 +106,17 @@ spotless {
 jsonSchema2Pojo {
     executions {
         create("rekor") {
-            source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
             targetDirectoryPrefix.set(file("$buildDir/generated/sources/rekor-model/"))
-            targetPackage.set("dev.sigstore.rekor")
-            generateBuilders.set(true)
-            annotationStyle.set("gson")
+            io {
+                source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
+            }
+            klass {
+                targetPackage.set("dev.sigstore.rekor")
+                annotationStyle.set("gson")
+            }
+            methods {
+                builders.set(true)
+            }
         }
     }
 }
