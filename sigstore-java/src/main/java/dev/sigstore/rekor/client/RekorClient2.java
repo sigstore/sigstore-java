@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import dev.sigstore.trustroot.TransparencyLog;
 import java.io.IOException;
 import java.net.URI;
@@ -67,6 +68,12 @@ public class RekorClient2 {
     /** Configure the remote rekor instance to communicate with. */
     public Builder setTransparencyLog(TransparencyLog tlog) {
       this.tlog = tlog;
+      return this;
+    }
+
+    /** Configure the remote rekor instance to communicate with, inferred from a trusted root. */
+    public Builder setTransparencyLog(SigstoreTrustedRoot trustedRoot) {
+      this.tlog = trustedRoot.getTLogs().current();
       return this;
     }
 

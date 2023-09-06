@@ -27,6 +27,7 @@ import dev.sigstore.http.GrpcChannels;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.trustroot.CertificateAuthority;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.security.cert.CertificateException;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
@@ -61,6 +62,12 @@ public class FulcioClient2 {
     /** The remote fulcio instance. */
     public Builder setCertificateAuthority(CertificateAuthority certificateAuthority) {
       this.certificateAuthority = certificateAuthority;
+      return this;
+    }
+
+    /** The remote fulcio instance inferred from a trustedRoot. */
+    public Builder setCertificateAuthority(SigstoreTrustedRoot trustedRoot) {
+      this.certificateAuthority = trustedRoot.getCAs().current();
       return this;
     }
 
