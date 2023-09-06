@@ -72,12 +72,33 @@ public class SigstoreTufClient {
       }
       try {
         tufMirror(
-            new URL("https://storage.googleapis.com/sigstore-tuf-root/"),
+            new URL("https://tuf-repo-cdn.sigstore.dev"),
             Path.of(
                 Resources.getResource("dev/sigstore/tuf/sigstore-tuf-root/root.json").getPath()));
       } catch (MalformedURLException e) {
         throw new AssertionError(e);
       }
+      return this;
+    }
+
+    public Builder useStagingInstance() {
+      if (remoteMirror != null || trustedRoot != null) {
+        throw new IllegalStateException(
+            "Using staging after configuring remoteMirror and trustedRoot");
+      }
+      try {
+        tufMirror(
+            new URL("https://tuf-repo-cdn.sigstage.dev"),
+            Path.of(
+                Resources.getResource("dev/sigstore/tuf/tuf-root-staging/root.json").getPath()));
+      } catch (MalformedURLException e) {
+        throw new AssertionError(e);
+      }
+      tufCacheLocation =
+          Path.of(System.getProperty("user.home"))
+              .resolve(".sigstore-java")
+              .resolve("staging")
+              .resolve("root");
       return this;
     }
 
