@@ -31,11 +31,14 @@ public abstract class PublicKey {
 
   @Lazy
   public java.security.PublicKey toJavaPublicKey()
-      throws InvalidKeySpecException, NoSuchAlgorithmException {
-    if (!getKeyDetails().equals("PKIX_ECDSA_P256_SHA_256")) {
-      throw new InvalidKeySpecException("Unsupported key algorithm: " + getKeyDetails());
+      throws NoSuchAlgorithmException, InvalidKeySpecException {
+    if (getKeyDetails().equals("PKIX_ECDSA_P256_SHA_256")) {
+      return Keys.parsePkixPublicKey(getRawBytes(), "EC");
     }
-    return Keys.parsePkixPublicKey(getRawBytes(), "EC");
+    if (getKeyDetails().equals("PKCS1_RSA_PKCS1V5")) {
+      return Keys.parsePkcs1RsaPublicKey(getRawBytes());
+    }
+    throw new InvalidKeySpecException("Unsupported key algorithm: " + getKeyDetails());
   }
 
   public static PublicKey from(dev.sigstore.proto.common.v1.PublicKey proto) {
