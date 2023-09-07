@@ -80,13 +80,7 @@ public class Keys {
       throw new InvalidKeySpecException("Invalid key, empty PEM section");
     }
     if (section.getType().equals("RSA PUBLIC KEY")) {
-      ASN1Sequence sequence = ASN1Sequence.getInstance(section.getContent());
-      ASN1Integer modulus = ASN1Integer.getInstance(sequence.getObjectAt(0));
-      ASN1Integer exponent = ASN1Integer.getInstance(sequence.getObjectAt(1));
-      RSAPublicKeySpec keySpec =
-          new RSAPublicKeySpec(modulus.getPositiveValue(), exponent.getPositiveValue());
-      KeyFactory factory = KeyFactory.getInstance("RSA");
-      return factory.generatePublic(keySpec);
+      return parsePkcs1RsaPublicKey(section.getContent());
     }
 
     // otherwise, we are dealing with PKIX X509 encoded keys
@@ -126,6 +120,17 @@ public class Keys {
     X509EncodedKeySpec spec = new X509EncodedKeySpec(contents);
     KeyFactory factory = KeyFactory.getInstance(algorithm);
     return factory.generatePublic(spec);
+  }
+
+  public static PublicKey parsePkcs1RsaPublicKey(byte[] contents)
+      throws NoSuchAlgorithmException, InvalidKeySpecException {
+    ASN1Sequence sequence = ASN1Sequence.getInstance(contents);
+    ASN1Integer modulus = ASN1Integer.getInstance(sequence.getObjectAt(0));
+    ASN1Integer exponent = ASN1Integer.getInstance(sequence.getObjectAt(1));
+    RSAPublicKeySpec keySpec =
+        new RSAPublicKeySpec(modulus.getPositiveValue(), exponent.getPositiveValue());
+    KeyFactory factory = KeyFactory.getInstance("RSA");
+    return factory.generatePublic(keySpec);
   }
 
   /**

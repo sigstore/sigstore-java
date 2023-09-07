@@ -17,6 +17,7 @@ package dev.sigstore.tuf;
 
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -38,11 +39,8 @@ class SigstoreTufClientTest {
             .tufCacheLocation(localStorePath)
             .build();
     client.forceUpdate();
-    Assertions.assertNotNull(client.getSigstoreTrustedRoot());
 
-    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getTLogs().current());
-    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getCTLogs().current());
-    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getCAs().current());
+    assertTrustedRootValid(client.getSigstoreTrustedRoot());
   }
 
   @Test
@@ -50,11 +48,23 @@ class SigstoreTufClientTest {
     var client =
         SigstoreTufClient.builder().useStagingInstance().tufCacheLocation(localStorePath).build();
     client.forceUpdate();
-    Assertions.assertNotNull(client.getSigstoreTrustedRoot());
 
-    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getTLogs().current());
-    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getCTLogs().current());
-    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getCAs().current());
+    assertTrustedRootValid(client.getSigstoreTrustedRoot());
+  }
+
+  private void assertTrustedRootValid(SigstoreTrustedRoot trustedRoot) throws Exception {
+    Assertions.assertNotNull(trustedRoot);
+    Assertions.assertDoesNotThrow(() -> trustedRoot.getTLogs().current());
+    Assertions.assertDoesNotThrow(() -> trustedRoot.getCTLogs().current());
+    Assertions.assertDoesNotThrow(() -> trustedRoot.getCAs().current());
+
+    for (var tlog : trustedRoot.getTLogs()) {
+      Assertions.assertDoesNotThrow(() -> tlog.getPublicKey().toJavaPublicKey());
+    }
+
+    for (var ctlog : trustedRoot.getCTLogs()) {
+      Assertions.assertDoesNotThrow(() -> ctlog.getPublicKey().toJavaPublicKey());
+    }
   }
 
   @Test
