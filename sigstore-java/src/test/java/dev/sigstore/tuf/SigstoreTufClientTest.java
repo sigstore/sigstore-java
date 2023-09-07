@@ -46,6 +46,18 @@ class SigstoreTufClientTest {
   }
 
   @Test
+  public void testUpdate_stagingHasTrustedRootJson() throws Exception {
+    var client =
+        SigstoreTufClient.builder().useStagingInstance().tufCacheLocation(localStorePath).build();
+    client.forceUpdate();
+    Assertions.assertNotNull(client.getSigstoreTrustedRoot());
+
+    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getTLogs().current());
+    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getCTLogs().current());
+    Assertions.assertDoesNotThrow(() -> client.getSigstoreTrustedRoot().getCAs().current());
+  }
+
+  @Test
   public void testUpdate_updateWhenCacheInvalid() throws Exception {
     var mockUpdater = mockUpdater();
     var client = new SigstoreTufClient(mockUpdater, Duration.ofSeconds(2));
