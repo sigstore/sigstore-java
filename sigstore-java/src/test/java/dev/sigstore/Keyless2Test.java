@@ -62,12 +62,12 @@ public class Keyless2Test {
   @SuppressWarnings("deprecation")
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_production() throws Exception {
-    var signer = KeylessSigner2.builder().sigstorePublicDefaults().build();
+    var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var results = signer.sign(artifactDigests);
 
     verifySigningResult(results);
 
-    var verifier = KeylessVerifier2.builder().sigstorePublicDefaults().build();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     for (var result : results) {
       verifier.verifyOnline(
           result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
@@ -79,11 +79,11 @@ public class Keyless2Test {
   @SuppressWarnings("deprecation")
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_staging() throws Exception {
-    var signer = KeylessSigner2.builder().sigstoreStagingDefaults().build();
+    var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
     var results = signer.sign(artifactDigests);
     verifySigningResult(results);
 
-    var verifier = KeylessVerifier2.builder().sigstoreStagingDefaults().build();
+    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
     for (var result : results) {
       verifier.verifyOnline(
           result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());

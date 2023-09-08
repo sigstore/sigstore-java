@@ -15,8 +15,6 @@
  */
 package dev.sigstore.trustroot;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.net.URI;
 import java.security.cert.CertPath;
 import java.time.Instant;

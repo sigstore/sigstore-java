@@ -15,132 +15,150 @@
  */
 package dev.sigstore.fulcio.client;
 
-import dev.sigstore.encryption.Keys;
-import dev.sigstore.encryption.certificates.transparency.*;
-import java.io.ByteArrayInputStream;
+import com.google.common.annotations.VisibleForTesting;
+import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.encryption.certificates.transparency.CTLogInfo;
+import dev.sigstore.encryption.certificates.transparency.CTVerificationResult;
+import dev.sigstore.encryption.certificates.transparency.CTVerifier;
+import dev.sigstore.trustroot.CertificateAuthorities;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.trustroot.TransparencyLogs;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.cert.*;
+import java.security.cert.CertPath;
+import java.security.cert.CertPathValidator;
+import java.security.cert.CertPathValidatorException;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.PKIXParameters;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.util.*;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-/** Verifier for fulcio {@link dev.sigstore.fulcio.client.SigningCertificate}. */
+/** Verifier for fulcio {@link SigningCertificate}. */
 public class FulcioVerifier {
-  private final @Nullable CTVerifier ctVerifier;
-  private final TrustAnchor fulcioRoot;
+  private final CertificateAuthorities cas;
+  private final TransparencyLogs ctLogs;
+  private final CTVerifier ctVerifier;
 
-  /**
-   * Instantiate a new verifier.
-   *
-   * @param fulcioRoot fulcio's root certificate
-   * @param ctfePublicKeys fulcio's certificate transparency log public keys (for all logs)
-   */
-  public static FulcioVerifier newFulcioVerifier(byte[] fulcioRoot, List<byte[]> ctfePublicKeys)
-      throws InvalidKeySpecException, NoSuchAlgorithmException, CertificateException, IOException,
-          InvalidAlgorithmParameterException {
-
-    List<PublicKey> ctfePublicKeyObjs = null;
-    if (ctfePublicKeys != null && ctfePublicKeys.size() != 0) {
-      ctfePublicKeyObjs = new ArrayList<>();
-      for (var pk : ctfePublicKeys) {
-        ctfePublicKeyObjs.add(Keys.parsePublicKey(pk));
-      }
-    }
-
-    CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-    X509Certificate fulcioRootObj =
-        (X509Certificate)
-            certificateFactory.generateCertificate(new ByteArrayInputStream(fulcioRoot));
-
-    TrustAnchor fulcioRootTrustAnchor = new TrustAnchor(fulcioRootObj, null);
-    // this should throw an InvalidAlgorithmException a bit earlier that would otherwise be
-    // encountered in verifyCertPath
-    new PKIXParameters(Collections.singleton(fulcioRootTrustAnchor));
-
-    return new FulcioVerifier(fulcioRootTrustAnchor, ctfePublicKeyObjs);
+  public static FulcioVerifier newFulcioVerifier(SigstoreTrustedRoot trustRoot)
+      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
+          NoSuchAlgorithmException {
+    return newFulcioVerifier(trustRoot.getCAs(), trustRoot.getCTLogs());
   }
 
-  private FulcioVerifier(TrustAnchor fulcioRoot, @Nullable List<PublicKey> ctfePublicKeys) {
-    this.fulcioRoot = fulcioRoot;
-    if (ctfePublicKeys != null) {
-      var logInfos = new ArrayList<CTLogInfo>();
-      for (var pk : ctfePublicKeys) {
-        var ctLogInfo = new CTLogInfo(pk, "fulcio ct log", "unused-url");
-        logInfos.add(ctLogInfo);
-      }
-      this.ctVerifier =
-          new CTVerifier(
-              logId ->
-                  logInfos.stream()
-                      .filter(ctLogInfo -> Arrays.equals(ctLogInfo.getID(), logId))
-                      .findFirst()
-                      .orElse(null));
-    } else {
-      ctVerifier = null;
+  public static FulcioVerifier newFulcioVerifier(
+      CertificateAuthorities cas, TransparencyLogs ctLogs)
+      throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+          CertificateException {
+    List<CTLogInfo> logs = new ArrayList<>();
+    for (var ctLog : ctLogs.all()) {
+      logs.add(
+          new CTLogInfo(
+              ctLog.getPublicKey().toJavaPublicKey(), "CT Log", ctLog.getBaseUrl().toString()));
     }
+    var verifier =
+        new CTVerifier(
+            logId ->
+                logs.stream()
+                    .filter(ctLogInfo -> Arrays.equals(ctLogInfo.getID(), logId))
+                    .findFirst()
+                    .orElse(null));
+
+    // check to see if we can use all fulcio roots (this is a bit eager)
+    for (var ca : cas.all()) {
+      ca.asTrustAnchor();
+    }
+
+    return new FulcioVerifier(cas, ctLogs, verifier);
   }
 
-  /**
-   * Verify that an SCT associated with a Singing Certificate is valid and signed by the configured
-   * CT-log public key.
-   *
-   * @param signingCertificate containing the SCT metadata to verify
-   * @throws FulcioVerificationException if verification fails for any reason
-   */
-  public void verifySct(SigningCertificate signingCertificate) throws FulcioVerificationException {
-    if (ctVerifier == null) {
-      throw new FulcioVerificationException("No ct-log public key was provided to verifier");
+  private FulcioVerifier(
+      CertificateAuthorities cas, TransparencyLogs ctLogs, CTVerifier ctVerifier) {
+    this.cas = cas;
+    this.ctLogs = ctLogs;
+    this.ctVerifier = ctVerifier;
+  }
+
+  @VisibleForTesting
+  void verifySct(SigningCertificate signingCertificate, CertPath rebuiltCert)
+      throws FulcioVerificationException {
+    if (ctLogs.size() == 0) {
+      throw new FulcioVerificationException("No ct logs were provided to verifier");
     }
 
     if (signingCertificate.getDetachedSct().isPresent()) {
-      CertificateEntry ce;
-      try {
-        ce = CertificateEntry.createForX509Certificate(signingCertificate.getLeafCertificate());
-      } catch (CertificateEncodingException cee) {
-        throw new FulcioVerificationException("Leaf certificate could not be parsed", cee);
-      }
-
-      var status = ctVerifier.verifySingleSCT(signingCertificate.getDetachedSct().get(), ce);
-      if (status != VerifiedSCT.Status.VALID) {
-        throw new FulcioVerificationException(
-            "SCT could not be verified because " + status.toString());
-      }
-    } else if (signingCertificate.hasEmbeddedSct()) {
-      var certs = signingCertificate.getCertificates();
-      CTVerificationResult result;
-      try {
-        // even though we're sending the whole chain, this method only checks SCTs on the leaf cert
-        result = ctVerifier.verifySignedCertificateTimestamps(certs, null, null);
-      } catch (CertificateEncodingException cee) {
-        throw new FulcioVerificationException(
-            "Certificates could not be parsed during sct verification");
-      }
-      int valid = result.getValidSCTs().size();
-      int invalid = result.getInvalidSCTs().size();
-      if (valid == 0 || invalid != 0) {
-        throw new FulcioVerificationException(
-            "Expecting at least one valid sct, but found "
-                + valid
-                + " valid and "
-                + invalid
-                + " invalid scts");
-      }
+      throw new FulcioVerificationException(
+          "Detached SCTs are not supported for validating certificates");
+    } else if (signingCertificate.getEmbeddedSct().isPresent()) {
+      verifyEmbeddedScts(rebuiltCert);
     } else {
-      throw new FulcioVerificationException("No detached or embedded SCTs were found to verify");
+      throw new FulcioVerificationException("No valid SCTs were found during verification");
     }
+  }
+
+  private void verifyEmbeddedScts(CertPath rebuiltCert) throws FulcioVerificationException {
+    @SuppressWarnings("unchecked")
+    var certs = (List<X509Certificate>) rebuiltCert.getCertificates();
+    CTVerificationResult result;
+    try {
+      result = ctVerifier.verifySignedCertificateTimestamps(certs, null, null);
+    } catch (CertificateEncodingException cee) {
+      throw new FulcioVerificationException(
+          "Certificates could not be parsed during SCT verification");
+    }
+
+    // these are technically valid, but we have the additional constraint of sigstore's trustroot
+    // providing a validity period for logs, so make sure all SCTs were signed by a log during
+    // that log's validity period
+    for (var validSct : result.getValidSCTs()) {
+      var sct = validSct.sct;
+
+      var logId = sct.getLogID();
+      var entryTime = Instant.ofEpochMilli(sct.getTimestamp());
+
+      var ctLog = ctLogs.find(logId, entryTime);
+      if (ctLog.isPresent()) {
+        // TODO: currently we only require one valid SCT, but maybe this should be configurable?
+        // found at least one valid sct with a matching valid log
+        return;
+      }
+    }
+    throw new FulcioVerificationException(
+        "No valid SCTs were found, all("
+            + (result.getValidSCTs().size() + result.getInvalidSCTs().size())
+            + ") SCTs were invalid");
   }
 
   /**
    * Verify that a cert chain is valid and chains up to the trust anchor (fulcio public key)
-   * configured in this validator.
+   * configured in this validator. Also verify that the leaf certificate contains at least one valid
+   * SCT
    *
    * @param signingCertificate containing the certificate chain
    * @throws FulcioVerificationException if verification fails for any reason
    */
-  public void verifyCertChain(SigningCertificate signingCertificate)
+  public void verifySigningCertificate(SigningCertificate signingCertificate)
+      throws FulcioVerificationException, IOException {
+    CertPath reconstructedCert = reconstructValidCertPath(signingCertificate);
+    verifySct(signingCertificate, reconstructedCert);
+  }
+
+  /**
+   * Find a valid cert path that chains back up to the trusted root certs and reconstruct a
+   * certificate path combining the provided un-trusted certs and a known set of trusted and
+   * intermediate certs.
+   */
+  CertPath reconstructValidCertPath(SigningCertificate signingCertificate)
       throws FulcioVerificationException {
     CertPathValidator cpv;
     try {
@@ -152,27 +170,55 @@ public class FulcioVerifier {
           e);
     }
 
-    PKIXParameters pkixParams;
-    try {
-      pkixParams = new PKIXParameters(Collections.singleton(fulcioRoot));
-    } catch (InvalidAlgorithmParameterException e) {
-      throw new RuntimeException(
-          "Can't create PKIX parameters for fulcioRoot. This should have been checked when generating a verifier instance",
-          e);
-    }
-    pkixParams.setRevocationEnabled(false);
+    var leaf = signingCertificate.getLeafCertificate();
+    var validCAs = cas.find(leaf.getNotBefore().toInstant());
 
-    // these certs are only valid for 15 minutes, so find a time in the validity period
-    @SuppressWarnings("JavaUtilDate")
-    Date dateInValidityPeriod =
-        new Date(signingCertificate.getLeafCertificate().getNotBefore().getTime());
-    pkixParams.setDate(dateInValidityPeriod);
-
-    try {
-      // a result is returned here, but I don't know what to do with it yet
-      cpv.validate(signingCertificate.getCertPath(), pkixParams);
-    } catch (CertPathValidatorException | InvalidAlgorithmParameterException ve) {
-      throw new FulcioVerificationException(ve);
+    if (validCAs.size() == 0) {
+      throw new FulcioVerificationException(
+          "No valid Certificate Authorities found when validating certificate");
     }
+
+    Map<String, String> caVerificationFailure = new LinkedHashMap<>();
+
+    for (var ca : validCAs) {
+      PKIXParameters pkixParams;
+      try {
+        pkixParams = new PKIXParameters(Collections.singleton(ca.asTrustAnchor()));
+      } catch (InvalidAlgorithmParameterException | CertificateException e) {
+        throw new RuntimeException(
+            "Can't create PKIX parameters for fulcioRoot. This should have been checked when generating a verifier instance",
+            e);
+      }
+      pkixParams.setRevocationEnabled(false);
+
+      // these certs are only valid for 15 minutes, so find a time in the validity period
+      @SuppressWarnings("JavaUtilDate")
+      Date dateInValidityPeriod =
+          new Date(signingCertificate.getLeafCertificate().getNotBefore().getTime());
+      pkixParams.setDate(dateInValidityPeriod);
+
+      CertPath rebuiltCert;
+      try {
+        // build a cert chain with the root-chain in question and the provided leaf
+        rebuiltCert =
+            Certificates.appendCertPath(ca.getCertPath(), signingCertificate.getLeafCertificate());
+
+        // a result is returned here, but we ignore it
+        cpv.validate(rebuiltCert, pkixParams);
+      } catch (CertPathValidatorException
+          | InvalidAlgorithmParameterException
+          | CertificateException ve) {
+        caVerificationFailure.put(ca.getUri().toString(), ve.getMessage());
+        // verification failed
+        continue;
+      }
+      return rebuiltCert;
+      // verification passed so just end this method
+    }
+    String errors =
+        caVerificationFailure.entrySet().stream()
+            .map(entry -> entry.getKey() + " (" + entry.getValue() + ")")
+            .collect(Collectors.joining("\n"));
+    throw new FulcioVerificationException("Certificate was not verifiable against CAs\n" + errors);
   }
 }

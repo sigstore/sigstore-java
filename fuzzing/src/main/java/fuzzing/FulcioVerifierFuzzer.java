@@ -29,24 +29,24 @@ import java.security.cert.CertificateFactory;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
+import util.Tuf;
 
 public class FulcioVerifierFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
       int[] intArray = data.consumeInts(data.consumeInt(1, 10));
+
+      var cas = Tuf.certificateAuthoritiesFrom(data);
+      var ctLogs = Tuf.transparencyLogsFrom(data);
+
       byte[] byteArray = data.consumeRemainingAsBytes();
-
       List<Certificate> certList = new ArrayList<Certificate>();
-      List<byte[]> byteArrayList = new ArrayList<byte[]>();
-
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
       certList.add(cf.generateCertificate(new ByteArrayInputStream(byteArray)));
       certList.add(cf.generateCertificate(new ByteArrayInputStream(byteArray)));
-      byteArrayList.add(byteArray);
-      byteArrayList.add(byteArray);
 
       SigningCertificate sc = SigningCertificate.from(cf.generateCertPath(certList));
-      FulcioVerifier fv = FulcioVerifier.newFulcioVerifier(byteArray, byteArrayList);
+      FulcioVerifier fv = FulcioVerifier.newFulcioVerifier(cas, ctLogs);
 
       for (int choice : intArray) {
         switch (choice % 4) {
@@ -56,11 +56,8 @@ public class FulcioVerifierFuzzer {
           case 1:
             sc.getLeafCertificate();
             break;
-          case 2:
-            fv.verifySct(sc);
-            break;
           case 3:
-            fv.verifyCertChain(sc);
+            fv.verifySigningCertificate(sc);
             break;
         }
       }

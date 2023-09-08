@@ -15,44 +15,40 @@
  */
 package dev.sigstore.fulcio.client;
 
-import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.*;
+import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.SIGNED_CERTIFICATE_DETACHED_SCT;
 
 import com.google.protobuf.ByteString;
-import dev.sigstore.encryption.certificates.transparency.SerializationException;
-import dev.sigstore.fulcio.v2.*;
+import dev.sigstore.fulcio.v2.CAGrpc;
+import dev.sigstore.fulcio.v2.CreateSigningCertificateRequest;
+import dev.sigstore.fulcio.v2.Credentials;
+import dev.sigstore.fulcio.v2.PublicKey;
+import dev.sigstore.fulcio.v2.PublicKeyRequest;
 import dev.sigstore.http.GrpcChannels;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
-import java.io.IOException;
-import java.net.URI;
+import dev.sigstore.trustroot.CertificateAuthority;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.security.cert.CertificateException;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 /** A client to communicate with a fulcio service instance over gRPC. */
 public class FulcioClient {
-  // GRPC explicitly doesn't want https:// in the server address, so it is not included
-  public static final String PUBLIC_FULCIO_SERVER = "fulcio.sigstore.dev";
-  public static final String STAGING_FULCIO_SERVER = "fulcio.sigstage.dev";
-  public static final boolean DEFAULT_REQUIRE_SCT = true;
 
   private final HttpParams httpParams;
-  private final URI serverUrl;
-  private final boolean requireSct;
+  private final CertificateAuthority certificateAuthority;
 
   public static Builder builder() {
     return new Builder();
   }
 
-  private FulcioClient(HttpParams httpParams, URI serverUrl, boolean requireSct) {
-    this.serverUrl = serverUrl;
-    this.requireSct = requireSct;
+  private FulcioClient(HttpParams httpParams, CertificateAuthority certificateAuthority) {
+    this.certificateAuthority = certificateAuthority;
     this.httpParams = httpParams;
   }
 
   public static class Builder {
-    private URI serverUrl = URI.create(PUBLIC_FULCIO_SERVER);
-    private boolean requireSct = DEFAULT_REQUIRE_SCT;
+    private CertificateAuthority certificateAuthority;
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
 
     private Builder() {}
@@ -63,26 +59,20 @@ public class FulcioClient {
       return this;
     }
 
-    /**
-     * The fulcio remote server URI, defaults to {@value PUBLIC_FULCIO_SERVER}. Do not include
-     * http:// or https:// in the server URL.
-     */
-    public Builder setServerUrl(URI uri) {
-      this.serverUrl = uri;
+    /** The remote fulcio instance. */
+    public Builder setCertificateAuthority(CertificateAuthority certificateAuthority) {
+      this.certificateAuthority = certificateAuthority;
       return this;
     }
 
-    /**
-     * Configure whether we should expect the fulcio instance to return an sct with the signing
-     * certificate, defaults to {@value DEFAULT_REQUIRE_SCT}.
-     */
-    public Builder requireSct(boolean requireSct) {
-      this.requireSct = requireSct;
+    /** The remote fulcio instance inferred from a trustedRoot. */
+    public Builder setCertificateAuthority(SigstoreTrustedRoot trustedRoot) {
+      this.certificateAuthority = trustedRoot.getCAs().current();
       return this;
     }
 
     public FulcioClient build() {
-      return new FulcioClient(httpParams, serverUrl, requireSct);
+      return new FulcioClient(httpParams, certificateAuthority);
     }
   }
 
@@ -93,11 +83,17 @@ public class FulcioClient {
    * @return a {@link SigningCertificate} from fulcio
    */
   public SigningCertificate signingCertificate(CertificateRequest request)
-      throws InterruptedException, CertificateException, IOException {
-    // TODO: If we want to reduce the cost of creating channels/connections, we could try
+      throws InterruptedException, CertificateException {
+    if (!certificateAuthority.isCurrent()) {
+      throw new RuntimeException(
+          "Certificate Authority '" + certificateAuthority.getUri() + "' is not current");
+    }
+    // TODO: 1. If we want to reduce the cost of creating channels/connections, we could try
     // to make a new connection once per batch of fulcio requests, but we're not really
     // at that point yet.
-    var channel = GrpcChannels.newManagedChannel(serverUrl, httpParams);
+    // TODO: 2. getUri().getAuthority() is potentially prone to error if we don't get a good URI
+    var channel =
+        GrpcChannels.newManagedChannel(certificateAuthority.getUri().getAuthority(), httpParams);
 
     try {
       var client = CAGrpc.newBlockingStub(channel);
@@ -128,20 +124,9 @@ public class FulcioClient {
               .createSigningCertificate(req);
 
       if (certs.getCertificateCase() == SIGNED_CERTIFICATE_DETACHED_SCT) {
-        if (certs.getSignedCertificateDetachedSct().getSignedCertificateTimestamp().isEmpty()
-            && requireSct) {
-          throw new CertificateException(
-              "no signed certificate timestamps were found in response from Fulcio");
-        }
-        try {
-          return SigningCertificate.newSigningCertificate(certs.getSignedCertificateDetachedSct());
-        } catch (SerializationException se) {
-          throw new CertificateException("Could not parse detached SCT");
-        }
-      } else {
-        return SigningCertificate.newSigningCertificate(certs.getSignedCertificateEmbeddedSct());
+        throw new CertificateException("Detached SCTs are not supported");
       }
-
+      return SigningCertificate.newSigningCertificate(certs.getSignedCertificateEmbeddedSct());
     } finally {
       channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
     }

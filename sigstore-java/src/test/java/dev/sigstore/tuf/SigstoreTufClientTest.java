@@ -52,7 +52,7 @@ class SigstoreTufClientTest {
     assertTrustedRootValid(client.getSigstoreTrustedRoot());
   }
 
-  private void assertTrustedRootValid(SigstoreTrustedRoot trustedRoot) throws Exception {
+  private void assertTrustedRootValid(SigstoreTrustedRoot trustedRoot) {
     Assertions.assertNotNull(trustedRoot);
     Assertions.assertDoesNotThrow(() -> trustedRoot.getTLogs().current());
     Assertions.assertDoesNotThrow(() -> trustedRoot.getCTLogs().current());

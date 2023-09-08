@@ -21,33 +21,27 @@ import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
+import util.Tuf;
 
 public class RekorVerifierFuzzer {
   private static final String URL = "https://false.url.for.RekorTypes.fuzzing.com";
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
+      var tLogs = Tuf.transparencyLogsFrom(data);
       byte[] byteArray = data.consumeRemainingAsBytes();
       String string = new String(byteArray, StandardCharsets.UTF_8);
 
       URI uri = new URI(URL);
       RekorEntry entry = RekorResponse.newRekorResponse(uri, string).getEntry();
-      RekorVerifier verifier = RekorVerifier.newRekorVerifier(byteArray);
+      RekorVerifier verifier = RekorVerifier.newRekorVerifier(tLogs);
 
       verifier.verifyEntry(entry);
       verifier.verifyInclusionProof(entry);
-    } catch (URISyntaxException
-        | InvalidKeySpecException
-        | NoSuchAlgorithmException
-        | IOException
-        | RekorParseException
-        | RekorVerificationException e) {
+    } catch (URISyntaxException | RekorParseException | RekorVerificationException e) {
       // Known exception
     }
   }

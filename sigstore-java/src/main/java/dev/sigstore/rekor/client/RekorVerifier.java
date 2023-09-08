@@ -16,34 +16,30 @@
 package dev.sigstore.rekor.client;
 
 import com.google.common.hash.Hashing;
-import dev.sigstore.encryption.Keys;
-import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
-import java.io.IOException;
-import java.security.*;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.trustroot.TransparencyLogs;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
 public class RekorVerifier {
-  private final Verifier verifier;
+  private final TransparencyLogs tlogs;
 
-  // A calculated logId from the transparency log (rekor) public key
-  private final String calculatedLogId;
-
-  public static RekorVerifier newRekorVerifier(byte[] rekorPublicKey)
-      throws InvalidKeySpecException, NoSuchAlgorithmException, IOException {
-    var publicKey = Keys.parsePublicKey(rekorPublicKey);
-    var verifier = Verifiers.newVerifier(publicKey);
-
-    return new RekorVerifier(verifier);
+  public static RekorVerifier newRekorVerifier(SigstoreTrustedRoot trustRoot) {
+    return newRekorVerifier(trustRoot.getTLogs());
   }
 
-  private RekorVerifier(Verifier verifier) {
-    this.calculatedLogId =
-        Hashing.sha256().hashBytes(verifier.getPublicKey().getEncoded()).toString();
-    this.verifier = verifier;
+  public static RekorVerifier newRekorVerifier(TransparencyLogs tlogs) {
+    return new RekorVerifier(tlogs);
+  }
+
+  private RekorVerifier(TransparencyLogs tlogs) {
+    this.tlogs = tlogs;
   }
 
   /**
@@ -61,16 +57,23 @@ public class RekorVerifier {
       throw new RekorVerificationException("No signed entry timestamp found in entry.");
     }
 
-    if (!entry.getLogID().equals(calculatedLogId)) {
-      throw new RekorVerificationException("LogId does not match supplied rekor public key.");
-    }
+    var tlog =
+        tlogs
+            .find(Hex.decode(entry.getLogID()), entry.getIntegratedTimeInstant())
+            .orElseThrow(
+                () ->
+                    new RekorVerificationException(
+                        "Log entry (logid, timestamp) does not match any provided transparency logs."));
 
     try {
+      var verifier = Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey());
       if (!verifier.verify(
           entry.getSignableContent(),
           Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
         throw new RekorVerificationException("Entry SET was not valid");
       }
+    } catch (InvalidKeySpecException ike) {
+      throw new RekorVerificationException("Public Key could be parsed", ike);
     } catch (InvalidKeyException ike) {
       throw new RekorVerificationException("Public Key was invalid", ike);
     } catch (SignatureException se) {
