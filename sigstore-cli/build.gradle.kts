@@ -15,7 +15,7 @@ dependencies {
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.34.1"))
     implementation("com.google.oauth-client:google-oauth-client")
 
-    annotationProcessor("info.picocli:picocli-codegen:4.7.4")
+    annotationProcessor("info.picocli:picocli-codegen:4.7.5")
 }
 
 tasks.compileJava {
