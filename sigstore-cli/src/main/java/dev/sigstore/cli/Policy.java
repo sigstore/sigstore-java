@@ -15,20 +15,18 @@
  */
 package dev.sigstore.cli;
 
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
-import picocli.CommandLine.Spec;
+import picocli.CommandLine.Option;
 
-@Command(
-    name = "sigstore",
-    mixinStandardHelpOptions = true,
-    subcommands = {Sign.class, Verify.class, VerifyBundle.class})
-public class Sigstore {
-  @Spec CommandSpec spec;
+public class Policy {
+  @Option(
+      names = {"--certificate-identity"},
+      description = "subject alternative name in certificate",
+      required = true)
+  String certificateSan;
 
-  public static void main(String[] args) {
-    int exitCode = new CommandLine(new Sigstore()).execute(args);
-    System.exit(exitCode);
-  }
+  @Option(
+      names = {"--certificate-oidc-issuer"},
+      description = "sigstore issuer in certificate",
+      required = true)
+  String certificateIssuer;
 }
