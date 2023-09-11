@@ -17,6 +17,10 @@
     {
       "matchPackagePrefixes": ["io.grpc", "com.google.protobuf"],
       "groupName": "protobuf_grpc"
+    },
+    {
+      "matchPackagePrefixes": ["info.picocli"],
+      "groupName": "picocli"
     }
   ]
 }
