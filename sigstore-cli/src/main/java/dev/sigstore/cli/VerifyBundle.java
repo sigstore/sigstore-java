@@ -15,52 +15,40 @@
  */
 package dev.sigstore.cli;
 
-import static com.google.common.io.Files.asByteSource;
 import static com.google.common.io.Files.newReader;
 
-import com.google.common.hash.Hashing;
 import dev.sigstore.KeylessSignature;
 import dev.sigstore.KeylessVerificationRequest;
 import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
 import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
-import dev.sigstore.KeylessVerifier;
+import dev.sigstore.KeylessVerifier2;
 import dev.sigstore.bundle.BundleFactory;
-import dev.sigstore.encryption.certificates.Certificates;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.cert.CertPath;
 import java.util.concurrent.Callable;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "verify", description = "verify an artifact")
-public class Verify implements Callable<Integer> {
+@Command(name = "verify-bundle", description = "verify an artifact using a sigstore bundle")
+public class VerifyBundle implements Callable<Integer> {
   @Parameters(arity = "1", paramLabel = "<artifact>", description = "artifact to verify")
   Path artifact;
 
-  @ArgGroup(multiplicity = "1", exclusive = true)
-  SignatureFiles signatureFiles;
+  @Option(
+      names = {"--bundle"},
+      description = "path to bundle file",
+      required = true)
+  Path bundleFile;
 
   @ArgGroup(multiplicity = "0..1", exclusive = false)
   Policy policy;
 
   @Override
   public Integer call() throws Exception {
-    byte[] digest = asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
-    KeylessSignature keylessSignature = null;
-    if (signatureFiles.sigAndCert != null) {
-      byte[] signature = Files.readAllBytes(signatureFiles.sigAndCert.signatureFile);
-      CertPath certPath =
-          Certificates.fromPemChain(Files.readAllBytes(signatureFiles.sigAndCert.certificateFile));
-      keylessSignature =
-          KeylessSignature.builder().signature(signature).certPath(certPath).digest(digest).build();
-    } else {
-      keylessSignature =
-          BundleFactory.readBundle(
-              newReader(signatureFiles.bundleFile.toFile(), StandardCharsets.UTF_8));
-    }
+    KeylessSignature keylessSignature =
+        BundleFactory.readBundle(newReader(bundleFile.toFile(), StandardCharsets.UTF_8));
 
     var verificationOptionsBuilder = VerificationOptions.builder();
     if (policy != null) {
@@ -72,7 +60,7 @@ public class Verify implements Callable<Integer> {
     }
     var verificationOptions = verificationOptionsBuilder.isOnline(true).build();
 
-    var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
+    var verifier = new KeylessVerifier2.Builder().sigstorePublicDefaults().build();
     verifier.verify(
         artifact,
         KeylessVerificationRequest.builder()
