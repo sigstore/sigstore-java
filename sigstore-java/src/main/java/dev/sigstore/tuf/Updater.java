@@ -24,8 +24,6 @@ import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.tuf.model.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -58,14 +56,14 @@ public class Updater {
   private Verifiers.Supplier verifiers;
   private MetaFetcher fetcher;
   private ZonedDateTime updateStartTime;
-  private Path trustedRootPath;
+  private RootProvider trustedRootPath;
   private MutableTufStore localStore;
 
   Updater(
       Clock clock,
       Verifiers.Supplier verifiers,
       MetaFetcher fetcher,
-      Path trustedRootPath,
+      RootProvider trustedRootPath,
       MutableTufStore localStore) {
     this.clock = clock;
     this.verifiers = verifiers;
@@ -106,7 +104,7 @@ public class Updater {
     if (localRoot.isPresent()) {
       trustedRoot = localRoot.get();
     } else {
-      trustedRoot = GSON.get().fromJson(Files.readString(trustedRootPath), Root.class);
+      trustedRoot = GSON.get().fromJson(trustedRootPath.get(), Root.class);
     }
     int baseVersion = trustedRoot.getSignedMeta().getVersion();
     int nextVersion = baseVersion + 1;
@@ -437,7 +435,7 @@ public class Updater {
     private Verifiers.Supplier verifiers = Verifiers::newVerifier;
 
     private MetaFetcher fetcher;
-    private Path trustedRootPath;
+    private RootProvider trustedRootPath;
     private MutableTufStore localStore;
 
     public Builder setClock(Clock clock) {
@@ -455,7 +453,7 @@ public class Updater {
       return this;
     }
 
-    public Builder setTrustedRootPath(Path trustedRootPath) {
+    public Builder setTrustedRootPath(RootProvider trustedRootPath) {
       this.trustedRootPath = trustedRootPath;
       return this;
     }

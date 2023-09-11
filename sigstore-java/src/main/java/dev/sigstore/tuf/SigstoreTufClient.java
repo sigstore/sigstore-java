@@ -17,7 +17,6 @@ package dev.sigstore.tuf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Resources;
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
@@ -63,7 +62,7 @@ public class SigstoreTufClient {
         Path.of(System.getProperty("user.home")).resolve(".sigstore-java").resolve("root");
 
     URL remoteMirror;
-    Path trustedRoot;
+    RootProvider trustedRoot;
 
     public Builder usePublicGoodInstance() {
       if (remoteMirror != null || trustedRoot != null) {
@@ -73,8 +72,7 @@ public class SigstoreTufClient {
       try {
         tufMirror(
             new URL("https://tuf-repo-cdn.sigstore.dev"),
-            Path.of(
-                Resources.getResource("dev/sigstore/tuf/sigstore-tuf-root/root.json").getPath()));
+            RootProvider.fromResource("dev/sigstore/tuf/sigstore-tuf-root/root.json"));
       } catch (MalformedURLException e) {
         throw new AssertionError(e);
       }
@@ -89,8 +87,7 @@ public class SigstoreTufClient {
       try {
         tufMirror(
             new URL("https://tuf-repo-cdn.sigstage.dev"),
-            Path.of(
-                Resources.getResource("dev/sigstore/tuf/tuf-root-staging/root.json").getPath()));
+            RootProvider.fromResource("dev/sigstore/tuf/tuf-root-staging/root.json"));
       } catch (MalformedURLException e) {
         throw new AssertionError(e);
       }
@@ -102,7 +99,7 @@ public class SigstoreTufClient {
       return this;
     }
 
-    public Builder tufMirror(URL mirror, Path trustedRoot) {
+    public Builder tufMirror(URL mirror, RootProvider trustedRoot) {
       this.remoteMirror = mirror;
       this.trustedRoot = trustedRoot;
       return this;

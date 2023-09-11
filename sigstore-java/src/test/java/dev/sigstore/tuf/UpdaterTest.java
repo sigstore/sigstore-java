@@ -937,7 +937,7 @@ class UpdaterTest {
         .setClock(Clock.fixed(Instant.parse(time), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
         .setFetcher(HttpMetaFetcher.newFetcher(new URL(remoteUrl)))
-        .setTrustedRootPath(trustedRootFile)
+        .setTrustedRootPath(RootProvider.fromFile(trustedRootFile))
         .setLocalStore(FileSystemTufStore.newFileSystemStore(localStore))
         .build();
   }
