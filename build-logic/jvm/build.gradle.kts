@@ -16,5 +16,5 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin")
     implementation("org.jetbrains.dokka:org.jetbrains.dokka.gradle.plugin:$embeddedKotlinVersion")
     implementation("com.github.autostyle:com.github.autostyle.gradle.plugin:3.2")
-    implementation("net.ltgt.errorprone:net.ltgt.errorprone.gradle.plugin:3.0.1")
+    implementation("net.ltgt.errorprone:net.ltgt.errorprone.gradle.plugin:3.1.0")
 }
