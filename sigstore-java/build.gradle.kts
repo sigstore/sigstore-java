@@ -4,7 +4,7 @@ plugins {
     id("build-logic.java-published-library")
     id("build-logic.test-junit5")
     id("org.jsonschema2dataclass") version "5.0.0"
-    id("com.google.protobuf") version "0.9.2"
+    id("com.google.protobuf") version "0.9.4"
 }
 
 description = "A Java client for signing and verifying using Sigstore"
@@ -23,13 +23,13 @@ dependencies {
     implementation("dev.sigstore:protobuf-specs:0.1.0") {
         because("It generates Sigstore Bundle file")
     }
-    implementation(platform("com.google.protobuf:protobuf-bom:3.22.0"))
+    implementation(platform("com.google.protobuf:protobuf-bom:3.24.3"))
     implementation("com.google.protobuf:protobuf-java-util") {
         because("It converts protobuf to json")
     }
 
     // grpc deps
-    implementation(platform("io.grpc:grpc-bom:1.53.0"))
+    implementation(platform("io.grpc:grpc-bom:1.58.0"))
     implementation("io.grpc:grpc-protobuf")
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
@@ -61,11 +61,11 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.22.0"
+        artifact = "com.google.protobuf:protoc:3.24.3"
     }
     plugins {
         id("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.53.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.58.0"
         }
     }
     generateProtoTasks {
