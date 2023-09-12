@@ -27,14 +27,15 @@ public abstract class ValidFor {
 
   public abstract Optional<Instant> getEnd();
 
+  /** Check if an instant of time is contained within the validity range including the endpoints. */
   public boolean contains(Instant instant) {
-    if (!getStart().isBefore(instant)) {
+    if (instant.isBefore(getStart())) {
       return false;
     }
-    if (getEnd().isEmpty() || getEnd().get().isAfter(instant)) {
+    if (getEnd().isEmpty()) {
       return true;
     }
-    return false;
+    return !instant.isAfter(getEnd().get());
   }
 
   public static ValidFor from(TimeRange proto) {
