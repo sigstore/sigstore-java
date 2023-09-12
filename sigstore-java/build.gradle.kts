@@ -20,7 +20,7 @@ dependencies {
 
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
 
-    implementation("dev.sigstore:protobuf-specs:0.1.0") {
+    implementation("dev.sigstore:protobuf-specs:0.2.1") {
         because("It generates Sigstore Bundle file")
     }
     implementation(platform("com.google.protobuf:protobuf-bom:3.24.3"))
