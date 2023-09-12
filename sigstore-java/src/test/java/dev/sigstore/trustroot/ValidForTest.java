@@ -31,11 +31,11 @@ class ValidForTest {
     Assertions.assertTrue(range.contains(Instant.now()));
 
     Assertions.assertTrue(range.contains(start.plus(10, ChronoUnit.SECONDS)));
-    Assertions.assertFalse(range.contains(start));
+    Assertions.assertTrue(range.contains(start));
     Assertions.assertFalse(range.contains(start.minus(10, ChronoUnit.SECONDS)));
 
     Assertions.assertTrue(range.contains(end.minus(10, ChronoUnit.SECONDS)));
-    Assertions.assertFalse(range.contains(end));
+    Assertions.assertTrue(range.contains(end));
     Assertions.assertFalse(range.contains(end.plus(10, ChronoUnit.SECONDS)));
   }
 
@@ -47,7 +47,7 @@ class ValidForTest {
     Assertions.assertTrue(range.contains(Instant.now().plus(10, ChronoUnit.SECONDS)));
 
     Assertions.assertTrue(range.contains(start.plus(10, ChronoUnit.SECONDS)));
-    Assertions.assertFalse(range.contains(start));
+    Assertions.assertTrue(range.contains(start));
     Assertions.assertFalse(range.contains(start.minus(10, ChronoUnit.SECONDS)));
   }
 }
