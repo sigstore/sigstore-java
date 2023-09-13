@@ -15,6 +15,7 @@
  */
 package dev.sigstore.fulcio.client;
 
+import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.certificates.transparency.CTLogInfo;
 import dev.sigstore.encryption.certificates.transparency.CTVerificationResult;
@@ -25,11 +26,13 @@ import dev.sigstore.trustroot.TransparencyLogs;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertPath;
 import java.security.cert.CertPathValidator;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.PKIXParameters;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -86,14 +89,9 @@ public class FulcioVerifier2 {
     this.ctVerifier = ctVerifier;
   }
 
-  /**
-   * Verify that an SCT associated with a Singing Certificate is valid and signed by the configured
-   * CT-log public key.
-   *
-   * @param signingCertificate containing the SCT metadata to verify
-   * @throws FulcioVerificationException if verification fails for any reason
-   */
-  public void verifySct(SigningCertificate signingCertificate) throws FulcioVerificationException {
+  @VisibleForTesting
+  void verifySct(SigningCertificate signingCertificate, CertPath rebuiltCert)
+      throws FulcioVerificationException {
     if (ctLogs.size() == 0) {
       throw new FulcioVerificationException("No ct logs were provided to verifier");
     }
@@ -102,18 +100,17 @@ public class FulcioVerifier2 {
       throw new FulcioVerificationException(
           "Detached SCTs are not supported for validating certificates");
     } else if (signingCertificate.getEmbeddedSct().isPresent()) {
-      verifyEmbeddedScts(signingCertificate);
+      verifyEmbeddedScts(rebuiltCert);
     } else {
       throw new FulcioVerificationException("No valid SCTs were found during verification");
     }
   }
 
-  private void verifyEmbeddedScts(SigningCertificate signingCertificate)
-      throws FulcioVerificationException {
-    var certs = signingCertificate.getCertificates();
+  private void verifyEmbeddedScts(CertPath rebuiltCert) throws FulcioVerificationException {
+    @SuppressWarnings("unchecked")
+    var certs = (List<X509Certificate>) rebuiltCert.getCertificates();
     CTVerificationResult result;
     try {
-      // even though we're sending the whole chain, this method only checks SCTs on the leaf cert
       result = ctVerifier.verifySignedCertificateTimestamps(certs, null, null);
     } catch (CertificateEncodingException cee) {
       throw new FulcioVerificationException(
@@ -144,13 +141,25 @@ public class FulcioVerifier2 {
 
   /**
    * Verify that a cert chain is valid and chains up to the trust anchor (fulcio public key)
-   * configured in this validator.
+   * configured in this validator. Also verify that the leaf certificate contains at least one valid
+   * SCT
    *
    * @param signingCertificate containing the certificate chain
    * @throws FulcioVerificationException if verification fails for any reason
    */
-  public void verifyCertChain(SigningCertificate signingCertificate)
+  public void verifySigningCertificate(SigningCertificate signingCertificate)
       throws FulcioVerificationException, IOException {
+    CertPath reconstructedCert = reconstructValidCertPath(signingCertificate);
+    verifySct(signingCertificate, reconstructedCert);
+  }
+
+  /**
+   * Find a valid cert path that chains back up to the trusted root certs and reconstruct a
+   * certificate path combining the provided un-trusted certs and a known set of trusted and
+   * intermediate certs.
+   */
+  CertPath reconstructValidCertPath(SigningCertificate signingCertificate)
+      throws FulcioVerificationException {
     CertPathValidator cpv;
     try {
       cpv = CertPathValidator.getInstance("PKIX");
@@ -171,8 +180,6 @@ public class FulcioVerifier2 {
 
     Map<String, String> caVerificationFailure = new LinkedHashMap<>();
 
-    System.out.println(Certificates.toPemString(signingCertificate.getCertPath()));
-
     for (var ca : validCAs) {
       PKIXParameters pkixParams;
       try {
@@ -190,10 +197,12 @@ public class FulcioVerifier2 {
           new Date(signingCertificate.getLeafCertificate().getNotBefore().getTime());
       pkixParams.setDate(dateInValidityPeriod);
 
+      CertPath rebuiltCert;
       try {
         // build a cert chain with the root-chain in question and the provided leaf
-        var rebuiltCert =
+        rebuiltCert =
             Certificates.appendCertPath(ca.getCertPath(), signingCertificate.getLeafCertificate());
+
         // a result is returned here, but we ignore it
         cpv.validate(rebuiltCert, pkixParams);
       } catch (CertPathValidatorException
@@ -203,8 +212,8 @@ public class FulcioVerifier2 {
         // verification failed
         continue;
       }
+      return rebuiltCert;
       // verification passed so just end this method
-      return;
     }
     String errors =
         caVerificationFailure.entrySet().stream()

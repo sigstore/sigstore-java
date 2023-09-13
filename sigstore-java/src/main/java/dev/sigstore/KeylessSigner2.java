@@ -307,10 +307,9 @@ public class KeylessSigner2 implements AutoCloseable {
                   tokenInfo.getIdToken(),
                   signer.sign(
                       tokenInfo.getSubjectAlternativeName().getBytes(StandardCharsets.UTF_8))));
-      fulcioVerifier.verifyCertChain(signingCert);
       // TODO: this signing workflow mandates SCTs, but fulcio itself doesn't, figure out a way to
       // allow that to be known
-      fulcioVerifier.verifySct(signingCert);
+      fulcioVerifier.verifySigningCertificate(signingCert);
       this.signingCert = signingCert;
       signingCertPemBytes = Certificates.toPemBytes(signingCert.getLeafCertificate());
     } finally {
