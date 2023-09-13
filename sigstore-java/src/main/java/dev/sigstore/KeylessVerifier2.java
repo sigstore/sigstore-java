@@ -157,20 +157,12 @@ public class KeylessVerifier2 {
               + Hex.toHexString(request.getKeylessSignature().getDigest()));
     }
 
-    // verify the certificate chains up to a trusted root (fulcio)
+    // verify the certificate chains up to a trusted root (fulcio) and contains a valid SCT
     try {
-      fulcioVerifier.verifyCertChain(signingCert);
+      fulcioVerifier.verifySigningCertificate(signingCert);
     } catch (FulcioVerificationException | IOException ex) {
       throw new KeylessVerificationException(
           "Fulcio certificate was not valid: " + ex.getMessage(), ex);
-    }
-
-    // make the sure a crt is signed by the certificate transparency log (embedded only)
-    try {
-      fulcioVerifier.verifySct(signingCert);
-    } catch (FulcioVerificationException ex) {
-      throw new KeylessVerificationException(
-          "Fulcio certificate SCT was not valid: " + ex.getMessage(), ex);
     }
 
     // verify the certificate identity if options are present
