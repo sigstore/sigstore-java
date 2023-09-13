@@ -21,19 +21,26 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
-import com.google.errorprone.annotations.InlineMe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
-import dev.sigstore.fulcio.client.*;
-import dev.sigstore.oidc.client.OidcClient;
+import dev.sigstore.fulcio.client.CertificateRequest;
+import dev.sigstore.fulcio.client.FulcioClient;
+import dev.sigstore.fulcio.client.FulcioVerificationException;
+import dev.sigstore.fulcio.client.FulcioVerifier;
+import dev.sigstore.fulcio.client.SigningCertificate;
+import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
-import dev.sigstore.rekor.client.*;
+import dev.sigstore.rekor.client.HashedRekordRequest;
+import dev.sigstore.rekor.client.RekorClient;
+import dev.sigstore.rekor.client.RekorParseException;
+import dev.sigstore.rekor.client.RekorVerificationException;
+import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.InvalidAlgorithmParameterException;
@@ -120,35 +127,15 @@ public class KeylessSigner implements AutoCloseable {
   }
 
   public static class Builder {
-    private FulcioClient fulcioClient;
-    private FulcioVerifier fulcioVerifier;
-    private RekorClient rekorClient;
-    private RekorVerifier rekorVerifier;
+    private SigstoreTufClient sigstoreTufClient;
     private OidcClients oidcClients;
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
 
     @CanIgnoreReturnValue
-    public Builder fulcioClient(FulcioClient fulcioClient, FulcioVerifier fulcioVerifier) {
-      this.fulcioClient = fulcioClient;
-      this.fulcioVerifier = fulcioVerifier;
+    public Builder sigstoreTufClient(SigstoreTufClient sigstoreTufClient) {
+      this.sigstoreTufClient = sigstoreTufClient;
       return this;
-    }
-
-    @CanIgnoreReturnValue
-    public Builder rekorClient(RekorClient rekorClient, RekorVerifier rekorVerifier) {
-      this.rekorClient = rekorClient;
-      this.rekorVerifier = rekorVerifier;
-      return this;
-    }
-
-    @CanIgnoreReturnValue
-    @Deprecated
-    @InlineMe(
-        replacement = "this.oidcClients(OidcClients.of(oidcClient))",
-        imports = "dev.sigstore.oidc.client.OidcClients")
-    public final Builder oidcClient(OidcClient oidcClient) {
-      return oidcClients(OidcClients.of(oidcClient));
     }
 
     @CanIgnoreReturnValue
@@ -182,13 +169,16 @@ public class KeylessSigner implements AutoCloseable {
     }
 
     @CheckReturnValue
-    public KeylessSigner build() {
-      Preconditions.checkNotNull(fulcioClient, "fulcioClient");
-      Preconditions.checkNotNull(fulcioVerifier, "fulcioVerifier");
-      Preconditions.checkNotNull(rekorClient, "rekorClient");
-      Preconditions.checkNotNull(rekorVerifier, "rekorVerifier");
-      Preconditions.checkNotNull(oidcClients, "oidcClients");
-      Preconditions.checkNotNull(signer, "signer");
+    public KeylessSigner build()
+        throws CertificateException, IOException, NoSuchAlgorithmException, InvalidKeySpecException,
+            InvalidKeyException, InvalidAlgorithmParameterException {
+      Preconditions.checkNotNull(sigstoreTufClient, "sigstoreTufClient");
+      sigstoreTufClient.update();
+      var trustedRoot = sigstoreTufClient.getSigstoreTrustedRoot();
+      var fulcioClient = FulcioClient.builder().setCertificateAuthority(trustedRoot).build();
+      var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
+      var rekorClient = RekorClient.builder().setTransparencyLog(trustedRoot).build();
+      var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
       return new KeylessSigner(
           fulcioClient,
           fulcioVerifier,
@@ -199,38 +189,26 @@ public class KeylessSigner implements AutoCloseable {
           minSigningCertificateLifetime);
     }
 
+    /**
+     * Initialize a builder with the sigstore public good instance tuf root and oidc targets with
+     * ecdsa signing.
+     */
     @CanIgnoreReturnValue
-    public Builder sigstorePublicDefaults()
-        throws IOException, InvalidAlgorithmParameterException, CertificateException,
-            InvalidKeySpecException, NoSuchAlgorithmException {
-      fulcioClient(
-          FulcioClient.builder().build(),
-          FulcioVerifier.newFulcioVerifier(
-              VerificationMaterial.Production.fulioCert(),
-              VerificationMaterial.Production.ctfePublicKeys()));
-      rekorClient(
-          RekorClient.builder().build(),
-          RekorVerifier.newRekorVerifier(VerificationMaterial.Production.rekorPublicKey()));
+    public Builder sigstorePublicDefaults() throws IOException, NoSuchAlgorithmException {
+      sigstoreTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
       oidcClients(OidcClients.DEFAULTS);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
     }
 
+    /**
+     * Initialize a builder with the sigstore staging instance tuf root and oidc targets with ecdsa
+     * signing.
+     */
     @CanIgnoreReturnValue
-    public Builder sigstoreStagingDefaults()
-        throws IOException, InvalidAlgorithmParameterException, CertificateException,
-            InvalidKeySpecException, NoSuchAlgorithmException {
-      fulcioClient(
-          FulcioClient.builder()
-              .setServerUrl(URI.create(FulcioClient.STAGING_FULCIO_SERVER))
-              .build(),
-          FulcioVerifier.newFulcioVerifier(
-              VerificationMaterial.Staging.fulioCert(),
-              VerificationMaterial.Staging.ctfePublicKeys()));
-      rekorClient(
-          RekorClient.builder().setServerUrl(URI.create(RekorClient.STAGING_REKOR_SERVER)).build(),
-          RekorVerifier.newRekorVerifier(VerificationMaterial.Staging.rekorPublicKey()));
+    public Builder sigstoreStagingDefaults() throws IOException, NoSuchAlgorithmException {
+      sigstoreTufClient = SigstoreTufClient.builder().useStagingInstance().build();
       oidcClients(OidcClients.STAGING_DEFAULTS);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
@@ -251,7 +229,7 @@ public class KeylessSigner implements AutoCloseable {
       throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
           UnsupportedAlgorithmException, CertificateException, IOException,
           FulcioVerificationException, RekorVerificationException, InterruptedException,
-          RekorParseException {
+          RekorParseException, InvalidKeySpecException {
 
     if (artifactDigests.size() == 0) {
       throw new IllegalArgumentException("Require one or more digests");
@@ -329,10 +307,9 @@ public class KeylessSigner implements AutoCloseable {
                   tokenInfo.getIdToken(),
                   signer.sign(
                       tokenInfo.getSubjectAlternativeName().getBytes(StandardCharsets.UTF_8))));
-      fulcioVerifier.verifyCertChain(signingCert);
       // TODO: this signing workflow mandates SCTs, but fulcio itself doesn't, figure out a way to
       // allow that to be known
-      fulcioVerifier.verifySct(signingCert);
+      fulcioVerifier.verifySigningCertificate(signingCert);
       this.signingCert = signingCert;
       signingCertPemBytes = Certificates.toPemBytes(signingCert.getLeafCertificate());
     } finally {
@@ -350,7 +327,8 @@ public class KeylessSigner implements AutoCloseable {
   public KeylessSignature sign(byte[] artifactDigest)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException, RekorParseException {
+          OidcException, InvalidKeyException, InterruptedException, RekorParseException,
+          InvalidKeySpecException {
     return sign(List.of(artifactDigest)).get(0);
   }
 
@@ -364,7 +342,8 @@ public class KeylessSigner implements AutoCloseable {
   public Map<Path, KeylessSignature> signFiles(List<Path> artifacts)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException, RekorParseException {
+          OidcException, InvalidKeyException, InterruptedException, RekorParseException,
+          InvalidKeySpecException {
     if (artifacts.size() == 0) {
       throw new IllegalArgumentException("Require one or more paths");
     }
@@ -391,7 +370,8 @@ public class KeylessSigner implements AutoCloseable {
   public KeylessSignature signFile(Path artifact)
       throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
           CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException, RekorParseException {
+          OidcException, InvalidKeyException, InterruptedException, RekorParseException,
+          InvalidKeySpecException {
     return signFiles(List.of(artifact)).get(artifact);
   }
 }

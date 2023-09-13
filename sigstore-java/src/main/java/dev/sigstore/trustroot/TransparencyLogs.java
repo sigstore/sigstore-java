@@ -59,10 +59,7 @@ public abstract class TransparencyLogs implements Iterable<TransparencyLog> {
   public Optional<TransparencyLog> find(byte[] logId, Instant time) {
     return getTransparencyLogs().stream()
         .filter(tl -> Arrays.equals(tl.getLogId().getKeyId(), logId))
-        .filter(tl -> tl.getPublicKey().getValidFor().getStart().compareTo(time) <= 0)
-        .filter(
-            tl ->
-                tl.getPublicKey().getValidFor().getEnd().orElse(Instant.now()).compareTo(time) >= 0)
+        .filter(tl -> tl.getPublicKey().getValidFor().contains(time))
         .findAny();
   }
 

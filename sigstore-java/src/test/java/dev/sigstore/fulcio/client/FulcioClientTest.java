@@ -20,11 +20,19 @@ import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
+import dev.sigstore.trustroot.CertificateAuthority;
+import dev.sigstore.trustroot.ImmutableCertificateAuthority;
+import dev.sigstore.trustroot.ImmutableValidFor;
+import dev.sigstore.trustroot.Subject;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertPath;
+import java.security.cert.CertificateException;
+import java.time.Instant;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 
 public class FulcioClientTest {
 
@@ -36,7 +44,7 @@ public class FulcioClientTest {
     var c =
         FulcioClient.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setServerUrl(fulcioWrapper.getGrpcURI())
+            .setCertificateAuthority(createCA(fulcioWrapper.getGrpcURI2()))
             .build();
 
     // create a "subject" and sign it with the oidc server key (signed JWT)
@@ -54,7 +62,6 @@ public class FulcioClientTest {
 
     // some pretty basic assertions
     Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-    Assertions.assertTrue(sc.getDetachedSct().isEmpty());
     Assertions.assertTrue(sc.hasEmbeddedSct());
   }
 
@@ -66,8 +73,7 @@ public class FulcioClientTest {
     var c =
         FulcioClient.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setServerUrl(fulcioWrapper.getGrpcURI())
-            .requireSct(false)
+            .setCertificateAuthority(createCA(fulcioWrapper.getGrpcURI2()))
             .build();
 
     // create a "subject" and sign it with the oidc server key (signed JWT)
@@ -81,15 +87,16 @@ public class FulcioClientTest {
     var cReq = CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
-    var sc = c.signingCertificate(cReq);
-
-    // some pretty basic assertions
-    Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-    Assertions.assertFalse(sc.getDetachedSct().isPresent());
-    Assertions.assertFalse(sc.hasEmbeddedSct());
+    var ex = Assertions.assertThrows(CertificateException.class, () -> c.signingCertificate(cReq));
+    Assertions.assertEquals(ex.getMessage(), "Detached SCTs are not supported");
   }
 
-  @Test
-  @Disabled("TODO: until we can hit a fulcio instance that generates detached SCTs")
-  public void testSigningCert_detachedSCT() {}
+  private CertificateAuthority createCA(URI uri) {
+    return ImmutableCertificateAuthority.builder()
+        .uri(uri)
+        .certPath(Mockito.mock(CertPath.class))
+        .subject(Mockito.mock(Subject.class))
+        .validFor(ImmutableValidFor.builder().start(Instant.EPOCH).build())
+        .build();
+  }
 }

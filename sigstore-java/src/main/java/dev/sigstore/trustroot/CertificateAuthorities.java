@@ -50,8 +50,7 @@ public abstract class CertificateAuthorities implements Iterable<CertificateAuth
    */
   public List<CertificateAuthority> find(Instant time) {
     return getCertificateAuthorities().stream()
-        .filter(ca -> ca.getValidFor().getStart().compareTo(time) <= 0)
-        .filter(ca -> ca.getValidFor().getEnd().orElse(Instant.now()).compareTo(time) >= 0)
+        .filter(ca -> ca.getValidFor().contains(time))
         .collect(Collectors.toList());
   }
 

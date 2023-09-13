@@ -176,11 +176,7 @@ class UpdaterTest {
   public void testTimestampUpdate_throwMetaNotFoundException() throws IOException {
     setupMirror("synthetic/test-template", "2.root.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
-    assertThrows(
-        FileNotFoundException.class,
-        () -> {
-          updater.updateTimestamp(updater.updateRoot());
-        });
+    assertThrows(FileNotFoundException.class, () -> updater.updateTimestamp(updater.updateRoot()));
   }
 
   @Test

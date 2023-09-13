@@ -16,14 +16,22 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
+import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.transparency.SerializationException;
+import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import dev.sigstore.trustroot.ImmutableLogId;
+import dev.sigstore.trustroot.ImmutableTransparencyLog;
+import dev.sigstore.trustroot.ImmutableTransparencyLogs;
+import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.List;
+import java.util.Collections;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -31,10 +39,10 @@ import org.junit.jupiter.api.Test;
 public class FulcioVerifierTest {
   private static String sctBase64;
   private static String certs;
-  private static byte[] fulcioRoot;
-  private static byte[] ctfePub;
-  private static byte[] badCtfePub;
   private static String certsWithEmbeddedSct;
+  private static String bundleFile;
+
+  private static SigstoreTrustedRoot trustRoot;
 
   @BeforeAll
   public static void loadResources() throws IOException {
@@ -47,102 +55,114 @@ public class FulcioVerifierTest {
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/cert.pem"),
             StandardCharsets.UTF_8);
 
-    fulcioRoot =
-        Resources.toByteArray(
-            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/fulcio.crt.pem"));
-    ctfePub =
-        Resources.toByteArray(
-            Resources.getResource("dev/sigstore/samples/fulcio-response/valid/ctfe.pub"));
-    badCtfePub =
-        Resources.toByteArray(Resources.getResource("dev/sigstore/samples/keys/test-rsa.pub"));
-
     certsWithEmbeddedSct =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/fulcio-response/valid/certWithSct.pem"),
             StandardCharsets.UTF_8);
+
+    bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle-with-leaf-cert.sigstore"),
+            StandardCharsets.UTF_8);
+  }
+
+  @BeforeAll
+  public static void initTrustRoot() throws IOException, CertificateException {
+    var json =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/trustroot/trusted_root.json"),
+            StandardCharsets.UTF_8);
+    var builder = TrustedRoot.newBuilder();
+    JsonFormat.parser().merge(json, builder);
+
+    trustRoot = SigstoreTrustedRoot.from(builder.build());
   }
 
   @Test
-  public void validSigningCertAndDetachedSct()
-      throws IOException, SerializationException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, InvalidAlgorithmParameterException,
-          FulcioVerificationException {
-    var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(ctfePub, badCtfePub));
+  public void detachedSctNotSupported() throws Exception {
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustRoot);
 
-    fulcioVerifier.verifyCertChain(signingCertificate);
-    fulcioVerifier.verifySct(signingCertificate);
+    var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
+    var ex =
+        Assertions.assertThrows(
+            FulcioVerificationException.class,
+            () -> fulcioVerifier.verifySct(signingCertificate, signingCertificate.getCertPath()));
+    Assertions.assertEquals(
+        "Detached SCTs are not supported for validating certificates", ex.getMessage());
   }
 
   @Test
   public void testVerifySct_nullCtLogKey()
       throws IOException, SerializationException, CertificateException, InvalidKeySpecException,
           NoSuchAlgorithmException, InvalidAlgorithmParameterException {
-    var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, null);
+    var signingCertificate =
+        SigningCertificate.newSigningCertificate(certsWithEmbeddedSct, sctBase64);
+    var fulcioVerifier =
+        FulcioVerifier.newFulcioVerifier(
+            trustRoot.getCAs(),
+            ImmutableTransparencyLogs.builder()
+                .addAllTransparencyLogs(Collections.emptyList())
+                .build());
 
     try {
-      fulcioVerifier.verifySct(signingCertificate);
+      fulcioVerifier.verifySigningCertificate(signingCertificate);
       Assertions.fail();
     } catch (FulcioVerificationException fve) {
-      Assertions.assertEquals("No ct-log public key was provided to verifier", fve.getMessage());
+      Assertions.assertEquals("No ct logs were provided to verifier", fve.getMessage());
     }
   }
 
   @Test
-  public void testVerifySct_noSct()
-      throws SerializationException, CertificateException, IOException,
-          InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchAlgorithmException {
+  public void testVerifySct_noSct() throws Exception {
     var signingCertificate = SigningCertificate.newSigningCertificate(certs, null);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(ctfePub, badCtfePub));
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustRoot);
 
     try {
-      fulcioVerifier.verifySct(signingCertificate);
+      fulcioVerifier.verifySct(signingCertificate, signingCertificate.getCertPath());
       Assertions.fail();
     } catch (FulcioVerificationException fve) {
-      Assertions.assertEquals(
-          "No detached or embedded SCTs were found to verify", fve.getMessage());
+      Assertions.assertEquals("No valid SCTs were found during verification", fve.getMessage());
     }
   }
 
   @Test
-  public void validSigningCertAndEmbeddedSct()
-      throws IOException, SerializationException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, InvalidAlgorithmParameterException,
-          FulcioVerificationException {
+  public void validSigningCertAndEmbeddedSct() throws Exception {
     var signingCertificate = SigningCertificate.newSigningCertificate(certsWithEmbeddedSct, null);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(ctfePub, badCtfePub));
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustRoot);
 
-    fulcioVerifier.verifyCertChain(signingCertificate);
-    fulcioVerifier.verifySct(signingCertificate);
+    fulcioVerifier.verifySigningCertificate(signingCertificate);
   }
 
   @Test
-  public void invalidEmbeddedSct()
-      throws SerializationException, CertificateException, IOException,
-          InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchAlgorithmException,
-          FulcioVerificationException {
-    var signingCertificate = SigningCertificate.newSigningCertificate(certsWithEmbeddedSct, null);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(badCtfePub));
+  public void validBundle() throws Exception {
+    var bundle = BundleFactory.readBundle(new StringReader(bundleFile));
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustRoot);
 
-    var fve =
-        Assertions.assertThrows(
-            FulcioVerificationException.class, () -> fulcioVerifier.verifySct(signingCertificate));
-    Assertions.assertEquals(
-        "Expecting at least one valid sct, but found 0 valid and 1 invalid scts", fve.getMessage());
+    Assertions.assertEquals(1, bundle.getCertPath().getCertificates().size());
+    fulcioVerifier.verifySigningCertificate(SigningCertificate.from(bundle.getCertPath()));
   }
 
   @Test
-  public void invalidDetachedSct()
-      throws SerializationException, CertificateException, IOException,
-          InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchAlgorithmException {
-    var signingCertificate = SigningCertificate.newSigningCertificate(certs, sctBase64);
-    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(fulcioRoot, List.of(badCtfePub));
+  public void invalidEmbeddedSct() throws Exception {
+    var signingCertificate = SigningCertificate.newSigningCertificate(certsWithEmbeddedSct, null);
+    var fulcioVerifier =
+        FulcioVerifier.newFulcioVerifier(
+            trustRoot.getCAs(),
+            ImmutableTransparencyLogs.builder()
+                .addTransparencyLog(
+                    ImmutableTransparencyLog.builder()
+                        .from(trustRoot.getCTLogs().all().get(0))
+                        .logId(
+                            ImmutableLogId.builder()
+                                .keyId("abcd".getBytes(StandardCharsets.UTF_8))
+                                .build())
+                        .build())
+                .build());
 
     var fve =
         Assertions.assertThrows(
-            FulcioVerificationException.class, () -> fulcioVerifier.verifySct(signingCertificate));
-    // TODO: this error message could probably use some work
-    Assertions.assertEquals("SCT could not be verified because UNKNOWN_LOG", fve.getMessage());
+            FulcioVerificationException.class,
+            () -> fulcioVerifier.verifySct(signingCertificate, signingCertificate.getCertPath()));
+    Assertions.assertEquals("No valid SCTs were found, all(1) SCTs were invalid", fve.getMessage());
   }
 }

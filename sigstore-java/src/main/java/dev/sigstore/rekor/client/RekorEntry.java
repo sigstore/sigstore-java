@@ -19,10 +19,12 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.*;
 import org.erdtman.jcs.JsonCanonicalizer;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
+import org.immutables.value.Value.Derived;
 
 /** A local representation of a rekor entry in the log. */
 @Gson.TypeAdapters
@@ -75,7 +77,7 @@ public interface RekorEntry {
    * Returns a decoded {@link RekorEntryBody} of the log entry. Use {@link RekorTypes} to further
    * process.
    */
-  @Value.Derived
+  @Derived
   default RekorEntryBody getBodyDecoded() {
     return GSON.get()
         .fromJson(new String(Base64.getDecoder().decode(getBody()), UTF_8), RekorEntryBody.class);
@@ -98,6 +100,12 @@ public interface RekorEntry {
 
   /** Returns the time the entry was integrated into the log. */
   long getIntegratedTime();
+
+  @Derived
+  @Gson.Ignore
+  default Instant getIntegratedTimeInstant() {
+    return Instant.ofEpochSecond(getIntegratedTime());
+  }
 
   /**
    * Returns the sha256 of the log's public key. Should be the same for all entries into this log.

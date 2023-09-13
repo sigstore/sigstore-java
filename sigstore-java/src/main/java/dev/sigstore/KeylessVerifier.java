@@ -25,18 +25,25 @@ import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.fulcio.client.SigningCertificate;
-import dev.sigstore.rekor.client.*;
+import dev.sigstore.rekor.client.HashedRekordRequest;
+import dev.sigstore.rekor.client.RekorClient;
+import dev.sigstore.rekor.client.RekorEntry;
+import dev.sigstore.rekor.client.RekorParseException;
+import dev.sigstore.rekor.client.RekorVerificationException;
+import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Path;
-import java.security.*;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Optional;
 import org.bouncycastle.util.encoders.Hex;
@@ -59,52 +66,27 @@ public class KeylessVerifier {
   }
 
   public static class Builder {
-    private FulcioVerifier fulcioVerifier;
-    private RekorClient rekorClient;
-    private RekorVerifier rekorVerifier;
+    private SigstoreTufClient sigstoreTufClient;
 
-    public KeylessVerifier.Builder fulcioVerifier(FulcioVerifier fulcioVerifier) {
-      this.fulcioVerifier = fulcioVerifier;
-      return this;
-    }
-
-    public KeylessVerifier.Builder rekorClient(
-        RekorClient rekorClient, RekorVerifier rekorVerifier) {
-      this.rekorClient = rekorClient;
-      this.rekorVerifier = rekorVerifier;
-      return this;
-    }
-
-    public KeylessVerifier build() {
-      Preconditions.checkNotNull(fulcioVerifier);
-      Preconditions.checkNotNull(rekorVerifier);
-      Preconditions.checkNotNull(rekorClient);
+    public KeylessVerifier build()
+        throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
+            NoSuchAlgorithmException, IOException, InvalidKeyException {
+      Preconditions.checkNotNull(sigstoreTufClient);
+      sigstoreTufClient.update();
+      var trustedRoot = sigstoreTufClient.getSigstoreTrustedRoot();
+      var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
+      var rekorClient = RekorClient.builder().setTransparencyLog(trustedRoot).build();
+      var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
       return new KeylessVerifier(fulcioVerifier, rekorClient, rekorVerifier);
     }
 
-    public Builder sigstorePublicDefaults()
-        throws IOException, InvalidAlgorithmParameterException, CertificateException,
-            InvalidKeySpecException, NoSuchAlgorithmException {
-      fulcioVerifier(
-          FulcioVerifier.newFulcioVerifier(
-              VerificationMaterial.Production.fulioCert(),
-              VerificationMaterial.Production.ctfePublicKeys()));
-      rekorClient(
-          RekorClient.builder().build(),
-          RekorVerifier.newRekorVerifier(VerificationMaterial.Production.rekorPublicKey()));
+    public Builder sigstorePublicDefaults() throws IOException {
+      sigstoreTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
       return this;
     }
 
-    public Builder sigstoreStagingDefaults()
-        throws IOException, InvalidAlgorithmParameterException, CertificateException,
-            InvalidKeySpecException, NoSuchAlgorithmException {
-      fulcioVerifier(
-          FulcioVerifier.newFulcioVerifier(
-              VerificationMaterial.Staging.fulioCert(),
-              VerificationMaterial.Staging.ctfePublicKeys()));
-      rekorClient(
-          RekorClient.builder().setServerUrl(URI.create(RekorClient.STAGING_REKOR_SERVER)).build(),
-          RekorVerifier.newRekorVerifier(VerificationMaterial.Staging.rekorPublicKey()));
+    public Builder sigstoreStagingDefaults() throws IOException {
+      sigstoreTufClient = SigstoreTufClient.builder().useStagingInstance().build();
       return this;
     }
   }
@@ -174,20 +156,13 @@ public class KeylessVerifier {
               + Hex.toHexString(request.getKeylessSignature().getDigest()));
     }
 
-    // verify the certificate chains up to a trusted root (fulcio)
+    // verify the certificate chains up to a trusted root (fulcio) and contains a valid SCT from
+    // a trusted CT log
     try {
-      fulcioVerifier.verifyCertChain(signingCert);
-    } catch (FulcioVerificationException ex) {
+      fulcioVerifier.verifySigningCertificate(signingCert);
+    } catch (FulcioVerificationException | IOException ex) {
       throw new KeylessVerificationException(
           "Fulcio certificate was not valid: " + ex.getMessage(), ex);
-    }
-
-    // make the sure a crt is signed by the certificate transparency log (embedded only)
-    try {
-      fulcioVerifier.verifySct(signingCert);
-    } catch (FulcioVerificationException ex) {
-      throw new KeylessVerificationException(
-          "Fulcio certificate SCT was not valid: " + ex.getMessage(), ex);
     }
 
     // verify the certificate identity if options are present
@@ -235,7 +210,7 @@ public class KeylessVerifier {
 
     // check if the time of entry inclusion in the log (a stand-in for signing time) is within the
     // validity period for the certificate
-    var entryTime = Date.from(Instant.ofEpochSecond(rekorEntry.getIntegratedTime()));
+    var entryTime = Date.from(rekorEntry.getIntegratedTimeInstant());
     try {
       leafCert.checkValidity(entryTime);
     } catch (CertificateNotYetValidException e) {
