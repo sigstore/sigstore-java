@@ -179,16 +179,44 @@ public class KeylessVerifier {
 
     var signature = request.getKeylessSignature().getSignature();
 
-    var rekorEntry =
-        request.getVerificationOptions().isOnline()
-            ? getEntryFromRekor(artifactDigest, leafCert, signature)
-            : request
-                .getKeylessSignature()
-                .getEntry()
-                .orElseThrow(
-                    () ->
-                        new KeylessVerificationException(
-                            "No rekor entry was provided for offline verification"));
+    // Logic is a bit convoluted for obtaining rekor entry for further processing
+    // 1. if we're in "online mode":
+    //   a. grab the entry from rekor remote to use for verification
+    //   b. if an entry was also provided directly to this library, verify it is valid and the
+    //      same signable content as the one we obtained from rekor. SETs will be different
+    //      because rekor can generate those using a non-idempotent signer, but all signatures
+    //      should still be valid
+    // 2. if we're in offline mode, ensure an entry was provided
+
+    RekorEntry rekorEntry;
+
+    if (request.getVerificationOptions().isOnline()) {
+      rekorEntry = getEntryFromRekor(artifactDigest, leafCert, signature);
+      if (request.getKeylessSignature().getEntry().isPresent()) {
+        var provided = request.getKeylessSignature().getEntry().get();
+        if (!Arrays.equals(
+            rekorEntry.getSignableContent(),
+            request.getKeylessSignature().getEntry().get().getSignableContent())) {
+          throw new KeylessVerificationException(
+              "Entry obtained from rekor does not match provided entry");
+        }
+        // verify the provided rekor entry is valid even if we are in online mode
+        try {
+          rekorVerifier.verifyEntry(provided);
+        } catch (RekorVerificationException ex) {
+          throw new KeylessVerificationException("Rekor entry signature was not valid");
+        }
+      }
+    } else {
+      rekorEntry =
+          request
+              .getKeylessSignature()
+              .getEntry()
+              .orElseThrow(
+                  () ->
+                      new KeylessVerificationException(
+                          "No rekor entry was provided for offline verification"));
+    }
 
     // verify the rekor entry is signed by the log keys
     try {

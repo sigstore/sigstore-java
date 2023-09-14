@@ -36,7 +36,10 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "verify", description = "verify an artifact")
+@Command(
+    name = "verify",
+    aliases = {"verify-bundle"},
+    description = "verify an artifact")
 public class Verify implements Callable<Integer> {
   @Parameters(arity = "1", paramLabel = "<artifact>", description = "artifact to verify")
   Path artifact;
@@ -52,19 +55,20 @@ public class Verify implements Callable<Integer> {
         names = {"--certificate-identity"},
         description = "subject alternative name in certificate",
         required = true)
-    private String certificateSan;
+    String certificateSan;
 
     @Option(
         names = {"--certificate-oidc-issuer"},
         description = "sigstore issuer in certificate",
         required = true)
-    private String certificateIssuer;
+    String certificateIssuer;
   }
 
   @Override
   public Integer call() throws Exception {
     byte[] digest = asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
-    KeylessSignature keylessSignature = null;
+    KeylessSignature keylessSignature;
+
     if (signatureFiles.sigAndCert != null) {
       byte[] signature = Files.readAllBytes(signatureFiles.sigAndCert.signatureFile);
       CertPath certPath =
