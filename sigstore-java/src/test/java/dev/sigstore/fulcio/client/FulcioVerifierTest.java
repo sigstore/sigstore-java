@@ -62,7 +62,7 @@ public class FulcioVerifierTest {
 
     bundleFile =
         Resources.toString(
-            Resources.getResource("dev/sigstore/samples/bundles/bundle-with-leaf-cert.sigstore"),
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.sigstore"),
             StandardCharsets.UTF_8);
   }
 
