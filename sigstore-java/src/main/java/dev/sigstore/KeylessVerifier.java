@@ -24,7 +24,6 @@ import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
-import dev.sigstore.fulcio.client.SigningCertificate;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorClient;
 import dev.sigstore.rekor.client.RekorEntry;
@@ -142,8 +141,8 @@ public class KeylessVerifier {
    */
   public void verify(byte[] artifactDigest, KeylessVerificationRequest request)
       throws KeylessVerificationException {
-    var signingCert = SigningCertificate.from(request.getKeylessSignature().getCertPath());
-    var leafCert = signingCert.getLeafCertificate();
+    var signingCert = request.getKeylessSignature().getCertPath();
+    var leafCert = Certificates.getLeaf(signingCert);
 
     // this ensures the provided artifact digest matches what may have come from a bundle (in
     // keyless signature)

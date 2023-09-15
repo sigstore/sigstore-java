@@ -140,12 +140,14 @@ public class Certificates {
     return cf.generateCertPath(Collections.singletonList(certificate));
   }
 
-  /** Appends a CertPath to another {@link CertPath} as children. */
-  public static CertPath appendCertPath(CertPath parent, Certificate child)
-      throws CertificateException {
+  /** Appends an CertPath to another {@link CertPath} as children. */
+  public static CertPath append(CertPath parent, CertPath child) throws CertificateException {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     List<Certificate> certs =
-        ImmutableList.<Certificate>builder().add(child).addAll(parent.getCertificates()).build();
+        ImmutableList.<Certificate>builder()
+            .addAll(child.getCertificates())
+            .addAll(parent.getCertificates())
+            .build();
     return cf.generateCertPath(certs);
   }
 
