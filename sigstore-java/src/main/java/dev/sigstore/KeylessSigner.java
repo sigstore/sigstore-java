@@ -264,7 +264,7 @@ public class KeylessSigner implements AutoCloseable {
       rekorVerifier.verifyEntry(rekorResponse.getEntry());
 
       result.add(
-          ImmutableKeylessSignature.builder()
+          KeylessSignature.builder()
               .digest(artifactDigest)
               .certPath(signingCert.getCertPath())
               .signature(signature)
