@@ -140,7 +140,7 @@ public class Certificates {
     return cf.generateCertPath(Collections.singletonList(certificate));
   }
 
-  /** Appends an CertPath to another {@link CertPath} as children. */
+  /** Appends a CertPath to another {@link CertPath} as children. */
   public static CertPath appendCertPath(CertPath parent, Certificate child)
       throws CertificateException {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
