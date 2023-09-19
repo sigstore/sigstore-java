@@ -17,15 +17,19 @@ package dev.sigstore;
 
 import java.util.List;
 import java.util.Map;
-import org.immutables.value.Value;
+import org.immutables.value.Value.Default;
+import org.immutables.value.Value.Immutable;
 
-@Value.Immutable
+@Immutable
 public interface KeylessVerificationRequest {
   KeylessSignature getKeylessSignature();
 
-  VerificationOptions getVerificationOptions();
+  @Default
+  default VerificationOptions getVerificationOptions() {
+    return VerificationOptions.builder().isOnline(true).build();
+  }
 
-  @Value.Immutable
+  @Immutable
   interface VerificationOptions {
     boolean isOnline();
 
@@ -36,7 +40,7 @@ public interface KeylessVerificationRequest {
     }
   }
 
-  @Value.Immutable
+  @Immutable
   interface CertificateIdentity {
     String getIssuer();
 
