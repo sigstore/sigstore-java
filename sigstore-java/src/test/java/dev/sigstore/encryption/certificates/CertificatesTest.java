@@ -19,6 +19,7 @@ import com.google.common.io.Resources;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.util.ArrayList;
 import java.util.List;
 import org.bouncycastle.util.encoders.Base64;
@@ -134,16 +135,55 @@ public class CertificatesTest {
 
   @Test
   public void appendCertPath() throws Exception {
-    var certPath =
+    var parent =
         Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT_CHAIN)));
-    var cert = Certificates.fromPem(Resources.toByteArray(Resources.getResource(CERT_GH)));
+    var child = Certificates.fromPem(Resources.toByteArray(Resources.getResource(CERT_GH)));
 
-    Assertions.assertEquals(2, certPath.getCertificates().size());
-    var appended = Certificates.appendCertPath(certPath, cert);
+    Assertions.assertEquals(2, parent.getCertificates().size());
+    var appended = Certificates.appendCertPath(parent, child);
 
     Assertions.assertEquals(3, appended.getCertificates().size());
-    Assertions.assertEquals(cert, appended.getCertificates().get(0));
-    Assertions.assertEquals(certPath.getCertificates().get(0), appended.getCertificates().get(1));
-    Assertions.assertEquals(certPath.getCertificates().get(1), appended.getCertificates().get(2));
+    Assertions.assertEquals(child, appended.getCertificates().get(0));
+    Assertions.assertEquals(parent.getCertificates().get(0), appended.getCertificates().get(1));
+    Assertions.assertEquals(parent.getCertificates().get(1), appended.getCertificates().get(2));
+  }
+
+  @Test
+  public void trimParent() throws Exception {
+    var certPath =
+        Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT_CHAIN)));
+    var parent =
+        CertificateFactory.getInstance("X.509")
+            .generateCertPath(List.of(certPath.getCertificates().get(1)));
+
+    var trimmed = Certificates.trimParent(certPath, parent);
+
+    Assertions.assertEquals(1, trimmed.getCertificates().size());
+    Assertions.assertEquals(certPath.getCertificates().get(0), trimmed.getCertificates().get(0));
+  }
+
+  @Test
+  public void containsParent() throws Exception {
+    var certPath =
+        Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT_CHAIN)));
+    var parent =
+        CertificateFactory.getInstance("X.509")
+            .generateCertPath(List.of(certPath.getCertificates().get(1)));
+    var cert = Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT)));
+
+    Assertions.assertTrue(Certificates.containsParent(certPath, parent));
+    Assertions.assertFalse(Certificates.containsParent(cert, certPath));
+    Assertions.assertTrue(Certificates.containsParent(certPath, certPath));
+    Assertions.assertTrue(Certificates.containsParent(cert, cert));
+  }
+
+  @Test
+  public void isSelfSigned() throws Exception {
+    var certPath =
+        Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT_CHAIN)));
+    var cert = Certificates.fromPem(Resources.toByteArray(Resources.getResource(CERT)));
+
+    Assertions.assertTrue(Certificates.isSelfSigned(certPath));
+    Assertions.assertFalse(Certificates.isSelfSigned(cert));
   }
 }

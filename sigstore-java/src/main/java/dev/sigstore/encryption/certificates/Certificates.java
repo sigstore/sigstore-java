@@ -26,9 +26,12 @@ import java.security.cert.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 
 public class Certificates {
+
+  private static final String SCT_X509_OID = "1.3.6.1.4.1.11129.2.4.2";
 
   /** Convert a certificate to a PEM encoded certificate. */
   public static String toPemString(Certificate cert) throws IOException {
@@ -137,15 +140,69 @@ public class Certificates {
     return cf.generateCertPath(Collections.singletonList(certificate));
   }
 
-  /** Appends an X509Certificate to a {@link CertPath} as a leaf. */
-  public static CertPath appendCertPath(CertPath root, Certificate certificate)
+  /** Appends a CertPath to another {@link CertPath} as children. */
+  public static CertPath appendCertPath(CertPath parent, Certificate child)
       throws CertificateException {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     List<Certificate> certs =
-        ImmutableList.<Certificate>builder()
-            .add(certificate)
-            .addAll(root.getCertificates())
-            .build();
+        ImmutableList.<Certificate>builder().add(child).addAll(parent.getCertificates()).build();
     return cf.generateCertPath(certs);
+  }
+
+  /**
+   * Trims a parent CertPath from a provided CertPath. This is intended to be used to trim trusted
+   * root and intermediates from a full CertPath to reveal just the untrusted parts which can be
+   * distributed as part of a signature tuple or bundle.
+   *
+   * @param certPath a certificate path to trim from
+   * @param parentPath the parent certPath to trim off the full certPath
+   * @return a trimmed path
+   * @throws IllegalArgumentException if the trimPath is not a parent of the certPath or if they are
+   *     the same length
+   * @throws CertificateException if an error occurs during CertPath construction
+   */
+  public static CertPath trimParent(CertPath certPath, CertPath parentPath)
+      throws CertificateException {
+    if (!containsParent(certPath, parentPath)) {
+      throw new IllegalArgumentException("trim path was not the parent of the provider chain");
+    }
+    var certs = certPath.getCertificates();
+    var parent = parentPath.getCertificates();
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    return cf.generateCertPath(certs.subList(0, certs.size() - parent.size()));
+  }
+
+  /** Check if a parent certpath is the suffix of a certpath */
+  public static boolean containsParent(CertPath certPath, CertPath parentPath) {
+    var certs = certPath.getCertificates();
+    var parent = parentPath.getCertificates();
+    return parent.size() <= certs.size()
+        && certs.subList(certs.size() - parent.size(), certs.size()).equals(parent);
+  }
+
+  /**
+   * Find and return any SCTs embedded in a certificate.
+   *
+   * @param certificate the certificate with embedded scts
+   * @return a byte array containing any number of embedded scts
+   */
+  public static Optional<byte[]> getEmbeddedSCTs(Certificate certificate) {
+    return Optional.ofNullable(((X509Certificate) certificate).getExtensionValue(SCT_X509_OID));
+  }
+
+  /** Check if a certificate is self-signed. */
+  public static boolean isSelfSigned(Certificate certificate) {
+    return ((X509Certificate) certificate)
+        .getIssuerX500Principal()
+        .equals(((X509Certificate) certificate).getSubjectX500Principal());
+  }
+
+  /** Check if the root of a CertPath is self-signed */
+  public static boolean isSelfSigned(CertPath certPath) {
+    return isSelfSigned(certPath.getCertificates().get(certPath.getCertificates().size() - 1));
+  }
+
+  public static X509Certificate getLeaf(CertPath certPath) {
+    return (X509Certificate) certPath.getCertificates().get(0);
   }
 }
