@@ -15,10 +15,19 @@
  */
 package dev.sigstore.testing;
 
+import com.google.gson.Gson;
+import dev.sigstore.encryption.certificates.Certificates;
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.cert.CertPath;
+import java.security.cert.CertificateException;
+import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.extension.*;
 
@@ -40,12 +49,17 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     return URI.create("http://localhost:5555");
   }
 
-  public URI getGrpcURI() {
-    return URI.create("localhost:5554");
-  }
-
   public URI getGrpcURI2() {
     return URI.create("http://localhost:5554");
+  }
+
+  public CertPath getTrustBundle() throws CertificateException, IOException, InterruptedException {
+    HttpRequest req =
+        HttpRequest.newBuilder().uri(getURI().resolve("/api/v2/trustBundle")).GET().build();
+    HttpResponse<String> response = HttpClient.newHttpClient().send(req, BodyHandlers.ofString());
+
+    TrustBundle tb = new Gson().fromJson(response.body(), TrustBundle.class);
+    return Certificates.fromPemChain(tb.chains.get(0).certificates.get(0));
   }
 
   private Path createConfig(String issuer) throws IOException {
@@ -97,6 +111,14 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     pb.redirectOutput(ProcessBuilder.Redirect.to(fulcioLog.toFile()));
     fulcioProcess = pb.start();
     Thread.sleep(1000); // wait for the server to come up
+  }
+
+  public static class TrustBundle {
+    private List<Chain> chains;
+  }
+
+  public static class Chain {
+    private List<String> certificates;
   }
 
   @Override
