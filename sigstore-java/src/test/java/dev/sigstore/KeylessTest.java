@@ -36,7 +36,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-public class Keyless2Test {
+public class KeylessTest {
   @TempDir public static Path testRoot;
 
   public static List<byte[]> artifactDigests;
@@ -68,10 +68,12 @@ public class Keyless2Test {
     verifySigningResult(results);
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    for (var result : results) {
-      verifier.verifyOnline(
-          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
-      checkBundleSerialization(result);
+
+    for (int i = 0; i < results.size(); i++) {
+      verifier.verify(
+          artifactDigests.get(i),
+          KeylessVerificationRequest.builder().keylessSignature(results.get(i)).build());
+      checkBundleSerialization(results.get(i));
     }
   }
 
@@ -84,10 +86,11 @@ public class Keyless2Test {
     verifySigningResult(results);
 
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
-    for (var result : results) {
-      verifier.verifyOnline(
-          result.getDigest(), Certificates.toPemBytes(result.getCertPath()), result.getSignature());
-      checkBundleSerialization(result);
+    for (int i = 0; i < results.size(); i++) {
+      verifier.verify(
+          artifactDigests.get(i),
+          KeylessVerificationRequest.builder().keylessSignature(results.get(i)).build());
+      checkBundleSerialization(results.get(i));
     }
   }
 

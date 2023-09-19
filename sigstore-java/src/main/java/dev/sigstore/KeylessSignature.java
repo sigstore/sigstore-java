@@ -25,7 +25,11 @@ public interface KeylessSignature {
   /** The sha256 hash digest of the artifact */
   byte[] getDigest();
 
-  /** The full certificate chain provided by fulcio for the public key used to sign the artifact */
+  /**
+   * The partial certificate chain provided by fulcio for the public key and identity used to sign
+   * the artifact, this should NOT contain the trusted root or any trusted intermediates. But users
+   * of this object should understand that older signatures may include the full chain.
+   */
   CertPath getCertPath();
 
   /** The signature over the artifact */

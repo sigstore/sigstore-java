@@ -15,11 +15,14 @@
  */
 package dev.sigstore.fulcio.client;
 
+import com.google.common.io.Resources;
+import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
+import dev.sigstore.testing.grpc.GrpcTypes;
 import dev.sigstore.trustroot.CertificateAuthority;
 import dev.sigstore.trustroot.ImmutableCertificateAuthority;
 import dev.sigstore.trustroot.ImmutableValidFor;
@@ -41,12 +44,6 @@ public class FulcioClientTest {
   public void testSigningCert(
       MockOAuth2ServerExtension mockOAuthServerExtension, FulcioWrapper fulcioWrapper)
       throws Exception {
-    var c =
-        FulcioClient.builder()
-            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setCertificateAuthority(createCA(fulcioWrapper.getGrpcURI2()))
-            .build();
-
     // create a "subject" and sign it with the oidc server key (signed JWT)
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
     var subject = mockOAuthServerExtension.getOidcToken().getSubjectAlternativeName();
@@ -58,11 +55,18 @@ public class FulcioClientTest {
     var cReq = CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
-    var sc = c.signingCertificate(cReq);
+    var client =
+        FulcioClient.builder()
+            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
+            .setCertificateAuthority(
+                createCA(fulcioWrapper.getGrpcURI2(), fulcioWrapper.getTrustBundle()))
+            .build();
+
+    var sc = client.signingCertificate(cReq);
 
     // some pretty basic assertions
-    Assertions.assertTrue(sc.getCertPath().getCertificates().size() > 0);
-    Assertions.assertTrue(sc.hasEmbeddedSct());
+    Assertions.assertTrue(sc.getCertificates().size() > 0);
+    Assertions.assertTrue(Certificates.getEmbeddedSCTs(Certificates.getLeaf(sc)).isPresent());
   }
 
   @Test
@@ -70,11 +74,6 @@ public class FulcioClientTest {
   public void testSigningCert_NoSct(
       MockOAuth2ServerExtension mockOAuthServerExtension, FulcioWrapper fulcioWrapper)
       throws Exception {
-    var c =
-        FulcioClient.builder()
-            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setCertificateAuthority(createCA(fulcioWrapper.getGrpcURI2()))
-            .build();
 
     // create a "subject" and sign it with the oidc server key (signed JWT)
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
@@ -87,16 +86,36 @@ public class FulcioClientTest {
     var cReq = CertificateRequest.newCertificateRequest(signer.getPublicKey(), token, signed);
 
     // ask fulcio for a signing cert
-    var ex = Assertions.assertThrows(CertificateException.class, () -> c.signingCertificate(cReq));
+    var client =
+        FulcioClient.builder()
+            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
+            .setCertificateAuthority(
+                createCA(fulcioWrapper.getGrpcURI2(), fulcioWrapper.getTrustBundle()))
+            .build();
+    var ex =
+        Assertions.assertThrows(CertificateException.class, () -> client.signingCertificate(cReq));
     Assertions.assertEquals(ex.getMessage(), "Detached SCTs are not supported");
   }
 
-  private CertificateAuthority createCA(URI uri) {
+  private CertificateAuthority createCA(URI uri, CertPath trustBundle) {
     return ImmutableCertificateAuthority.builder()
         .uri(uri)
-        .certPath(Mockito.mock(CertPath.class))
+        .certPath(trustBundle)
         .subject(Mockito.mock(Subject.class))
         .validFor(ImmutableValidFor.builder().start(Instant.EPOCH).build())
         .build();
+  }
+
+  @Test
+  public void testDecode_embeddedGrpc() throws Exception {
+    var certs =
+        GrpcTypes.PemToCertificateChain(
+            Resources.toString(
+                Resources.getResource("dev/sigstore/samples/fulcio-response/valid/certWithSct.pem"),
+                StandardCharsets.UTF_8));
+    var signingCert = FulcioClient.builder().build().decodeCerts(certs);
+    Assertions.assertTrue(
+        Certificates.getEmbeddedSCTs(Certificates.getLeaf(signingCert)).isPresent());
+    Assertions.assertEquals(3, signingCert.getCertificates().size());
   }
 }

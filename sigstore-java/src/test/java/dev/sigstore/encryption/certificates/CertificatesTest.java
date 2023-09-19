@@ -137,13 +137,13 @@ public class CertificatesTest {
   public void appendCertPath() throws Exception {
     var parent =
         Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT_CHAIN)));
-    var child = Certificates.fromPem(Resources.toByteArray(Resources.getResource(CERT_GH)));
+    var child = Certificates.fromPemChain(Resources.toByteArray(Resources.getResource(CERT_GH)));
 
     Assertions.assertEquals(2, parent.getCertificates().size());
-    var appended = Certificates.appendCertPath(parent, child);
+    var appended = Certificates.append(parent, child);
 
     Assertions.assertEquals(3, appended.getCertificates().size());
-    Assertions.assertEquals(child, appended.getCertificates().get(0));
+    Assertions.assertEquals(child.getCertificates().get(0), appended.getCertificates().get(0));
     Assertions.assertEquals(parent.getCertificates().get(0), appended.getCertificates().get(1));
     Assertions.assertEquals(parent.getCertificates().get(1), appended.getCertificates().get(2));
   }

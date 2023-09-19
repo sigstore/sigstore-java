@@ -29,7 +29,6 @@ import dev.sigstore.fulcio.client.CertificateRequest;
 import dev.sigstore.fulcio.client.FulcioClient;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
-import dev.sigstore.fulcio.client.SigningCertificate;
 import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
@@ -47,6 +46,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
+import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
@@ -82,7 +82,7 @@ public class KeylessSigner implements AutoCloseable {
 
   /** The code signing certificate from Fulcio. */
   @GuardedBy("lock")
-  private @Nullable SigningCertificate signingCert;
+  private @Nullable CertPath signingCert;
 
   /**
    * Representation {@link #signingCert} in PEM bytes format. This is used to avoid serializing the
@@ -244,7 +244,7 @@ public class KeylessSigner implements AutoCloseable {
       // However, files might be large, and it might take time to talk to Rekor
       // so we check the certificate expiration here.
       renewSigningCertificate();
-      SigningCertificate signingCert;
+      CertPath signingCert;
       byte[] signingCertPemBytes;
       lock.readLock().lock();
       try {
@@ -266,7 +266,7 @@ public class KeylessSigner implements AutoCloseable {
       result.add(
           KeylessSignature.builder()
               .digest(artifactDigest)
-              .certPath(signingCert.getCertPath())
+              .certPath(signingCert)
               .signature(signature)
               .entry(rekorResponse.getEntry())
               .build());
@@ -284,7 +284,7 @@ public class KeylessSigner implements AutoCloseable {
       if (signingCert != null) {
         @SuppressWarnings("JavaUtilDate")
         long lifetimeLeft =
-            signingCert.getLeafCertificate().getNotAfter().getTime() - System.currentTimeMillis();
+            Certificates.getLeaf(signingCert).getNotAfter().getTime() - System.currentTimeMillis();
         if (lifetimeLeft > minSigningCertificateLifetime.toMillis()) {
           // The current certificate is fine, reuse it
           return;
@@ -300,7 +300,7 @@ public class KeylessSigner implements AutoCloseable {
       signingCert = null;
       signingCertPemBytes = null;
       OidcToken tokenInfo = oidcClients.getIDToken();
-      SigningCertificate signingCert =
+      CertPath signingCert =
           fulcioClient.signingCertificate(
               CertificateRequest.newCertificateRequest(
                   signer.getPublicKey(),
@@ -311,7 +311,7 @@ public class KeylessSigner implements AutoCloseable {
       // allow that to be known
       fulcioVerifier.verifySigningCertificate(signingCert);
       this.signingCert = signingCert;
-      signingCertPemBytes = Certificates.toPemBytes(signingCert.getLeafCertificate());
+      signingCertPemBytes = Certificates.toPemBytes(signingCert);
     } finally {
       lock.writeLock().unlock();
     }

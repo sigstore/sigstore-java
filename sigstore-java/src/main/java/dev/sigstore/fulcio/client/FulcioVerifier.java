@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Verifier for fulcio {@link SigningCertificate}. */
+/** Verifier for fulcio generated signing cerificates */
 public class FulcioVerifier {
   private final CertificateAuthorities cas;
   private final TransparencyLogs ctLogs;
@@ -90,25 +90,21 @@ public class FulcioVerifier {
   }
 
   @VisibleForTesting
-  void verifySct(SigningCertificate signingCertificate, CertPath rebuiltCert)
-      throws FulcioVerificationException {
+  void verifySct(CertPath fullCertPath) throws FulcioVerificationException {
     if (ctLogs.size() == 0) {
       throw new FulcioVerificationException("No ct logs were provided to verifier");
     }
 
-    if (signingCertificate.getDetachedSct().isPresent()) {
-      throw new FulcioVerificationException(
-          "Detached SCTs are not supported for validating certificates");
-    } else if (signingCertificate.getEmbeddedSct().isPresent()) {
-      verifyEmbeddedScts(rebuiltCert);
+    if (Certificates.getEmbeddedSCTs(Certificates.getLeaf(fullCertPath)).isPresent()) {
+      verifyEmbeddedScts(fullCertPath);
     } else {
       throw new FulcioVerificationException("No valid SCTs were found during verification");
     }
   }
 
-  private void verifyEmbeddedScts(CertPath rebuiltCert) throws FulcioVerificationException {
+  private void verifyEmbeddedScts(CertPath certPath) throws FulcioVerificationException {
     @SuppressWarnings("unchecked")
-    var certs = (List<X509Certificate>) rebuiltCert.getCertificates();
+    var certs = (List<X509Certificate>) certPath.getCertificates();
     CTVerificationResult result;
     try {
       result = ctVerifier.verifySignedCertificateTimestamps(certs, null, null);
@@ -144,22 +140,23 @@ public class FulcioVerifier {
    * configured in this validator. Also verify that the leaf certificate contains at least one valid
    * SCT
    *
-   * @param signingCertificate containing the certificate chain
+   * @param signingCertificate containing a certificate chain, this chain should not contain any
+   *     trusted root or trusted intermediates
    * @throws FulcioVerificationException if verification fails for any reason
    */
-  public void verifySigningCertificate(SigningCertificate signingCertificate)
+  public void verifySigningCertificate(CertPath signingCertificate)
       throws FulcioVerificationException, IOException {
-    CertPath reconstructedCert = reconstructValidCertPath(signingCertificate);
-    verifySct(signingCertificate, reconstructedCert);
+    CertPath fullCertPath = validateCertPath(signingCertificate);
+    verifySct(fullCertPath);
   }
 
   /**
    * Find a valid cert path that chains back up to the trusted root certs and reconstruct a
    * certificate path combining the provided un-trusted certs and a known set of trusted and
-   * intermediate certs.
+   * intermediate certs. If a full certificate is provided with a self signed root, this should
+   * attempt to match the root/intermediate with a trusted chain.
    */
-  CertPath reconstructValidCertPath(SigningCertificate signingCertificate)
-      throws FulcioVerificationException {
+  CertPath validateCertPath(CertPath signingCertificate) throws FulcioVerificationException {
     CertPathValidator cpv;
     try {
       cpv = CertPathValidator.getInstance("PKIX");
@@ -170,7 +167,7 @@ public class FulcioVerifier {
           e);
     }
 
-    var leaf = signingCertificate.getLeafCertificate();
+    var leaf = Certificates.getLeaf(signingCertificate);
     var validCAs = cas.find(leaf.getNotBefore().toInstant());
 
     if (validCAs.size() == 0) {
@@ -194,17 +191,27 @@ public class FulcioVerifier {
       // these certs are only valid for 15 minutes, so find a time in the validity period
       @SuppressWarnings("JavaUtilDate")
       Date dateInValidityPeriod =
-          new Date(signingCertificate.getLeafCertificate().getNotBefore().getTime());
+          new Date(Certificates.getLeaf(signingCertificate).getNotBefore().getTime());
       pkixParams.setDate(dateInValidityPeriod);
 
-      CertPath rebuiltCert;
+      CertPath fullCertPath;
       try {
-        // build a cert chain with the root-chain in question and the provided leaf
-        rebuiltCert =
-            Certificates.appendCertPath(ca.getCertPath(), signingCertificate.getLeafCertificate());
+        if (Certificates.isSelfSigned(signingCertificate)) {
+          if (Certificates.containsParent(signingCertificate, ca.getCertPath())) {
+            fullCertPath = signingCertificate;
+          } else {
+            // verification failed because we didn't match to a trusted root
+            caVerificationFailure.put(
+                ca.getUri().toString(), "Trusted root in chain does not match");
+            continue;
+          }
+        } else {
+          // build a cert chain with the root-chain in question and the provided signing certificate
+          fullCertPath = Certificates.append(ca.getCertPath(), signingCertificate);
+        }
 
         // a result is returned here, but we ignore it
-        cpv.validate(rebuiltCert, pkixParams);
+        cpv.validate(fullCertPath, pkixParams);
       } catch (CertPathValidatorException
           | InvalidAlgorithmParameterException
           | CertificateException ve) {
@@ -212,7 +219,7 @@ public class FulcioVerifier {
         // verification failed
         continue;
       }
-      return rebuiltCert;
+      return fullCertPath;
       // verification passed so just end this method
     }
     String errors =
