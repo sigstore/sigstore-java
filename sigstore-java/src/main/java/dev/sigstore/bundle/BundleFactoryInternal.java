@@ -17,7 +17,6 @@ package dev.sigstore.bundle;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.ImmutableKeylessSignature;
 import dev.sigstore.KeylessSignature;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.bundle.v1.Bundle;
@@ -210,7 +209,7 @@ class BundleFactoryInternal {
               + " is supported");
     }
     try {
-      return ImmutableKeylessSignature.builder()
+      return KeylessSignature.builder()
           .digest(bundle.getMessageSignature().getMessageDigest().getDigest().toByteArray())
           .certPath(
               toCertPath(
