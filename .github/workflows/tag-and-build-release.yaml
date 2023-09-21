@@ -58,8 +58,7 @@ jobs:
 
       - name: Build project
         run: |
-          # override the version in gradle.properties
-          ./gradlew clean :sigstore-java:createReleaseBundle -Pversion=${{ github.event.inputs.release_version }}
+          ./gradlew clean :sigstore-java:createReleaseBundle -Pversion=${{ github.event.inputs.release_version }} -Prelease -PskipSign
 
       - name: Hash Artifacts
         id: hash
