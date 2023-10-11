@@ -47,6 +47,24 @@ public class KeylessVerifierTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
+  public void testVerify_noDigestInBundle(boolean isOnline) throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle-no-digest.sigstore"),
+            StandardCharsets.UTF_8);
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verificationReq =
+        KeylessVerificationRequest.builder()
+            .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
+            .verificationOptions(VerificationOptions.builder().isOnline(isOnline).build())
+            .build();
+    verifier.verify(Path.of(artifact), verificationReq);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void testVerify_mismatchedSet(boolean isOnline) throws Exception {
     // a bundle file where the SET is replaced with a valid SET for another artifact
     var bundleFile =

@@ -46,7 +46,6 @@ import java.security.cert.CertificateFactory;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -68,8 +67,12 @@ class BundleFactoryInternal {
    * @return Sigstore Bundle in protobuf builder format
    */
   static Bundle.Builder createBundleBuilder(KeylessSignature signingResult) {
+    if (signingResult.getDigest().length == 0) {
+      throw new IllegalStateException(
+          "keyless signature must have artifact digest when serializing to bundle");
+    }
     return Bundle.newBuilder()
-        .setMediaType("application/vnd.dev.sigstore.bundle+json;version=0.1")
+        .setMediaType("application/vnd.dev.sigstore.bundle+json;version=0.2")
         .setVerificationMaterial(buildVerificationMaterial(signingResult))
         .setMessageSignature(
             MessageSignature.newBuilder()
@@ -157,27 +160,39 @@ class BundleFactoryInternal {
     }
     Bundle bundle = bundleBuilder.build();
 
+    // TODO: only allow v0.2 bundles at some point, we will only be producing v0.2 bundles
+    // TODO: in our GA release.
+    // var supportedMediaType = "application/vnd.dev.sigstore.bundle+json;version=0.2";
+    // if (!supportedMediaType.equals(bundle.getMediaType())) {
+    //   throw new BundleParseException(
+    //     "Unsupported media type '"
+    //       + bundle.getMediaType()
+    //       + "', only '"
+    //       + supportedMediaType
+    //       + "' is supported");
+    // }
+
     if (bundle.getVerificationMaterial().getTlogEntriesCount() == 0) {
       throw new BundleParseException("Could not find any tlog entries in bundle json");
     }
     var bundleEntry = bundle.getVerificationMaterial().getTlogEntries(0);
+    if (!bundleEntry.hasInclusionProof()) {
+      throw new BundleParseException("Could not find an inclusion proof");
+    }
     var bundleInclusionProof = bundleEntry.getInclusionProof();
 
-    ImmutableInclusionProof inclusionProof = null;
-    if (bundleEntry.hasInclusionProof()) {
-      inclusionProof =
-          ImmutableInclusionProof.builder()
-              .logIndex(bundleInclusionProof.getLogIndex())
-              .rootHash(Hex.toHexString(bundleInclusionProof.getRootHash().toByteArray()))
-              .treeSize(bundleInclusionProof.getTreeSize())
-              .checkpoint(bundleInclusionProof.getCheckpoint().getEnvelope())
-              .addAllHashes(
-                  bundleInclusionProof.getHashesList().stream()
-                      .map(ByteString::toByteArray)
-                      .map(Hex::toHexString)
-                      .collect(Collectors.toList()))
-              .build();
-    }
+    ImmutableInclusionProof inclusionProof =
+        ImmutableInclusionProof.builder()
+            .logIndex(bundleInclusionProof.getLogIndex())
+            .rootHash(Hex.toHexString(bundleInclusionProof.getRootHash().toByteArray()))
+            .treeSize(bundleInclusionProof.getTreeSize())
+            .checkpoint(bundleInclusionProof.getCheckpoint().getEnvelope())
+            .addAllHashes(
+                bundleInclusionProof.getHashesList().stream()
+                    .map(ByteString::toByteArray)
+                    .map(Hex::toHexString)
+                    .collect(Collectors.toList()))
+            .build();
 
     var verification =
         ImmutableVerification.builder()
@@ -185,7 +200,7 @@ class BundleFactoryInternal {
                 Base64.getEncoder()
                     .encodeToString(
                         bundleEntry.getInclusionPromise().getSignedEntryTimestamp().toByteArray()))
-            .inclusionProof(Optional.ofNullable(inclusionProof))
+            .inclusionProof(inclusionProof)
             .build();
 
     var rekorEntry =
@@ -199,18 +214,23 @@ class BundleFactoryInternal {
             .verification(verification)
             .build();
 
-    var hashAlgorithm = bundle.getMessageSignature().getMessageDigest().getAlgorithm();
-    if (hashAlgorithm != HashAlgorithm.SHA2_256) {
-      throw new BundleParseException(
-          "Cannot read message digests of type "
-              + hashAlgorithm
-              + ", only "
-              + HashAlgorithm.SHA2_256
-              + " is supported");
+    var digest = new byte[] {};
+    if (bundle.getMessageSignature().hasMessageDigest()) {
+      var hashAlgorithm = bundle.getMessageSignature().getMessageDigest().getAlgorithm();
+      if (hashAlgorithm != HashAlgorithm.SHA2_256) {
+        throw new BundleParseException(
+            "Cannot read message digests of type "
+                + hashAlgorithm
+                + ", only "
+                + HashAlgorithm.SHA2_256
+                + " is supported");
+      }
+      digest = bundle.getMessageSignature().getMessageDigest().getDigest().toByteArray();
     }
+
     try {
       return KeylessSignature.builder()
-          .digest(bundle.getMessageSignature().getMessageDigest().getDigest().toByteArray())
+          .digest(digest)
           .certPath(
               toCertPath(
                   bundle.getVerificationMaterial().getX509CertificateChain().getCertificatesList()))

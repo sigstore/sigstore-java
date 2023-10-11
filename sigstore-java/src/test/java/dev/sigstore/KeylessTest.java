@@ -59,7 +59,6 @@ public class KeylessTest {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_production() throws Exception {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
@@ -78,7 +77,6 @@ public class KeylessTest {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
@@ -108,7 +106,7 @@ public class KeylessTest {
       Assertions.assertNotNull(result.getSignature());
 
       var hr = RekorTypes.getHashedRekord(result.getEntry().get());
-      // check if ht rekor entry has the digest we sent
+      // check if the rekor entry has the digest we sent
       Assertions.assertArrayEquals(artifactDigest, result.getDigest());
       // check if the rekor entry has the signature we sent
       Assertions.assertArrayEquals(

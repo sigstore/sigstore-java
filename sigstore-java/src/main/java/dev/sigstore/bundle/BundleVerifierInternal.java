@@ -128,6 +128,13 @@ public class BundleVerifierInternal {
   }
 
   static boolean isRequired(Descriptors.FieldDescriptor field) {
+    // while this isn't configured into the spec, we do not support rfc3161 timestamps in java yet,
+    // so make SETs from rekor required in code here
+    if (field
+        .getFullName()
+        .equals("dev.sigstore.rekor.v1.TransparencyLogEntry.inclusion_promise")) {
+      return true;
+    }
     return field.isRequired()
         || field
             .toProto()
