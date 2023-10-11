@@ -22,7 +22,10 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public interface KeylessSignature {
-  /** The sha256 hash digest of the artifact */
+  /**
+   * The sha256 hash digest of the artifact, this may be empty and should be treated as not present
+   * in that case.
+   */
   byte[] getDigest();
 
   /**

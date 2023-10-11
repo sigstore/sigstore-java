@@ -146,13 +146,16 @@ public class KeylessVerifier {
 
     // this ensures the provided artifact digest matches what may have come from a bundle (in
     // keyless signature)
-    if (!Arrays.equals(artifactDigest, request.getKeylessSignature().getDigest())) {
-      throw new KeylessVerificationException(
-          "Provided artifact sha256 digest does not match digest used for verification"
-              + "\nprovided(hex) : "
-              + Hex.toHexString(artifactDigest)
-              + "\nverification  : "
-              + Hex.toHexString(request.getKeylessSignature().getDigest()));
+    var digest = request.getKeylessSignature().getDigest();
+    if (digest.length > 0) {
+      if (!Arrays.equals(artifactDigest, digest)) {
+        throw new KeylessVerificationException(
+            "Provided artifact sha256 digest does not match digest used for verification"
+                + "\nprovided(hex) : "
+                + Hex.toHexString(artifactDigest)
+                + "\nverification  : "
+                + Hex.toHexString(digest));
+      }
     }
 
     // verify the certificate chains up to a trusted root (fulcio) and contains a valid SCT from

@@ -191,7 +191,7 @@ open class BaseGradleTest {
 
     protected fun <SELF : AbstractCharSequenceAssert<SELF, ACTUAL>, ACTUAL : CharSequence> AbstractCharSequenceAssert<SELF, ACTUAL>.basicSigstoreStructure() =
         contains(
-            """"mediaType": "application/vnd.dev.sigstore.bundle+json;version\u003d0.1"""",
+            """"mediaType": "application/vnd.dev.sigstore.bundle+json;version\u003d0.2"""",
             """"algorithm": "SHA2_256"""",
         )
 }
