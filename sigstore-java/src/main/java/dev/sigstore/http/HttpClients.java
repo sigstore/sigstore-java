@@ -15,9 +15,11 @@
  */
 package dev.sigstore.http;
 
+import com.google.api.client.http.HttpBackOffIOExceptionHandler;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.apache.v2.ApacheHttpTransport;
+import com.google.api.client.util.ExponentialBackOff;
 import java.io.IOException;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -38,15 +40,18 @@ public class HttpClients {
     return new ApacheHttpTransport(hcb.build());
   }
 
-  /** Create a new get requests with the httpParams applied and exponential backoff retries. */
+  /** Create a new get requests with the httpParams applied and retries. */
   public static HttpRequestFactory newRequestFactory(HttpParams httpParams) throws IOException {
     return HttpClients.newHttpTransport(httpParams)
         .createRequestFactory(
             request -> {
               request.setConnectTimeout(httpParams.getTimeout() * 1000);
               request.setReadTimeout(httpParams.getTimeout() * 1000);
+              request.setNumberOfRetries(3); // arbitrarily selected number of retries
               request.setUnsuccessfulResponseHandler(
                   UnsuccessfulResponseHandler.newUnsuccessfulResponseHandler());
+              request.setIOExceptionHandler(
+                  new HttpBackOffIOExceptionHandler(new ExponentialBackOff()));
             });
   }
 }
