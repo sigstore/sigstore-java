@@ -36,6 +36,7 @@ import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorClient;
 import dev.sigstore.rekor.client.RekorParseException;
+import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.tuf.SigstoreTufClient;
@@ -51,6 +52,7 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -77,6 +79,7 @@ public class KeylessSigner implements AutoCloseable {
   private final RekorClient rekorClient;
   private final RekorVerifier rekorVerifier;
   private final OidcClients oidcClients;
+  private final List<OidcIdentity> oidcIdentities;
   private final Signer signer;
   private final Duration minSigningCertificateLifetime;
 
@@ -99,6 +102,7 @@ public class KeylessSigner implements AutoCloseable {
       RekorClient rekorClient,
       RekorVerifier rekorVerifier,
       OidcClients oidcClients,
+      List<OidcIdentity> oidcIdentities,
       Signer signer,
       Duration minSigningCertificateLifetime) {
     this.fulcioClient = fulcioClient;
@@ -106,6 +110,7 @@ public class KeylessSigner implements AutoCloseable {
     this.rekorClient = rekorClient;
     this.rekorVerifier = rekorVerifier;
     this.oidcClients = oidcClients;
+    this.oidcIdentities = oidcIdentities;
     this.signer = signer;
     this.minSigningCertificateLifetime = minSigningCertificateLifetime;
   }
@@ -129,6 +134,7 @@ public class KeylessSigner implements AutoCloseable {
   public static class Builder {
     private SigstoreTufClient sigstoreTufClient;
     private OidcClients oidcClients;
+    private List<OidcIdentity> oidcIdentities = Collections.emptyList();
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
 
@@ -141,6 +147,16 @@ public class KeylessSigner implements AutoCloseable {
     @CanIgnoreReturnValue
     public Builder oidcClients(OidcClients oidcClients) {
       this.oidcClients = oidcClients;
+      return this;
+    }
+
+    /**
+     * An allow list OIDC identities to be used during signing. If the OidcClients are misconfigured
+     * or pick up unexpected credentials, this should prevent signing from proceeding
+     */
+    @CanIgnoreReturnValue
+    public Builder allowedOidcIdentities(List<OidcIdentity> oidcIdentities) {
+      this.oidcIdentities = ImmutableList.copyOf(oidcIdentities);
       return this;
     }
 
@@ -185,6 +201,7 @@ public class KeylessSigner implements AutoCloseable {
           rekorClient,
           rekorVerifier,
           oidcClients,
+          oidcIdentities,
           signer,
           minSigningCertificateLifetime);
     }
@@ -225,11 +242,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a list of keyless singing results.
    */
   @CheckReturnValue
-  public List<KeylessSignature> sign(List<byte[]> artifactDigests)
-      throws OidcException, NoSuchAlgorithmException, SignatureException, InvalidKeyException,
-          UnsupportedAlgorithmException, CertificateException, IOException,
-          FulcioVerificationException, RekorVerificationException, InterruptedException,
-          RekorParseException, InvalidKeySpecException {
+  public List<KeylessSignature> sign(List<byte[]> artifactDigests) throws KeylessSignerException {
 
     if (artifactDigests.size() == 0) {
       throw new IllegalArgumentException("Require one or more digests");
@@ -238,12 +251,30 @@ public class KeylessSigner implements AutoCloseable {
     var result = ImmutableList.<KeylessSignature>builder();
 
     for (var artifactDigest : artifactDigests) {
-      var signature = signer.signDigest(artifactDigest);
+      byte[] signature;
+      try {
+        signature = signer.signDigest(artifactDigest);
+      } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException ex) {
+        throw new KeylessSignerException("Failed to sign artifact", ex);
+      }
 
       // Technically speaking, it is unlikely the certificate will expire between signing artifacts
       // However, files might be large, and it might take time to talk to Rekor
       // so we check the certificate expiration here.
-      renewSigningCertificate();
+      try {
+        renewSigningCertificate();
+      } catch (FulcioVerificationException
+          | UnsupportedAlgorithmException
+          | OidcException
+          | IOException
+          | InterruptedException
+          | InvalidKeyException
+          | NoSuchAlgorithmException
+          | SignatureException
+          | CertificateException ex) {
+        throw new KeylessSignerException("Failed to obtain signing certificate", ex);
+      }
+
       CertPath signingCert;
       byte[] signingCertPemBytes;
       lock.readLock().lock();
@@ -260,8 +291,19 @@ public class KeylessSigner implements AutoCloseable {
       var rekorRequest =
           HashedRekordRequest.newHashedRekordRequest(
               artifactDigest, signingCertPemBytes, signature);
-      var rekorResponse = rekorClient.putEntry(rekorRequest);
-      rekorVerifier.verifyEntry(rekorResponse.getEntry());
+
+      RekorResponse rekorResponse;
+      try {
+        rekorResponse = rekorClient.putEntry(rekorRequest);
+      } catch (RekorParseException | IOException ex) {
+        throw new KeylessSignerException("Failed to put entry in rekor", ex);
+      }
+
+      try {
+        rekorVerifier.verifyEntry(rekorResponse.getEntry());
+      } catch (RekorVerificationException ex) {
+        throw new KeylessSignerException("Failed to validate rekor response after signing", ex);
+      }
 
       result.add(
           KeylessSignature.builder()
@@ -277,7 +319,7 @@ public class KeylessSigner implements AutoCloseable {
   private void renewSigningCertificate()
       throws InterruptedException, CertificateException, IOException, UnsupportedAlgorithmException,
           NoSuchAlgorithmException, InvalidKeyException, SignatureException,
-          FulcioVerificationException, OidcException {
+          FulcioVerificationException, OidcException, KeylessSignerException {
     // Check if the certificate is still valid
     lock.readLock().lock();
     try {
@@ -300,6 +342,18 @@ public class KeylessSigner implements AutoCloseable {
       signingCert = null;
       signingCertPemBytes = null;
       OidcToken tokenInfo = oidcClients.getIDToken();
+
+      // check if we have an allow list and if so, ensure the provided token is in there
+      if (!oidcIdentities.isEmpty()) {
+        var obtainedToken = OidcIdentity.from(tokenInfo);
+        if (!oidcIdentities.contains(OidcIdentity.from(tokenInfo))) {
+          throw new KeylessSignerException(
+              "Obtained Oidc Token "
+                  + obtainedToken
+                  + " does not match any identities in allow list");
+        }
+      }
+
       CertPath signingCert =
           fulcioClient.signingCertificate(
               CertificateRequest.newCertificateRequest(
@@ -324,11 +378,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a keyless singing results.
    */
   @CheckReturnValue
-  public KeylessSignature sign(byte[] artifactDigest)
-      throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
-          CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException, RekorParseException,
-          InvalidKeySpecException {
+  public KeylessSignature sign(byte[] artifactDigest) throws KeylessSignerException {
     return sign(List.of(artifactDigest)).get(0);
   }
 
@@ -339,18 +389,18 @@ public class KeylessSigner implements AutoCloseable {
    * @return a map of artifacts and their keyless singing results.
    */
   @CheckReturnValue
-  public Map<Path, KeylessSignature> signFiles(List<Path> artifacts)
-      throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
-          CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException, RekorParseException,
-          InvalidKeySpecException {
+  public Map<Path, KeylessSignature> signFiles(List<Path> artifacts) throws KeylessSignerException {
     if (artifacts.size() == 0) {
       throw new IllegalArgumentException("Require one or more paths");
     }
     var digests = new ArrayList<byte[]>(artifacts.size());
     for (var artifact : artifacts) {
       var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
-      digests.add(artifactByteSource.hash(Hashing.sha256()).asBytes());
+      try {
+        digests.add(artifactByteSource.hash(Hashing.sha256()).asBytes());
+      } catch (IOException ex) {
+        throw new KeylessSignerException("Failed to hash artifact " + artifact);
+      }
     }
     var signingResult = sign(digests);
     var result = ImmutableMap.<Path, KeylessSignature>builder();
@@ -367,11 +417,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a keyless singing results.
    */
   @CheckReturnValue
-  public KeylessSignature signFile(Path artifact)
-      throws FulcioVerificationException, RekorVerificationException, UnsupportedAlgorithmException,
-          CertificateException, NoSuchAlgorithmException, SignatureException, IOException,
-          OidcException, InvalidKeyException, InterruptedException, RekorParseException,
-          InvalidKeySpecException {
+  public KeylessSignature signFile(Path artifact) throws KeylessSignerException {
     return signFiles(List.of(artifact)).get(artifact);
   }
 }

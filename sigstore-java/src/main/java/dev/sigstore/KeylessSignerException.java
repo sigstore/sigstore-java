@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.oidc.client;
+package dev.sigstore;
 
-import org.immutables.value.Value;
+public class KeylessSignerException extends Exception {
+  public KeylessSignerException(String message) {
+    super(message);
+  }
 
-/** A token from a provider with both openid and email scope claims. */
-@Value.Immutable
-public interface OidcToken {
-  /** The subject or email claim from the token to include in the SAN on the certificate. */
-  String getSubjectAlternativeName();
+  public KeylessSignerException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-  /** The issuer of the id token. */
-  String getIssuer();
-
-  /** The full oidc token obtained from the provider. */
-  String getIdToken();
+  public KeylessSignerException(Throwable cause) {
+    super(cause);
+  }
 }
