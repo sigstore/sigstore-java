@@ -17,6 +17,7 @@
 package dev.sigstore.json.canonicalizer;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Vector;
@@ -37,7 +38,7 @@ public class JsonCanonicalizer {
   }
 
   public JsonCanonicalizer(byte[] jsonData) throws IOException {
-    this(new String(jsonData, "utf-8"));
+    this(new String(jsonData, StandardCharsets.UTF_8));
   }
 
   private void escape(char c) {
@@ -137,7 +138,7 @@ public class JsonCanonicalizer {
   }
 
   public byte[] getEncodedUTF8() throws IOException {
-    return getEncodedString().getBytes("utf-8");
+    return getEncodedString().getBytes(StandardCharsets.UTF_8);
   }
 }
 
