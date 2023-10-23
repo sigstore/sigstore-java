@@ -49,7 +49,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
-    testImplementation(platform("org.mockito:mockito-bom:5.5.0"))
+    testImplementation(platform("org.mockito:mockito-bom:5.6.0"))
     testImplementation("org.mockito:mockito-core")
     testImplementation("org.mockito:mockito-junit-jupiter")
 
