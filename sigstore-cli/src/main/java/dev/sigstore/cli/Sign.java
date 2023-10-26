@@ -28,7 +28,10 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "sign", description = "sign an artifacts")
+@Command(
+    name = "sign",
+    aliases = {"sign-bundle"},
+    description = "sign an artifacts")
 public class Sign implements Callable<Integer> {
 
   @Parameters(arity = "1", paramLabel = "<artifact>", description = "artifact to sign")

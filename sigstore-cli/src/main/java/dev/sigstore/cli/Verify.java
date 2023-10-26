@@ -89,7 +89,7 @@ public class Verify implements Callable<Integer> {
               .subjectAlternativeName(policy.certificateSan)
               .build());
     }
-    var verificationOptions = verificationOptionsBuilder.isOnline(true).build();
+    var verificationOptions = verificationOptionsBuilder.alwaysUseRemoteRekorEntry(false).build();
 
     var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
     verifier.verify(
