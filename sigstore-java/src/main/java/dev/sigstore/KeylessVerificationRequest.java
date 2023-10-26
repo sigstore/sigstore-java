@@ -26,12 +26,18 @@ public interface KeylessVerificationRequest {
 
   @Default
   default VerificationOptions getVerificationOptions() {
-    return VerificationOptions.builder().isOnline(true).build();
+    return VerificationOptions.builder().alwaysUseRemoteRekorEntry(false).build();
   }
 
   @Immutable
   interface VerificationOptions {
-    boolean isOnline();
+
+    /**
+     * Connect to rekor to obtain a rekor entry for verification. This will ignore the provided
+     * rekor entry in a {@link KeylessSignature}. Verifier may still connect to Rekor to obtain an
+     * entry if no {@link KeylessSignature#getEntry()} is empty.
+     */
+    boolean alwaysUseRemoteRekorEntry();
 
     List<CertificateIdentity> getCertificateIdentities();
 

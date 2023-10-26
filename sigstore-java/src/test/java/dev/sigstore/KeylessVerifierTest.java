@@ -22,28 +22,11 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public class KeylessVerifierTest {
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  public void testVerify(boolean isOnline) throws Exception {
-    var bundleFile =
-        Resources.toString(
-            Resources.getResource("dev/sigstore/samples/bundles/bundle.sigstore"),
-            StandardCharsets.UTF_8);
-    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    var verificationReq =
-        KeylessVerificationRequest.builder()
-            .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
-            .verificationOptions(VerificationOptions.builder().isOnline(isOnline).build())
-            .build();
-    verifier.verify(Path.of(artifact), verificationReq);
-  }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
@@ -58,14 +41,14 @@ public class KeylessVerifierTest {
     var verificationReq =
         KeylessVerificationRequest.builder()
             .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
-            .verificationOptions(VerificationOptions.builder().isOnline(isOnline).build())
+            .verificationOptions(
+                VerificationOptions.builder().alwaysUseRemoteRekorEntry(isOnline).build())
             .build();
     verifier.verify(Path.of(artifact), verificationReq);
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  public void testVerify_mismatchedSet(boolean isOnline) throws Exception {
+  @Test
+  public void testVerify_mismatchedSet() throws Exception {
     // a bundle file where the SET is replaced with a valid SET for another artifact
     var bundleFile =
         Resources.toString(
@@ -78,7 +61,8 @@ public class KeylessVerifierTest {
     var verificationReq =
         KeylessVerificationRequest.builder()
             .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
-            .verificationOptions(VerificationOptions.builder().isOnline(isOnline).build())
+            .verificationOptions(
+                VerificationOptions.builder().alwaysUseRemoteRekorEntry(false).build())
             .build();
     Assertions.assertThrows(
         KeylessVerificationException.class,

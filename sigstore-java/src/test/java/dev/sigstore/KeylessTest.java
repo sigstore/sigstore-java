@@ -67,7 +67,6 @@ public class KeylessTest {
     verifySigningResult(results);
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-
     for (int i = 0; i < results.size(); i++) {
       verifier.verify(
           artifactDigests.get(i),

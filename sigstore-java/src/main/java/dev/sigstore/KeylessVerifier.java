@@ -18,7 +18,6 @@ package dev.sigstore;
 import com.google.api.client.util.Preconditions;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
@@ -90,35 +89,6 @@ public class KeylessVerifier {
     }
   }
 
-  /**
-   * Verify that the inputs can attest to the validity of a signature using sigstore's keyless
-   * infrastructure. If no exception is thrown, it should be assumed verification has passed.
-   *
-   * @param artifactDigest the sha256 digest of the artifact that was signed
-   * @param certChain the certificate chain obtained from a fulcio instance
-   * @param signature the signature on the artifact
-   * @throws KeylessVerificationException if the signing information could not be verified
-   */
-  @Deprecated
-  public void verifyOnline(byte[] artifactDigest, byte[] certChain, byte[] signature)
-      throws KeylessVerificationException {
-    try {
-      verify(
-          artifactDigest,
-          KeylessVerificationRequest.builder()
-              .keylessSignature(
-                  KeylessSignature.builder()
-                      .signature(signature)
-                      .certPath(Certificates.fromPemChain(certChain))
-                      .digest(artifactDigest)
-                      .build())
-              .verificationOptions(VerificationOptions.builder().isOnline(true).build())
-              .build());
-    } catch (CertificateException ex) {
-      throw new KeylessVerificationException("Certificate was not valid: " + ex.getMessage(), ex);
-    }
-  }
-
   /** Convenience wrapper around {@link #verify(byte[], KeylessVerificationRequest)}. */
   public void verify(Path artifact, KeylessVerificationRequest request)
       throws KeylessVerificationException {
@@ -181,34 +151,11 @@ public class KeylessVerifier {
 
     var signature = request.getKeylessSignature().getSignature();
 
-    // Logic is a bit convoluted for obtaining rekor entry for further processing
-    // 1. if we're in "online mode":
-    //   a. grab the entry from rekor remote to use for verification
-    //   b. if an entry was also provided directly to this library, verify it is valid and the
-    //      same signable content as the one we obtained from rekor. SETs will be different
-    //      because rekor can generate those using a non-idempotent signer, but all signatures
-    //      should still be valid
-    // 2. if we're in offline mode, ensure an entry was provided
-
     RekorEntry rekorEntry;
-
-    if (request.getVerificationOptions().isOnline()) {
+    if (request.getVerificationOptions().alwaysUseRemoteRekorEntry()
+        || request.getKeylessSignature().getEntry().isEmpty()) {
+      // this setting means we ignore any provided entry
       rekorEntry = getEntryFromRekor(artifactDigest, leafCert, signature);
-      if (request.getKeylessSignature().getEntry().isPresent()) {
-        var provided = request.getKeylessSignature().getEntry().get();
-        if (!Arrays.equals(
-            rekorEntry.getSignableContent(),
-            request.getKeylessSignature().getEntry().get().getSignableContent())) {
-          throw new KeylessVerificationException(
-              "Entry obtained from rekor does not match provided entry");
-        }
-        // verify the provided rekor entry is valid even if we are in online mode
-        try {
-          rekorVerifier.verifyEntry(provided);
-        } catch (RekorVerificationException ex) {
-          throw new KeylessVerificationException("Rekor entry signature was not valid");
-        }
-      }
     } else {
       rekorEntry =
           request
@@ -234,8 +181,8 @@ public class KeylessVerifier {
       } catch (RekorVerificationException ex) {
         throw new KeylessVerificationException("Rekor entry inclusion proof was not valid");
       }
-    } else if (request.getVerificationOptions().isOnline()) {
-      throw new KeylessVerificationException("Fetched rekor entry did not contain inclusion proof");
+    } else if (request.getVerificationOptions().alwaysUseRemoteRekorEntry()) {
+      throw new KeylessVerificationException("Rekor entry did not contain inclusion proof");
     }
 
     // check if the time of entry inclusion in the log (a stand-in for signing time) is within the
