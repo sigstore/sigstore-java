@@ -15,8 +15,13 @@
  */
 package dev.sigstore;
 
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.json.webtoken.JsonWebSignature;
 import com.google.common.hash.Hashing;
+import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import dev.sigstore.testing.matchers.ByteArrayListMatcher;
+import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
+import dev.sigstore.testkit.annotations.OidcProviderType;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +29,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import org.bouncycastle.util.encoders.Hex;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -91,5 +99,50 @@ public class KeylessSignerTest {
   @Test
   public void sign_digest() throws Exception {
     Assertions.assertEquals(signingResults.get(0), signer.sign(artifactHashes.get(0)));
+  }
+
+  @Test
+  @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
+  // this test will only pass on the github.com/sigstore/sigstore-java repository
+  public void sign_failGithubOidcCheck() throws Exception {
+    var signer =
+        KeylessSigner.builder()
+            .sigstorePublicDefaults()
+            .allowedOidcIdentities(List.of(OidcIdentity.of("goose@goose.com", "goose.com")))
+            .build();
+    var ex =
+        Assertions.assertThrows(
+            KeylessSignerException.class,
+            () ->
+                signer.sign(
+                    Hex.decode(
+                        "10f26b52447ec6427c178cadb522ce649922ee67f6d59709e45700aa5df68b30")));
+    MatcherAssert.assertThat(ex.getMessage(), CoreMatchers.startsWith("Obtained Oidc Token"));
+    MatcherAssert.assertThat(
+        ex.getMessage(), CoreMatchers.endsWith("does not match any identities in allow list"));
+  }
+
+  @Test
+  @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
+  // this test will only pass on the github.com/sigstore/sigstore-java repository
+  public void sign_passGithubOidcCheck() throws Exception {
+    // silly way to get the right oidc identity to make sure our simple matcher works
+    var jws =
+        JsonWebSignature.parse(
+            new GsonFactory(), GithubActionsOidcClient.builder().build().getIDToken().getIdToken());
+    var expectedGithubSubject = jws.getPayload().getSubject();
+    var signer =
+        KeylessSigner.builder()
+            .sigstorePublicDefaults()
+            .allowedOidcIdentities(
+                List.of(
+                    OidcIdentity.of(
+                        expectedGithubSubject, "https://token.actions.githubusercontent.com"),
+                    OidcIdentity.of("some@other.com", "https://accounts.other.com")))
+            .build();
+    Assertions.assertDoesNotThrow(
+        () ->
+            signer.sign(
+                Hex.decode("10f26b52447ec6427c178cadb522ce649922ee67f6d59709e45700aa5df68b30")));
   }
 }

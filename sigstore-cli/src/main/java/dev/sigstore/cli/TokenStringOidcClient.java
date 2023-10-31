@@ -42,6 +42,7 @@ public class TokenStringOidcClient implements OidcClient {
       var jws = JsonWebSignature.parse(new GsonFactory(), idToken);
       return ImmutableOidcToken.builder()
           .idToken(idToken)
+          .issuer(jws.getPayload().getIssuer())
           .subjectAlternativeName(jws.getPayload().getSubject())
           .build();
     } catch (IOException e) {

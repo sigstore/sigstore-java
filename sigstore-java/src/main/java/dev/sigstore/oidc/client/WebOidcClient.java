@@ -193,6 +193,7 @@ public class WebOidcClient implements OidcClient {
     return ImmutableOidcToken.builder()
         .subjectAlternativeName(emailFromIDToken)
         .idToken(idTokenString)
+        .issuer(issuer)
         .build();
   }
 
