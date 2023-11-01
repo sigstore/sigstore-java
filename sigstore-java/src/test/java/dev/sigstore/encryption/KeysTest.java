@@ -43,6 +43,14 @@ class KeysTest {
       "dev/sigstore/samples/keys/test-ecdsa-sha2-nistp256.pub";
 
   @Test
+  void parsePublicKey_invalid() {
+    var key =
+        "-----BEGIN Ã-----\nMGMGB1gFB00gFM0EEEEEEEzEEEEEEEEEEEEEEEEEEEEEEEEEEEEEFB00gFM0EEEEEEEzEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEFGB1g070v129B1700372=\n-----END ïI";
+    Assertions.assertThrows(
+        IOException.class, () -> Keys.parsePublicKey(key.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  @Test
   void parsePublicKey_rsa() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(RSA_PUB_PATH)));
@@ -61,7 +69,7 @@ class KeysTest {
   void parsePublicKey_ec() throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(EC_PUB_PATH)));
-    assertEquals("EC", result.getAlgorithm());
+    assertEquals("ECDSA", result.getAlgorithm());
   }
 
   @Test
@@ -70,7 +78,7 @@ class KeysTest {
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ED25519_PUB_PATH)));
-    // BouncyCastle names the algorithm differently than the JDK
+    // BouncyCastle names the algorithm differently than the JDK (Ed25519 vs EdDSA)
     assertEquals("Ed25519", result.getAlgorithm());
   }
 
@@ -95,7 +103,7 @@ class KeysTest {
       throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
     PublicKey result =
         Keys.parsePublicKey(Resources.toByteArray(Resources.getResource(ECDSA_SHA2_NISTP256)));
-    assertEquals("EC", result.getAlgorithm());
+    assertEquals("ECDSA", result.getAlgorithm());
   }
 
   @Test
@@ -126,7 +134,7 @@ class KeysTest {
   @Test
   @EnabledForJreRange(min = JRE.JAVA_15)
   void parseTufPublicKey_ed25519_java15Plus()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+      throws NoSuchAlgorithmException, InvalidKeySpecException {
     // {@code step crypto keypair ed25519.pub /dev/null --kty OKP --curve Ed25519}
     // copy just the key part out of ed25519.pub removing PEM header and footer
     // {@code echo $(copied content) | base64 -d | hexdump -v -e '/1 "%02x" '}
@@ -210,23 +218,8 @@ class KeysTest {
   }
 
   @Test
-  void parsePublicKey_failOnNullSection()
-      throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
-    // This unit test is used to test the fix for a bug discovered by oss-fuzz
-    // The bug happens when a malformed byte array is passed to the method
-    // https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=57247
+  void parsePublicKey_failOnBadPEM() throws Exception {
     byte[] byteArray = "-----BEGIN A-----\nBBBBB-----END A".getBytes(StandardCharsets.UTF_8);
-    Assertions.assertThrows(InvalidKeySpecException.class, () -> Keys.parsePublicKey(byteArray));
-  }
-
-  @Test
-  void testGetJavaVersion() {
-    assertEquals(1, Keys.getJavaVersion("1.6.0_23"));
-    assertEquals(1, Keys.getJavaVersion("1.7.0"));
-    assertEquals(1, Keys.getJavaVersion("1.6.0_23"));
-    assertEquals(9, Keys.getJavaVersion("9.0.1"));
-    assertEquals(11, Keys.getJavaVersion("11.0.4"));
-    assertEquals(12, Keys.getJavaVersion("12.0.1"));
-    assertEquals(15, Keys.getJavaVersion("15.0.1"));
+    Assertions.assertThrows(IOException.class, () -> Keys.parsePublicKey(byteArray));
   }
 }
