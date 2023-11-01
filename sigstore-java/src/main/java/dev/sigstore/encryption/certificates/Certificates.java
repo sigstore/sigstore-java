@@ -15,7 +15,6 @@
  */
 package dev.sigstore.encryption.certificates;
 
-import com.google.api.client.util.PemReader;
 import com.google.common.collect.ImmutableList;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -27,7 +26,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
+import org.bouncycastle.util.encoders.DecoderException;
 
 public class Certificates {
 
@@ -96,36 +99,34 @@ public class Certificates {
 
   /** Convert a PEM encoded certificate chain to a {@link CertPath}. */
   public static CertPath fromPemChain(String certs) throws CertificateException {
-    PemReader pemReader = null;
-    try {
-      pemReader = new PemReader(new StringReader(certs));
-      CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    try (PEMParser pemParser = new PEMParser(new StringReader(certs))) {
       ArrayList<X509Certificate> certList = new ArrayList<>();
       while (true) {
         try {
-          PemReader.Section section = pemReader.readNextSection();
+          var section = pemParser.readObject(); // throws DecoderException
           if (section == null) {
             break;
           }
-          byte[] certBytes = section.getBase64DecodedBytes();
-          certList.add(
-              (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certBytes)));
-        } catch (IOException | IllegalArgumentException ioe) {
-          throw new CertificateParsingException("Error reading PEM section in cert chain", ioe);
+          if (section instanceof X509CertificateHolder) {
+            var certificate =
+                new JcaX509CertificateConverter().getCertificate((X509CertificateHolder) section);
+            certList.add(certificate);
+          } else {
+            throw new CertificateException(
+                "Unsupported pem section: "
+                    + section.getClass().toString()
+                    + " is not an X509Certificate");
+          }
+        } catch (IOException | DecoderException e) {
+          throw new CertificateException("failed to parse PEM object to certificate", e);
         }
       }
       if (certList.isEmpty()) {
-        throw new CertificateParsingException("no valid PEM certificates were found");
+        throw new CertificateException("no valid PEM certificates were found");
       }
-      return cf.generateCertPath(certList);
-    } finally {
-      if (pemReader != null) {
-        try {
-          pemReader.close();
-        } catch (IOException e) {
-          // ignored
-        }
-      }
+      return CertificateFactory.getInstance("X.509").generateCertPath(certList);
+    } catch (IOException e) {
+      throw new CertificateException("failed to close PEM parser", e);
     }
   }
 
