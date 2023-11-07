@@ -15,36 +15,39 @@
  */
 package dev.sigstore.encryption;
 
-import static org.bouncycastle.jce.ECPointUtil.*;
+import static org.bouncycastle.jce.ECPointUtil.decodePoint;
 
-import com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.security.*;
-import java.security.spec.*;
-import java.util.Locale;
-import java.util.logging.Logger;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.PublicKey;
+import java.security.Security;
+import java.security.spec.ECPoint;
+import java.security.spec.ECPublicKeySpec;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.RSAPublicKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.List;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
-import org.bouncycastle.crypto.params.ECKeyParameters;
-import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
-import org.bouncycastle.crypto.params.RSAKeyParameters;
-import org.bouncycastle.crypto.util.PublicKeyFactory;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 import org.bouncycastle.jce.spec.ECNamedCurveSpec;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.util.encoders.DecoderException;
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemReader;
 
 /** For internal use. Key related utility functions. */
 public class Keys {
 
-  private static final Logger log = Logger.getLogger(Keys.class.getName());
+  private static final List<String> SUPPORTED_KEY_TYPES =
+      List.of("ECDSA", "EC", "RSA", "Ed25519", "EdDSA");
 
   static {
     Security.addProvider(new BouncyCastleProvider());
@@ -60,48 +63,26 @@ public class Keys {
    */
   public static PublicKey parsePublicKey(byte[] keyBytes)
       throws InvalidKeySpecException, IOException, NoSuchAlgorithmException {
-    PemReader pemReader =
-        new PemReader(
-            new InputStreamReader(new ByteArrayInputStream(keyBytes), StandardCharsets.UTF_8));
-    PemObject section = null;
-    try {
-      section = pemReader.readPemObject();
-      if (pemReader.readPemObject() != null) {
+    try (PEMParser pemParser =
+        new PEMParser(
+            new InputStreamReader(new ByteArrayInputStream(keyBytes), StandardCharsets.UTF_8))) {
+      var keyObj = pemParser.readObject(); // throws DecoderException
+      if (keyObj == null) {
         throw new InvalidKeySpecException(
             "sigstore public keys must be only a single PEM encoded public key");
       }
+      JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
+      if (keyObj instanceof SubjectPublicKeyInfo) {
+        PublicKey pk = converter.getPublicKey((SubjectPublicKeyInfo) keyObj);
+        if (!SUPPORTED_KEY_TYPES.contains(pk.getAlgorithm())) {
+          throw new NoSuchAlgorithmException("Unsupported key type: " + pk.getAlgorithm());
+        }
+        return pk;
+      }
+      throw new InvalidKeySpecException("Could not parse PEM section into public key");
     } catch (DecoderException e) {
       throw new InvalidKeySpecException("Invalid key, could not parse PEM section");
     }
-    // special handling for PKCS1 (rsa) public key
-    // TODO: The length checking is not necessary after https://github.com/bcgit/bc-java/issues/1370
-    // has been merged. Remove it when bc-java is updated with the merge.
-    if ((section == null) || (section.getContent() == null) || (section.getContent().length == 0)) {
-      throw new InvalidKeySpecException("Invalid key, empty PEM section");
-    }
-    if (section.getType().equals("RSA PUBLIC KEY")) {
-      return parsePkcs1RsaPublicKey(section.getContent());
-    }
-
-    // otherwise, we are dealing with PKIX X509 encoded keys
-    byte[] content = section.getContent();
-    EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(content);
-    AsymmetricKeyParameter keyParameters = null;
-
-    // Ensure PEM content can be parsed correctly
-    try {
-      keyParameters = PublicKeyFactory.createKey(content);
-    } catch (IllegalStateException e) {
-      throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
-    }
-    if (keyParameters == null) {
-      throw new InvalidKeySpecException("Invalid key, could not parse PEM content");
-    }
-
-    // get algorithm inspecting the created class
-    String keyAlgorithm = extractKeyAlgorithm(keyParameters);
-    KeyFactory keyFactory = KeyFactory.getInstance(keyAlgorithm);
-    return keyFactory.generatePublic(publicKeySpec);
   }
 
   /**
@@ -183,35 +164,5 @@ public class Keys {
       default:
         throw new RuntimeException(scheme + " not currently supported");
     }
-  }
-
-  // https://stackoverflow.com/questions/42911637/get-publickey-from-key-bytes-not-knowing-the-key-algorithm
-  private static String extractKeyAlgorithm(AsymmetricKeyParameter keyParameters)
-      throws NoSuchAlgorithmException {
-    if (keyParameters instanceof RSAKeyParameters) {
-      return "RSA";
-    } else if (keyParameters instanceof Ed25519PublicKeyParameters) {
-      return "EdDSA";
-    } else if (keyParameters instanceof ECKeyParameters) {
-      return "EC";
-    } else {
-      String error =
-          String.format(
-              Locale.ROOT,
-              "The key provided was of type: %s. We only support RSA, EdDSA, and EC ",
-              keyParameters);
-      log.warning(error);
-      throw new NoSuchAlgorithmException(error);
-    }
-  }
-
-  @VisibleForTesting
-  protected static int getJavaVersion() {
-    return getJavaVersion(System.getProperty("java.version"));
-  }
-
-  @VisibleForTesting
-  protected static int getJavaVersion(String version) {
-    return Integer.parseInt(version.substring(0, version.indexOf(".")));
   }
 }
