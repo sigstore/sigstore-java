@@ -23,7 +23,7 @@ dependencies {
     implementation("dev.sigstore:protobuf-specs:0.2.1") {
         because("It generates Sigstore Bundle file")
     }
-    implementation(platform("com.google.protobuf:protobuf-bom:3.24.4"))
+    implementation(platform("com.google.protobuf:protobuf-bom:3.25.0"))
     implementation("com.google.protobuf:protobuf-java-util") {
         because("It converts protobuf to json")
     }
@@ -61,7 +61,7 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.24.4"
+        artifact = "com.google.protobuf:protoc:3.25.0"
     }
     plugins {
         id("grpc") {
