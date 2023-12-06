@@ -107,7 +107,7 @@ jsonSchema2Pojo {
     executions {
         create("rekor") {
             source.setFrom(files("${sourceSets.main.get().output.resourcesDir}/rekor/model"))
-            targetDirectoryPrefix.set(file("$buildDir/generated/sources/rekor-model/"))
+            targetDirectoryPrefix.set(layout.buildDirectory.dir("generated/sources/rekor-model/"))
             targetPackage.set("dev.sigstore.rekor")
             generateBuilders.set(true)
             annotationStyle.set("gson")
