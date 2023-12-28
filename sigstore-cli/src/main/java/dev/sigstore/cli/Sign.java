@@ -22,6 +22,7 @@ import dev.sigstore.oidc.client.OidcClients;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.concurrent.Callable;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -57,7 +58,9 @@ public class Sign implements Callable<Integer> {
     var signer = signerBuilder.build();
     var signingResult = signer.signFile(artifact);
     if (signatureFiles.sigAndCert != null) {
-      Files.write(signatureFiles.sigAndCert.signatureFile, signingResult.getSignature());
+      Files.write(
+          signatureFiles.sigAndCert.signatureFile,
+          Base64.getEncoder().encode(signingResult.getSignature()));
       Files.write(
           signatureFiles.sigAndCert.certificateFile,
           Certificates.toPemBytes(signingResult.getCertPath()));
