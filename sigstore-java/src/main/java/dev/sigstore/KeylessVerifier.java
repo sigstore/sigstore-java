@@ -64,14 +64,13 @@ public class KeylessVerifier {
   }
 
   public static class Builder {
-    private SigstoreTufClient sigstoreTufClient;
+    private TrustedRootProvider trustedRootProvider;
 
     public KeylessVerifier build()
         throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
             NoSuchAlgorithmException, IOException, InvalidKeyException {
-      Preconditions.checkNotNull(sigstoreTufClient);
-      sigstoreTufClient.update();
-      var trustedRoot = sigstoreTufClient.getSigstoreTrustedRoot();
+      Preconditions.checkNotNull(trustedRootProvider);
+      var trustedRoot = trustedRootProvider.get();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
       var rekorClient = RekorClient.builder().setTransparencyLog(trustedRoot).build();
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
@@ -79,12 +78,19 @@ public class KeylessVerifier {
     }
 
     public Builder sigstorePublicDefaults() throws IOException {
-      sigstoreTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+      var sigstoreTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClient);
       return this;
     }
 
     public Builder sigstoreStagingDefaults() throws IOException {
-      sigstoreTufClient = SigstoreTufClient.builder().useStagingInstance().build();
+      var sigstoreTufClient = SigstoreTufClient.builder().useStagingInstance().build();
+      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClient);
+      return this;
+    }
+
+    public Builder fromTrustedRoot(Path trustedRoot) {
+      trustedRootProvider = TrustedRootProvider.from(trustedRoot);
       return this;
     }
   }

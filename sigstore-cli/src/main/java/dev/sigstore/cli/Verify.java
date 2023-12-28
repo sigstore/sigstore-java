@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.CertPath;
+import java.util.Base64;
 import java.util.concurrent.Callable;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -49,6 +50,12 @@ public class Verify implements Callable<Integer> {
 
   @ArgGroup(multiplicity = "0..1", exclusive = false)
   Policy policy;
+
+  @Option(
+      names = {"--trusted-root"},
+      description = "an alternative to the TUF managed sigstore public good trusted root",
+      required = false)
+  Path trustedRoot;
 
   static class Policy {
     @Option(
@@ -70,7 +77,9 @@ public class Verify implements Callable<Integer> {
     KeylessSignature keylessSignature;
 
     if (signatureFiles.sigAndCert != null) {
-      byte[] signature = Files.readAllBytes(signatureFiles.sigAndCert.signatureFile);
+      byte[] signature =
+          Base64.getMimeDecoder()
+              .decode(Files.readAllBytes(signatureFiles.sigAndCert.signatureFile));
       CertPath certPath =
           Certificates.fromPemChain(Files.readAllBytes(signatureFiles.sigAndCert.certificateFile));
       keylessSignature =
@@ -91,7 +100,10 @@ public class Verify implements Callable<Integer> {
     }
     var verificationOptions = verificationOptionsBuilder.alwaysUseRemoteRekorEntry(false).build();
 
-    var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
+    var verifier =
+        (trustedRoot == null)
+            ? new KeylessVerifier.Builder().sigstorePublicDefaults().build()
+            : new KeylessVerifier.Builder().fromTrustedRoot(trustedRoot).build();
     verifier.verify(
         artifact,
         KeylessVerificationRequest.builder()
