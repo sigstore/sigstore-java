@@ -14,16 +14,13 @@
  * limitations under the License.
  *
  */
-import dev.sigstore.sign.SigstoreSignExtension
-
 plugins {
     id("dev.sigstore.sign-base")
     id("maven-publish")
 }
 
 plugins.withId("publishing") {
-    logger.lifecycle("Signing publications")
-    configure<SigstoreSignExtension> {
-        sign(publications = the<PublishingExtension>().publications)
+    sigstoreSign {
+        sign(publications = publishing.publications)
     }
 }
