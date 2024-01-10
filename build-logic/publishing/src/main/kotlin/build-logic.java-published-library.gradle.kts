@@ -3,6 +3,7 @@ plugins {
     id("build-logic.java-library")
     id("build-logic.reproducible-builds")
     id("build-logic.publish-to-central")
+    id("build-logic.signing")
 }
 
 java {
@@ -17,3 +18,5 @@ publishing {
         }
     }
 }
+
+signing.sign(publishing.publications["mavenJava"])
