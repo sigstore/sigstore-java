@@ -135,6 +135,11 @@ Automatically signs all Maven publications in Sigstore.
 Provides `SigstoreSignFilesTask` task for signing files in Sigstore.
 The plugin adds no tasks by default.
 
+Properties:
+* `dev.sigstore.sign.remove.sigstore.asc` (since 0.6.0, default: `true`). Removes `.sigstore.asc` files from the publication.
+  Sonatype OSSRH supports publishing `.sigstore` signatures, and it does not require `.sigstore.asc` files, so
+  `dev.sigstore.sign` plugin removes them by default. If you need to sign all the files, set this property to `false`.
+
 Extensions:
 * `sigstoreSign`: `dev.sigstore.sign.SigstoreSignExtension`
 

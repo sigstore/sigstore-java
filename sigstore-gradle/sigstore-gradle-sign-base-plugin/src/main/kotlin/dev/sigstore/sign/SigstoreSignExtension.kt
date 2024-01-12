@@ -30,6 +30,8 @@ import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.the
+import org.gradle.kotlin.dsl.withType
+import org.gradle.plugins.signing.Sign
 import kotlin.collections.set
 
 abstract class SigstoreSignExtension(private val project: Project) {
@@ -78,6 +80,11 @@ abstract class SigstoreSignExtension(private val project: Project) {
             this.signatureDirectory.set(signatureDirectory)
         }
 
+        val removeSigstoreAsc =
+            project.findProperty("dev.sigstore.sign.remove.sigstore.asc")?.toString()?.toBoolean() != false
+
+        val publicationName = publication.name
+
         val artifacts = mutableMapOf<PublicationArtifact, T>()
         publication.allPublishableArtifacts {
             val publishableArtifact = this
@@ -92,6 +99,20 @@ abstract class SigstoreSignExtension(private val project: Project) {
                     publishableArtifact,
                     DefaultDerivedArtifactFile(project.tasks.named<DefaultTask>(signTask.name), signatureLocation)
                 ).apply { builtBy(signTask) }
+                // Gradle's signing plugin reacts on adding artifacts, and it might add .asc signature
+                // So we need to remove .sigstore.asc as it is unwanted in most of the cases
+                if (removeSigstoreAsc) {
+                    project.tasks.withType<Sign>()
+                        .matching { it.name.contains(publicationName, ignoreCase = true) }
+                        .configureEach {
+                            // Remove .sigstore.asc signature.
+                            // Unfortunately, it will scan all the signatures every time,
+                            // however, it seems to be the only way to do it since the artifacts can be added
+                            // within afterEvaluate block, so we can't use afterEvaluate
+                            // to "remove all .sigstore.asc" at once
+                            signatures.removeIf { it.name.endsWith(".sigstore.asc") }
+                        }
+                }
             }
         }
         publication.whenPublishableArtifactRemoved {

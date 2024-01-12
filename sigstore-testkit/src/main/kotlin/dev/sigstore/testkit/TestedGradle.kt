@@ -16,10 +16,12 @@
  */
 package dev.sigstore.testkit
 
+import org.gradle.util.GradleVersion
+
 /**
  * Lists Gradle versions and its configuration for backward compatibility testing of Sigstore Gradle plugin.
  */
 data class TestedGradle(
-    val version: String,
+    val version: GradleVersion,
     val configurationCache: BaseGradleTest.ConfigurationCache
 )

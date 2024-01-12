@@ -17,6 +17,7 @@
 package dev.sigstore.testkit
 
 import org.assertj.core.api.AbstractCharSequenceAssert
+import org.assertj.core.api.SoftAssertions
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.internal.DefaultGradleRunner
 import org.gradle.util.GradleVersion
@@ -47,22 +48,32 @@ open class BaseGradleTest {
             )
 
         @JvmStatic
+        fun gradleVersions() = listOf(
+            // Gradle 7.2 fails with "No service of type ObjectFactory available in default services"
+            // So we require Gradle 7.3+
+            "7.3",
+            "7.5.1",
+            "8.1",
+            "8.5",
+        ).map { GradleVersion.version(it) }
+
+        @JvmStatic
         fun gradleVersionAndSettings(): Iterable<Arguments> {
             if (!isCI) {
-                // Make the test faster, and skip extra tests with the configuration cache to reduce OIDC flows
-                // Gradle 7.2 fails with "No service of type ObjectFactory available in default services"
-                return listOf(arguments(TestedGradle("7.3", ConfigurationCache.ON)))
+                // Execute a single combination only when running locally
+                return listOf(arguments(TestedGradle(gradleVersions().first(), ConfigurationCache.ON)))
             }
-            return mutableListOf<Arguments>().apply {
-                add(arguments(TestedGradle("7.3", ConfigurationCache.ON)))
-                add(arguments(TestedGradle("7.5.1", ConfigurationCache.ON)))
-                add(arguments(TestedGradle("7.5.1", ConfigurationCache.OFF)))
+            return buildList {
+                addAll(
+                    gradleVersions().map { arguments(TestedGradle(it, ConfigurationCache.ON)) }
+                )
+                add(arguments(TestedGradle(gradleVersions().first(), ConfigurationCache.OFF)))
             }
         }
 
         @JvmStatic
         fun sigstoreJavaVersions(): Iterable<Arguments> {
-            return mutableListOf<Arguments>().apply {
+            return buildList {
                 add(arguments(SIGSTORE_JAVA_CURRENT_VERSION))
                 // For now, we test the plugins only with locally-built sigstore-java version
                 if (isCI && false) {
@@ -150,9 +161,9 @@ open class BaseGradleTest {
         )
     }
 
-    protected fun prepare(gradleVersion: String, vararg arguments: String) =
+    protected fun prepare(gradleVersion: GradleVersion, vararg arguments: String) =
         gradleRunner
-            .withGradleVersion(gradleVersion)
+            .withGradleVersion(gradleVersion.version)
             .withProjectDir(projectDir.toFile())
             .apply {
                 this as DefaultGradleRunner
@@ -176,7 +187,7 @@ open class BaseGradleTest {
         if (gradle.configurationCache != ConfigurationCache.ON) {
             return
         }
-        if (GradleVersion.version(gradle.version) < GradleVersion.version("7.0")) {
+        if (gradle.version < GradleVersion.version("7.0")) {
             Assertions.fail<Unit>("Gradle version $gradle does not support configuration cache")
         }
         // Gradle 6.5 expects values ON, OFF, WARN, so we add the option for 7.0 only
@@ -188,6 +199,9 @@ open class BaseGradleTest {
             """.trimIndent()
         )
     }
+
+    protected fun assertSoftly(body: SoftAssertions.() -> Unit) =
+        SoftAssertions.assertSoftly(body)
 
     protected fun <SELF : AbstractCharSequenceAssert<SELF, ACTUAL>, ACTUAL : CharSequence> AbstractCharSequenceAssert<SELF, ACTUAL>.basicSigstoreStructure() =
         contains(
