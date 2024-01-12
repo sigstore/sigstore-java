@@ -18,6 +18,7 @@ package dev.sigstore.gradle
 
 import dev.sigstore.testkit.BaseGradleTest
 import dev.sigstore.testkit.TestedGradle
+import dev.sigstore.testkit.TestedGradleAndSigstoreJava
 import dev.sigstore.testkit.TestedSigstoreJava
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
@@ -32,34 +33,34 @@ import org.junit.jupiter.params.provider.MethodSource
 class RemoveSigstoreAscTest : BaseGradleTest() {
     companion object {
         @JvmStatic
-        fun signingSupportedGradleAndSigstoreJavaVersions(): Iterable<Arguments> =
-            if (isCI) {
-                gradleAndSigstoreJavaVersions()
-            } else {
-                // Find the first version that supports configuration cache for Gradle's signing plugin (8.1+)
-                listOf(
-                    arguments(
-                        TestedGradle(
+        fun signingSupportedGradleAndSigstoreJavaVersions(): Iterable<TestedGradleAndSigstoreJava> =
+            gradleAndSigstoreJavaVersions()
+                .filter {
+                    it.gradle.configurationCache == ConfigurationCache.OFF ||
                             // Signing plugin supports configuration cache since 8.1
-                            gradleVersions().first { it >= GradleVersion.version("8.1") },
-                            ConfigurationCache.ON
-                        ),
-                        SIGSTORE_JAVA_CURRENT_VERSION
+                            it.gradle.version >= GradleVersion.version("8.1")
+                }.ifEmpty {
+                    // When executing tests locally, the above gradleAndSigstoreJavaVersions might produce
+                    // Gradle < 8.1 + configuration cache=on which is incompatible with signing plugin.
+                    listOf(
+                        TestedGradleAndSigstoreJava(
+                            TestedGradle(GradleVersion.version("8.1"), ConfigurationCache.OFF),
+                            SIGSTORE_JAVA_CURRENT_VERSION
+                        )
                     )
-                )
-            }
+                }
 
         @JvmStatic
-        fun oneSigningSupportedGradleAndSigstoreJavaVersions(): Iterable<Arguments> =
+        fun oneSigningSupportedGradleAndSigstoreJavaVersions(): Iterable<TestedGradleAndSigstoreJava> =
             signingSupportedGradleAndSigstoreJavaVersions().take(1)
     }
 
     @ParameterizedTest
     @MethodSource("signingSupportedGradleAndSigstoreJavaVersions")
-    fun `basic configuration avoids signing sigstore with pgp`(gradle: TestedGradle, sigstoreJava: TestedSigstoreJava) {
-        prepareBuildScripts(gradle, sigstoreJava)
+    fun `basic configuration avoids signing sigstore with pgp`(case: TestedGradleAndSigstoreJava) {
+        prepareBuildScripts(case)
 
-        prepare(gradle.version, "publishAllPublicationsToTmpRepository", "-s")
+        prepare(case.gradle.version, "publishAllPublicationsToTmpRepository", "-s")
             .build()
 
         assertSoftly {
@@ -69,8 +70,8 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
             assertSignatures("sigstore-test-1.0.pom")
         }
 
-        if (gradle.configurationCache == ConfigurationCache.ON) {
-            val result = prepare(gradle.version, "publishAllPublicationsToTmpRepository", "-s")
+        if (case.gradle.configurationCache == ConfigurationCache.ON) {
+            val result = prepare(case.gradle.version, "publishAllPublicationsToTmpRepository", "-s")
                 .build()
 
             assertThat(result.output)
@@ -83,8 +84,8 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
 
     @ParameterizedTest
     @MethodSource("oneSigningSupportedGradleAndSigstoreJavaVersions")
-    fun `crossign sigstore with pgp`(gradle: TestedGradle, sigstoreJava: TestedSigstoreJava) {
-        prepareBuildScripts(gradle, sigstoreJava)
+    fun `crossign sigstore with pgp`(case: TestedGradleAndSigstoreJava) {
+        prepareBuildScripts(case)
         projectDir.resolve("gradle.properties").toFile().appendText(
             """
 
@@ -93,7 +94,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
             dev.sigstore.sign.remove.sigstore.asc=false
             """.trimIndent()
         )
-        prepare(gradle.version, "publishAllPublicationsToTmpRepository", "-s")
+        prepare(case.gradle.version, "publishAllPublicationsToTmpRepository", "-s")
             .build()
         assertSoftly {
             assertSignatures("sigstore-test-1.0.pom", expectSigstoreAsc = true)
@@ -103,7 +104,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
         }
     }
 
-    private fun prepareBuildScripts(gradle: TestedGradle, sigstoreJava: TestedSigstoreJava) {
+    private fun prepareBuildScripts(case: TestedGradleAndSigstoreJava) {
         writeBuildGradle(
             """
             plugins {
@@ -112,7 +113,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
                 id("maven-publish")
                 id("dev.sigstore.sign")
             }
-            ${declareRepositoryAndDependency(sigstoreJava)}
+            ${declareRepositoryAndDependency(case.sigstoreJava)}
 
             group = "dev.sigstore.test"
             java {
@@ -148,9 +149,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
             rootProject.name = 'sigstore-test'
             """.trimIndent()
         )
-        if (gradle.version >= GradleVersion.version("8.1")) {
-            enableConfigurationCache(gradle)
-        }
+        enableConfigurationCache(case.gradle)
     }
 
     private fun SoftAssertions.assertSignatures(name: String, expectSigstoreAsc: Boolean = false) {

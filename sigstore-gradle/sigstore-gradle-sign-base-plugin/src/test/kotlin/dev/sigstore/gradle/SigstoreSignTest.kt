@@ -18,6 +18,7 @@ package dev.sigstore.gradle
 
 import dev.sigstore.testkit.BaseGradleTest
 import dev.sigstore.testkit.TestedGradle
+import dev.sigstore.testkit.TestedGradleAndSigstoreJava
 import dev.sigstore.testkit.TestedSigstoreJava
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
@@ -28,7 +29,7 @@ import org.junit.jupiter.params.provider.MethodSource
 class SigstoreSignTest: BaseGradleTest() {
     @ParameterizedTest
     @MethodSource("gradleAndSigstoreJavaVersions")
-    fun `sign file`(gradle: TestedGradle, sigstoreJava: TestedSigstoreJava) {
+    fun `sign file`(case: TestedGradleAndSigstoreJava) {
         writeBuildGradle(
             """
             import dev.sigstore.sign.tasks.SigstoreSignFilesTask
@@ -36,7 +37,7 @@ class SigstoreSignTest: BaseGradleTest() {
                 id("java")
                 id("dev.sigstore.sign-base")
             }
-            ${declareRepositoryAndDependency(sigstoreJava)}
+            ${declareRepositoryAndDependency(case.sigstoreJava)}
             group = "dev.sigstore.test"
             def helloProps = tasks.register("helloProps", WriteProperties) {
                 outputFile = file("build/helloProps.txt")
@@ -53,15 +54,15 @@ class SigstoreSignTest: BaseGradleTest() {
             rootProject.name = 'sigstore-test'
             """.trimIndent()
         )
-        enableConfigurationCache(gradle)
-        prepare(gradle.version, "signFile", "-s")
+        enableConfigurationCache(case.gradle)
+        prepare(case.gradle.version, "signFile", "-s")
             .build()
         assertThat(projectDir.resolve("build/helloProps.txt.sigstore"))
             .content()
             .basicSigstoreStructure()
 
-        if (gradle.configurationCache == ConfigurationCache.ON) {
-            val result = prepare(gradle.version, "signFile", "-s")
+        if (case.gradle.configurationCache == ConfigurationCache.ON) {
+            val result = prepare(case.gradle.version, "signFile", "-s")
                 .build()
 
             assertThat(result.output)

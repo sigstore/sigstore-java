@@ -58,38 +58,42 @@ open class BaseGradleTest {
         ).map { GradleVersion.version(it) }
 
         @JvmStatic
-        fun gradleVersionAndSettings(): Iterable<Arguments> {
+        fun gradleVersionAndSettings(): Iterable<TestedGradle> {
             if (!isCI) {
                 // Execute a single combination only when running locally
-                return listOf(arguments(TestedGradle(gradleVersions().first(), ConfigurationCache.ON)))
+                return listOf(
+                    TestedGradle(gradleVersions().first(), ConfigurationCache.ON)
+                )
             }
             return buildList {
                 addAll(
-                    gradleVersions().map { arguments(TestedGradle(it, ConfigurationCache.ON)) }
+                    gradleVersions().map { TestedGradle(it, ConfigurationCache.ON) }
                 )
-                add(arguments(TestedGradle(gradleVersions().first(), ConfigurationCache.OFF)))
+                // Test the first and the last version without configuration cache
+                add(TestedGradle(gradleVersions().first(), ConfigurationCache.OFF))
+                add(TestedGradle(gradleVersions().last(), ConfigurationCache.OFF))
             }
         }
 
         @JvmStatic
-        fun sigstoreJavaVersions(): Iterable<Arguments> {
+        fun sigstoreJavaVersions(): Iterable<TestedSigstoreJava> {
             return buildList {
-                add(arguments(SIGSTORE_JAVA_CURRENT_VERSION))
+                add(SIGSTORE_JAVA_CURRENT_VERSION)
                 // For now, we test the plugins only with locally-built sigstore-java version
                 if (isCI && false) {
-                    add(arguments(TestedSigstoreJava.Default))
+                    add(TestedSigstoreJava.Default)
                     // 0.3.0 is the minimal version that supports generating Sigstore Bundle
-                    add(arguments(TestedSigstoreJava.Version("0.3.0")))
+                    add(TestedSigstoreJava.Version("0.3.0"))
                 }
             }
         }
 
         @JvmStatic
-        fun gradleAndSigstoreJavaVersions(): Iterable<Arguments> {
+        fun gradleAndSigstoreJavaVersions(): Iterable<TestedGradleAndSigstoreJava> {
             val gradle = gradleVersionAndSettings()
             val sigstore = sigstoreJavaVersions()
             return gradle.flatMap { gradleVersion ->
-                sigstore.map { arguments(*gradleVersion.get(), *it.get()) }
+                sigstore.map { TestedGradleAndSigstoreJava(gradleVersion, it) }
             }
         }
     }
@@ -186,9 +190,6 @@ open class BaseGradleTest {
     ) {
         if (gradle.configurationCache != ConfigurationCache.ON) {
             return
-        }
-        if (gradle.version < GradleVersion.version("7.0")) {
-            Assertions.fail<Unit>("Gradle version $gradle does not support configuration cache")
         }
         // Gradle 6.5 expects values ON, OFF, WARN, so we add the option for 7.0 only
         projectDir.resolve("gradle.properties").toFile().appendText(
