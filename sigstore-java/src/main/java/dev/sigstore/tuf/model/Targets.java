@@ -17,12 +17,15 @@ package dev.sigstore.tuf.model;
 
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
+import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Targets metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
 public interface Targets extends SignedTufMeta<TargetMeta> {
   @Override
-  @Gson.Named("signed")
-  TargetMeta getSignedMeta();
+  @Derived
+  default TargetMeta getSignedMeta() {
+    return getSignedMeta(TargetMeta.class);
+  }
 }

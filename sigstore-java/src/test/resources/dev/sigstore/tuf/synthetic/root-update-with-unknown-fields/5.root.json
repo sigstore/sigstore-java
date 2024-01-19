@@ -1,0 +1,82 @@
+{
+ "signatures": [
+  {
+   "keyid": "c8e09a68b5821b75462ae0df52151c81deb7f1838246dc1da8c34cc91ec12bda",
+   "sig": "3045022016f788e5c90b169b4a9b28c56bf73df988b67c2d73f4e49205db50f9f0ae8066022100b4aabd9298ff12205724bae48bf9118a262581a7ca4b5d1a1b4c68498bd5fdde"
+  },
+  {
+   "keyid": "762cb22caca65de5e9b7b6baecb84ca989d337280ce6914b6440aea95769ad93",
+   "sig": "3045022100f5a9447b9d240905408106e183ef90914d248a43a869585e5f2001570663f51002207b359b6a39b7ee45c98aca93ba90043bc1f14f9f1223d0cc19eba1c9841e2e82"
+  }
+ ],
+ "signed": {
+  "_type": "root",
+  "consistent_snapshot": true,
+  "expires": "2034-01-06T09:35:12Z",
+  "keys": {
+   "762cb22caca65de5e9b7b6baecb84ca989d337280ce6914b6440aea95769ad93": {
+    "keytype": "ecdsa",
+    "keyval": {
+     "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEohqIdE+yTl4OxpX8ZxNUPrg3SL9H\nBDnhZuceKkxy2oMhUOxhWweZeG3bfM1T4ZLnJimC6CAYVU5+F5jZCoftRw==\n-----END PUBLIC KEY-----\n"
+    },
+    "scheme": "ecdsa-sha2-nistp256",
+    "x-tuf-on-ci-keyowner": "@jku"
+   },
+   "858f105a894358684339a8d05f7f07d09010b35bcb0808ac8b09c26fce5434b6": {
+    "keytype": "ecdsa",
+    "keyval": {
+     "public": "-----BEGIN PUBLIC KEY-----\nMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEs+efoKU658vT/rNOsCalHpNadxVtbAei\n0xpIP4bpszlnrYYflOrdDr53rNiQJ33O4eR6Zv1NE6nauR7CKvfuuCNGrtJNEToU\nvWd0uw0zv2ZcL/s7ybmje3qvhhMcN5Ot\n-----END PUBLIC KEY-----\n"
+    },
+    "scheme": "ecdsa-sha2-nistp384",
+    "x-tuf-on-ci-online-uri": "gcpkms:projects/projectsigstore-staging/locations/global/keyRings/tuf-keyring/cryptoKeys/tuf-staging-key/cryptoKeyVersions/1"
+   },
+   "c8e09a68b5821b75462ae0df52151c81deb7f1838246dc1da8c34cc91ec12bda": {
+    "keyid_hash_algorithms": [
+     "sha256",
+     "sha512"
+    ],
+    "keytype": "ecdsa-sha2-nistp256",
+    "keyval": {
+     "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEL3vL/VeaH6nBbo4rekyO4cc/QthS\n+nlyJXCXSnyIMAtLmVTa8Pf0qG6YIVaR0TmLkyk9YoSVsZakxuMTuaEwrg==\n-----END PUBLIC KEY-----\n"
+    },
+    "scheme": "ecdsa-sha2-nistp256",
+    "x-tuf-on-ci-keyowner": "@-repo-import"
+   }
+  },
+  "roles": {
+   "root": {
+    "keyids": [
+     "c8e09a68b5821b75462ae0df52151c81deb7f1838246dc1da8c34cc91ec12bda",
+     "762cb22caca65de5e9b7b6baecb84ca989d337280ce6914b6440aea95769ad93"
+    ],
+    "threshold": 1
+   },
+   "snapshot": {
+    "keyids": [
+     "858f105a894358684339a8d05f7f07d09010b35bcb0808ac8b09c26fce5434b6"
+    ],
+    "threshold": 1,
+    "x-tuf-on-ci-expiry-period": 3650,
+    "x-tuf-on-ci-signing-period": 365
+   },
+   "targets": {
+    "keyids": [
+     "762cb22caca65de5e9b7b6baecb84ca989d337280ce6914b6440aea95769ad93"
+    ],
+    "threshold": 1
+   },
+   "timestamp": {
+    "keyids": [
+     "858f105a894358684339a8d05f7f07d09010b35bcb0808ac8b09c26fce5434b6"
+    ],
+    "threshold": 1,
+    "x-tuf-on-ci-expiry-period": 14,
+    "x-tuf-on-ci-signing-period": 7
+   }
+  },
+  "spec_version": "1.0",
+  "version": 5,
+  "x-tuf-on-ci-expiry-period": 3650,
+  "x-tuf-on-ci-signing-period": 365
+ }
+}

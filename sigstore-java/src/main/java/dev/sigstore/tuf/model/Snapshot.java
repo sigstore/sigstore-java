@@ -17,12 +17,15 @@ package dev.sigstore.tuf.model;
 
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
+import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Snapshot metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
 public interface Snapshot extends SignedTufMeta<SnapshotMeta> {
   @Override
-  @Gson.Named("signed")
-  SnapshotMeta getSignedMeta();
+  @Derived
+  default SnapshotMeta getSignedMeta() {
+    return getSignedMeta(SnapshotMeta.class);
+  }
 }
