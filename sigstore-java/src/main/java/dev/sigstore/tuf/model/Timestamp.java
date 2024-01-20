@@ -17,6 +17,7 @@ package dev.sigstore.tuf.model;
 
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
+import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Timestamp metadata. */
 @Gson.TypeAdapters
@@ -24,6 +25,8 @@ import org.immutables.value.Value;
 public interface Timestamp extends SignedTufMeta<TimestampMeta> {
 
   @Override
-  @Gson.Named("signed")
-  TimestampMeta getSignedMeta();
+  @Derived
+  default TimestampMeta getSignedMeta() {
+    return getSignedMeta(TimestampMeta.class);
+  }
 }

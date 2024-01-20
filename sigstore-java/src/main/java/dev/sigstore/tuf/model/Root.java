@@ -17,12 +17,15 @@ package dev.sigstore.tuf.model;
 
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
+import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Root metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
 public interface Root extends SignedTufMeta<RootMeta> {
   @Override
-  @Gson.Named("signed")
-  RootMeta getSignedMeta();
+  @Derived
+  default RootMeta getSignedMeta() {
+    return getSignedMeta(RootMeta.class);
+  }
 }

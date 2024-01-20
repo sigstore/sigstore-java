@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.Hashing;
+import com.google.common.io.Resources;
 import com.google.gson.JsonSyntaxException;
 import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
@@ -124,6 +125,21 @@ class UpdaterTest {
       assertEquals(1, e.getRequiredSignatures(), "expected signature threshold");
       assertEquals(0, e.getVerifiedSignatures(), "expected verified signatures");
     }
+  }
+
+  @Test
+  public void testRootUpdate_newRootHasUnknownFields() throws Exception {
+    setupMirror("synthetic/root-update-with-unknown-fields", "4.root.json", "5.root.json");
+    Path startingRoot =
+        Path.of(
+            Resources.getResource(
+                    "dev/sigstore/tuf/synthetic/root-update-with-unknown-fields/4.root.json")
+                .getPath());
+    var updater = createTimeStaticUpdater(localStorePath, startingRoot);
+
+    updater.updateRoot();
+    Root root = TestResources.loadRoot(localStorePath.resolve("root.json"));
+    assertEquals(5, root.getSignedMeta().getVersion());
   }
 
   @Test

@@ -15,10 +15,14 @@
  */
 package dev.sigstore.tuf.model;
 
+import com.google.gson.JsonElement;
 import dev.sigstore.json.GsonSupplier;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import java.io.IOException;
 import java.util.List;
+import org.immutables.gson.Gson;
+import org.immutables.value.Value.Derived;
+import org.immutables.value.Value.Lazy;
 
 /**
  * Signed wrapper around {@link TufMeta}.
@@ -32,7 +36,19 @@ public interface SignedTufMeta<T extends TufMeta> {
   /** The role metadata that has been signed. */
   T getSignedMeta();
 
+  /** An internal helper to translate raw signed json to a useable type. */
+  @Derived
+  default T getSignedMeta(Class<T> type) {
+    return GsonSupplier.GSON.get().fromJson(getRawSignedMeta(), type);
+  }
+
+  /** The raw signed json, just verify signature over this to prevent loss of unknown fields */
+  @Gson.Named("signed")
+  JsonElement getRawSignedMeta();
+
+  @Lazy
   default byte[] getCanonicalSignedBytes() throws IOException {
-    return new JsonCanonicalizer(GsonSupplier.GSON.get().toJson(getSignedMeta())).getEncodedUTF8();
+    return new JsonCanonicalizer(GsonSupplier.GSON.get().toJson(getRawSignedMeta()))
+        .getEncodedUTF8();
   }
 }
