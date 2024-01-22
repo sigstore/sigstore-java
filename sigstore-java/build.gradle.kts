@@ -23,13 +23,13 @@ dependencies {
     implementation("dev.sigstore:protobuf-specs:0.2.1") {
         because("It generates Sigstore Bundle file")
     }
-    implementation(platform("com.google.protobuf:protobuf-bom:3.25.1"))
+    implementation(platform("com.google.protobuf:protobuf-bom:3.25.2"))
     implementation("com.google.protobuf:protobuf-java-util") {
         because("It converts protobuf to json")
     }
 
     // grpc deps
-    implementation(platform("io.grpc:grpc-bom:1.60.1"))
+    implementation(platform("io.grpc:grpc-bom:1.61.0"))
     implementation("io.grpc:grpc-protobuf")
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
@@ -61,11 +61,11 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.1"
+        artifact = "com.google.protobuf:protoc:3.25.2"
     }
     plugins {
         id("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.60.1"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.61.0"
         }
     }
     generateProtoTasks {
