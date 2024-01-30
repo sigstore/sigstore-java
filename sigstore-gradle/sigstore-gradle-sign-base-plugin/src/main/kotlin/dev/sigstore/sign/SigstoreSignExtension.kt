@@ -41,7 +41,7 @@ abstract class SigstoreSignExtension(private val project: Project) {
     abstract val sigstoreJavaVersion : Property<String>
 
     init {
-        sigstoreJavaVersion.convention("0.6.0")
+        sigstoreJavaVersion.convention("0.7.0")
         (this as ExtensionAware).extensions.create<OidcClientExtension>(
             "oidcClient",
             project.objects,
