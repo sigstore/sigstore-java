@@ -21,6 +21,10 @@
     {
       "matchPackagePrefixes": ["info.picocli"],
       "groupName": "picocli"
+    },
+    {
+      "matchPackagePrefixes": ["io.github.netmikey.logunit"],
+      "groupName": "logunit"
     }
   ]
 }

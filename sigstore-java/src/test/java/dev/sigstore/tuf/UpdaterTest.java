@@ -17,7 +17,11 @@ package dev.sigstore.tuf;
 
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_REAL_TRUSTED_ROOT;
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,8 +31,19 @@ import com.google.gson.JsonSyntaxException;
 import dev.sigstore.encryption.signers.Verifier;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.testkit.tuf.TestResources;
-import dev.sigstore.tuf.model.*;
+import dev.sigstore.tuf.model.Hashes;
+import dev.sigstore.tuf.model.ImmutableKey;
+import dev.sigstore.tuf.model.ImmutableRootRole;
+import dev.sigstore.tuf.model.ImmutableSignature;
+import dev.sigstore.tuf.model.Key;
+import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
+import dev.sigstore.tuf.model.Signature;
+import dev.sigstore.tuf.model.Snapshot;
+import dev.sigstore.tuf.model.TargetMeta;
+import dev.sigstore.tuf.model.Targets;
+import dev.sigstore.tuf.model.Timestamp;
+import io.github.netmikey.logunit.api.LogCapturer;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -57,8 +72,13 @@ import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.event.Level;
 
 class UpdaterTest {
 
@@ -68,6 +88,9 @@ class UpdaterTest {
   static String remoteUrl;
   @TempDir Path localStorePath;
   @TempDir static Path localMirrorPath;
+
+  @RegisterExtension
+  LogCapturer logs = LogCapturer.create().captureForType(Updater.class, Level.DEBUG);
 
   @BeforeAll
   static void startRemoteResourceServer() throws Exception {
@@ -140,6 +163,31 @@ class UpdaterTest {
     updater.updateRoot();
     Root root = TestResources.loadRoot(localStorePath.resolve("root.json"));
     assertEquals(5, root.getSignedMeta().getVersion());
+  }
+
+  @Test
+  public void testRootUpdate_newRootHasEmptySignatures() throws Exception {
+    setupMirror("synthetic/root-update-with-empty-signature", "2.root.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+
+    updater.updateRoot();
+    Root root = TestResources.loadRoot(localStorePath.resolve("root.json"));
+    assertEquals(2, root.getSignedMeta().getVersion());
+    logs.assertContains(
+        "TUF: ignored unverifiable signature: '' for keyid: '0b5108e406f6d2f59ef767797b314be99d35903950ba43a2d51216eeeb8da98c'");
+  }
+
+  @Test
+  public void testRootUpdate_newRootHasInvalidSignatures() throws Exception {
+    setupMirror("synthetic/root-update-with-invalid-signature", "2.root.json");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+
+    updater.updateRoot();
+    Root root = TestResources.loadRoot(localStorePath.resolve("root.json"));
+    assertEquals(2, root.getSignedMeta().getVersion());
+    logs.getEvents();
+    logs.assertContains(
+        "TUF: ignored invalid signature: 'abcd123' for keyid: '0b5108e406f6d2f59ef767797b314be99d35903950ba43a2d51216eeeb8da98c', because 'exception decoding Hex string: String index out of range: 7'");
   }
 
   @Test
