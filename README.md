@@ -26,6 +26,9 @@ var result = signer.sign(testArtifact);
 
 // resulting signature information
 
+// sigstore bundle format (serialized as <artifact>.sigstore.json)
+String bundle = BundleFactory.createBundle(result)
+
 // artifact digest
 byte[] digest = result.getDigest();
 
@@ -36,11 +39,15 @@ byte[] certsBytes = Certificates.toPemBytes(result.getCertPath()) // converted t
 // artifact signature
 byte[] sig = result.getSignature()
 
-// sigstore bundle format (json string)
-String bundle = BundleFactory.createBundle(result)
 ```
 
 #### Verification
+
+##### KeylessSignature from bundle
+```java
+var bundleFile = // java.nio.Path to a .sigstore.json signature bundle file
+var keylessSignature = BundleFactory.readBundle(Files.newBufferedReader(bundleFile, StandardCharsets.UTF_8));
+```
 
 ##### KeylessSignature from certificate and signature
 ```java
@@ -55,19 +62,12 @@ var keylessSignature =
         .build();
 ```
 
-##### KeylessSignature from bundle
-```java
-var bundleFile = // java.nio.path to some bundle file
-var keylessSignature = BundleFactory.readBundle(Files.newBufferedReader(bundleFile, StandardCharsets.UTF_8));
-```
 
 ##### Configure verification options
 ```java
 var verificationOptions = 
     VerificationOptions.builder()
-        // verify online? (connect to rekor for inclusion proof)
-        .isOnline(true)
-        // optionally add certificate policy
+        // add certificate policy to verify the identity of the signer
         .addCertificateIdentities(
             CertificateIdentity.builder()
                 .issuer("https://accounts.example.com"))
@@ -78,7 +78,7 @@ var verificationOptions =
 
 ##### Do verification
 ```java
-var artifact = // path to artifact file
+var artifact = // java.nio.Path to artifact file
 try {
   var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
   verifier.verify(
