@@ -171,7 +171,7 @@ public class WebOidcClient implements OidcClient {
               .setIssuer(issuer)
               .setCertificatesLocation(endpoints.getJwksUri())
               .build();
-      if (!idTokenVerifier.verify(parsedIdToken)) {
+      if (!idTokenVerifier.verifyOrThrow(parsedIdToken)) {
         throw new OidcException("id token could not be verified");
       }
     } catch (IOException e) {

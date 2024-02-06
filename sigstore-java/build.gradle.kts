@@ -40,7 +40,7 @@ dependencies {
     implementation("org.bouncycastle:bcutil-jdk18on:1.77")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.77")
 
-    implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.34.1"))
+    implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.35.0"))
     implementation("com.google.oauth-client:google-oauth-client")
     implementation("com.google.oauth-client:google-oauth-client-jetty")
     implementation("com.google.oauth-client:google-oauth-client-java6")
