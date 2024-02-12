@@ -11,7 +11,7 @@ dependencies {
 
     // This is different from typical "testImplementation" dependencies, because
     // testkit exposes junit5 dependencies in its API (e.g. annotations)
-    api(platform("org.junit:junit-bom:5.10.1"))
+    api(platform("org.junit:junit-bom:5.10.2"))
     api("org.junit.jupiter:junit-jupiter-api")
     api("org.junit.jupiter:junit-jupiter-params")
     implementation("org.junit.jupiter:junit-jupiter")
