@@ -15,11 +15,13 @@
  */
 package dev.sigstore.proto;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.common.v1.X509Certificate;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.time.Instant;
@@ -40,5 +42,12 @@ public class ProtoMutators {
 
   public static Instant toInstant(Timestamp timestamp) {
     return Instant.ofEpochSecond(timestamp.getSeconds(), timestamp.getNanos());
+  }
+
+  public static X509Certificate fromCert(java.security.cert.X509Certificate certificate)
+      throws CertificateEncodingException {
+    byte[] encoded;
+    encoded = certificate.getEncoded();
+    return X509Certificate.newBuilder().setRawBytes(ByteString.copyFrom(encoded)).build();
   }
 }

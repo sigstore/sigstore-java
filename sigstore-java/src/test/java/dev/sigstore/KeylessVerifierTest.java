@@ -61,11 +61,46 @@ public class KeylessVerifierTest {
     var verificationReq =
         KeylessVerificationRequest.builder()
             .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
-            .verificationOptions(
-                VerificationOptions.builder().alwaysUseRemoteRekorEntry(false).build())
             .build();
     Assertions.assertThrows(
         KeylessVerificationException.class,
         () -> verifier.verify(Path.of(artifact), verificationReq));
+  }
+
+  @Test
+  public void testVerify_canVerifyV01Bundle() throws Exception {
+    verifyBundle(
+        "dev/sigstore/samples/bundles/artifact.txt",
+        "dev/sigstore/samples/bundles/bundle.v1.sigstore");
+  }
+
+  @Test
+  public void testVerify_canVerifyV02Bundle() throws Exception {
+    verifyBundle(
+        "dev/sigstore/samples/bundles/artifact.txt",
+        "dev/sigstore/samples/bundles/bundle.v2.sigstore");
+  }
+
+  @Test
+  public void testVerify_canVerifyV03Bundle() throws Exception {
+    verifyBundle(
+        "dev/sigstore/samples/bundles/artifact.txt",
+        "dev/sigstore/samples/bundles/bundle.v3.sigstore");
+  }
+
+  public void verifyBundle(String artifactResourcePath, String bundleResourcePath)
+      throws Exception {
+    var artifact = Resources.getResource(artifactResourcePath).getPath();
+    var bundleFile =
+        Resources.toString(Resources.getResource(bundleResourcePath), StandardCharsets.UTF_8);
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verificationReq =
+        KeylessVerificationRequest.builder()
+            .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
+            .verificationOptions(VerificationOptions.builder().build())
+            .build();
+
+    verifier.verify(Path.of(artifact), verificationReq);
   }
 }

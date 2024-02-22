@@ -15,10 +15,11 @@
  */
 package dev.sigstore.bundle;
 
+import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.KeylessSignature;
-import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.bundle.v1.Bundle;
 import dev.sigstore.proto.bundle.v1.VerificationMaterial;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
@@ -26,7 +27,6 @@ import dev.sigstore.proto.common.v1.HashOutput;
 import dev.sigstore.proto.common.v1.LogId;
 import dev.sigstore.proto.common.v1.MessageSignature;
 import dev.sigstore.proto.common.v1.X509Certificate;
-import dev.sigstore.proto.common.v1.X509CertificateChain;
 import dev.sigstore.proto.rekor.v1.Checkpoint;
 import dev.sigstore.proto.rekor.v1.InclusionPromise;
 import dev.sigstore.proto.rekor.v1.InclusionProof;
@@ -39,13 +39,11 @@ import dev.sigstore.rekor.client.RekorEntry;
 import java.io.IOException;
 import java.io.Reader;
 import java.security.cert.CertPath;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -58,6 +56,12 @@ import org.bouncycastle.util.encoders.Hex;
  */
 class BundleFactoryInternal {
   static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
+
+  private static final String BUNDLE_V_0_1 = "application/vnd.dev.sigstore.bundle+json;version=0.1";
+  private static final String BUNDLE_V_0_2 = "application/vnd.dev.sigstore.bundle+json;version=0.2";
+  private static final String BUNDLE_V_0_3 = "application/vnd.dev.sigstore.bundle+json;version=0.3";
+  private static final List<String> SUPPORTED_MEDIA_TYPES =
+      List.of(BUNDLE_V_0_1, BUNDLE_V_0_2, BUNDLE_V_0_3);
 
   /**
    * Generates Sigstore Bundle Builder from {@link KeylessSignature}. This might be useful in case
@@ -72,7 +76,7 @@ class BundleFactoryInternal {
           "keyless signature must have artifact digest when serializing to bundle");
     }
     return Bundle.newBuilder()
-        .setMediaType("application/vnd.dev.sigstore.bundle+json;version=0.2")
+        .setMediaType(BUNDLE_V_0_3)
         .setVerificationMaterial(buildVerificationMaterial(signingResult))
         .setMessageSignature(
             MessageSignature.newBuilder()
@@ -85,29 +89,18 @@ class BundleFactoryInternal {
 
   private static VerificationMaterial.Builder buildVerificationMaterial(
       KeylessSignature signingResult) {
-    var builder =
-        VerificationMaterial.newBuilder()
-            .setX509CertificateChain(
-                X509CertificateChain.newBuilder()
-                    .addAllCertificates(
-                        signingResult.getCertPath().getCertificates().stream()
-                            .map(
-                                c -> {
-                                  byte[] encoded;
-                                  try {
-                                    encoded = c.getEncoded();
-                                  } catch (CertificateEncodingException e) {
-                                    throw new IllegalArgumentException(
-                                        "Cannot encode certificate " + c, e);
-                                  }
-                                  return X509Certificate.newBuilder()
-                                      .setRawBytes(ByteString.copyFrom(encoded))
-                                      .build();
-                                })
-                            .collect(Collectors.toList())));
-    if (signingResult.getEntry().isPresent()) {
-      builder.addTlogEntries(buildTlogEntries(signingResult.getEntry().get()));
+    X509Certificate cert;
+    var javaCert = Iterables.getLast(signingResult.getCertPath().getCertificates());
+    try {
+      cert = ProtoMutators.fromCert((java.security.cert.X509Certificate) javaCert);
+    } catch (CertificateEncodingException ce) {
+      throw new IllegalArgumentException("Cannot encode certificate " + javaCert, ce);
     }
+    var builder = VerificationMaterial.newBuilder().setCertificate(cert);
+    if (signingResult.getEntry().isEmpty()) {
+      throw new IllegalArgumentException("A log entry must be present in the signing result");
+    }
+    builder.addTlogEntries(buildTlogEntries(signingResult.getEntry().get()));
     return builder;
   }
 
@@ -135,10 +128,13 @@ class BundleFactoryInternal {
   private static void addInclusionProof(
       TransparencyLogEntry.Builder transparencyLogEntry, RekorEntry entry) {
     RekorEntry.InclusionProof inclusionProof =
-        entry.getVerification().getInclusionProof().orElse(null);
-    if (inclusionProof == null) {
-      return;
-    }
+        entry
+            .getVerification()
+            .getInclusionProof()
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "An inclusion proof must be present in the log entry in the signing result"));
     transparencyLogEntry.setInclusionProof(
         InclusionProof.newBuilder()
             .setLogIndex(inclusionProof.getLogIndex())
@@ -156,43 +152,39 @@ class BundleFactoryInternal {
     try {
       JsonFormat.parser().merge(jsonReader, bundleBuilder);
     } catch (IOException ioe) {
-      throw new BundleParseException("Could not read bundle json", ioe);
+      throw new BundleParseException("Could not process bundle json", ioe);
     }
-    Bundle bundle = bundleBuilder.build();
 
-    // TODO: only allow v0.2 bundles at some point, we will only be producing v0.2 bundles
-    // TODO: in our GA release.
-    // var supportedMediaType = "application/vnd.dev.sigstore.bundle+json;version=0.2";
-    // if (!supportedMediaType.equals(bundle.getMediaType())) {
-    //   throw new BundleParseException(
-    //     "Unsupported media type '"
-    //       + bundle.getMediaType()
-    //       + "', only '"
-    //       + supportedMediaType
-    //       + "' is supported");
-    // }
+    Bundle bundle = bundleBuilder.build();
+    if (!SUPPORTED_MEDIA_TYPES.contains(bundle.getMediaType())) {
+      throw new BundleParseException("Unsupported bundle media type: " + bundle.getMediaType());
+    }
 
     if (bundle.getVerificationMaterial().getTlogEntriesCount() == 0) {
       throw new BundleParseException("Could not find any tlog entries in bundle json");
     }
     var bundleEntry = bundle.getVerificationMaterial().getTlogEntries(0);
+    RekorEntry.InclusionProof inclusionProof = null;
     if (!bundleEntry.hasInclusionProof()) {
-      throw new BundleParseException("Could not find an inclusion proof");
-    }
-    var bundleInclusionProof = bundleEntry.getInclusionProof();
+      if (!bundle.getMediaType().equals(BUNDLE_V_0_1)) {
+        throw new BundleParseException("Could not find an inclusion proof");
+      }
+    } else {
+      var bundleInclusionProof = bundleEntry.getInclusionProof();
 
-    ImmutableInclusionProof inclusionProof =
-        ImmutableInclusionProof.builder()
-            .logIndex(bundleInclusionProof.getLogIndex())
-            .rootHash(Hex.toHexString(bundleInclusionProof.getRootHash().toByteArray()))
-            .treeSize(bundleInclusionProof.getTreeSize())
-            .checkpoint(bundleInclusionProof.getCheckpoint().getEnvelope())
-            .addAllHashes(
-                bundleInclusionProof.getHashesList().stream()
-                    .map(ByteString::toByteArray)
-                    .map(Hex::toHexString)
-                    .collect(Collectors.toList()))
-            .build();
+      inclusionProof =
+          ImmutableInclusionProof.builder()
+              .logIndex(bundleInclusionProof.getLogIndex())
+              .rootHash(Hex.toHexString(bundleInclusionProof.getRootHash().toByteArray()))
+              .treeSize(bundleInclusionProof.getTreeSize())
+              .checkpoint(bundleInclusionProof.getCheckpoint().getEnvelope())
+              .addAllHashes(
+                  bundleInclusionProof.getHashesList().stream()
+                      .map(ByteString::toByteArray)
+                      .map(Hex::toHexString)
+                      .collect(Collectors.toList()))
+              .build();
+    }
 
     var verification =
         ImmutableVerification.builder()
@@ -200,7 +192,7 @@ class BundleFactoryInternal {
                 Base64.getEncoder()
                     .encodeToString(
                         bundleEntry.getInclusionPromise().getSignedEntryTimestamp().toByteArray()))
-            .inclusionProof(inclusionProof)
+            .inclusionProof(Optional.ofNullable(inclusionProof))
             .build();
 
     var rekorEntry =
@@ -213,6 +205,10 @@ class BundleFactoryInternal {
                     .encodeToString(bundleEntry.getCanonicalizedBody().toByteArray()))
             .verification(verification)
             .build();
+
+    if (bundle.hasDsseEnvelope()) {
+      throw new BundleParseException("DSSE envelope signatures are not supported by this client");
+    }
 
     var digest = new byte[] {};
     if (bundle.getMessageSignature().hasMessageDigest()) {
@@ -228,27 +224,24 @@ class BundleFactoryInternal {
       digest = bundle.getMessageSignature().getMessageDigest().getDigest().toByteArray();
     }
 
+    CertPath certPath;
     try {
-      return KeylessSignature.builder()
-          .digest(digest)
-          .certPath(
-              toCertPath(
-                  bundle.getVerificationMaterial().getX509CertificateChain().getCertificatesList()))
-          .signature(bundle.getMessageSignature().getSignature().toByteArray())
-          .entry(rekorEntry)
-          .build();
+      if (bundle.getVerificationMaterial().hasCertificate()) {
+        certPath =
+            ProtoMutators.toCertPath(List.of(bundle.getVerificationMaterial().getCertificate()));
+      } else {
+        certPath =
+            ProtoMutators.toCertPath(
+                bundle.getVerificationMaterial().getX509CertificateChain().getCertificatesList());
+      }
     } catch (CertificateException ce) {
       throw new BundleParseException("Could not parse bundle certificate chain", ce);
     }
-  }
-
-  private static CertPath toCertPath(List<X509Certificate> certificates)
-      throws CertificateException {
-    CertificateFactory cf = CertificateFactory.getInstance("X.509");
-    List<Certificate> converted = new ArrayList<>(certificates.size());
-    for (var cert : certificates) {
-      converted.add(Certificates.fromDer(cert.getRawBytes().toByteArray()));
-    }
-    return cf.generateCertPath(converted);
+    return KeylessSignature.builder()
+        .digest(digest)
+        .certPath(certPath)
+        .signature(bundle.getMessageSignature().getSignature().toByteArray())
+        .entry(rekorEntry)
+        .build();
   }
 }
