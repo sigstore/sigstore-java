@@ -49,21 +49,18 @@ jobs:
 
     # at some point this should just be replaced with something that can bring up a sigstore test env
     - name: Install Fulcio
-      run: |
-          go install github.com/sigstore/fulcio@main
+      run: go install github.com/sigstore/fulcio@main
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
 
     - name: Test sigstore-java
-      uses: gradle/gradle-build-action@a8f75513eafdebd8141bd1cd4e30fcd194af8dfa # v2.12.0
-      with:
-        arguments: build
+      run: ./gradlew build
 
     - name: Ensure sigstore-java self signing still works
-      uses: gradle/gradle-build-action@a8f75513eafdebd8141bd1cd4e30fcd194af8dfa # v2.12.0
-      with:
-        arguments: sigstore-java:publishToMavenLocal -Prelease -PskipPgpSigning
+      run: ./gradlew sigstore-java:publishToMavenLocal -Prelease -PskipPgpSigning
 
     - name: Test sigstore-java/sandbox
-      uses: gradle/gradle-build-action@a8f75513eafdebd8141bd1cd4e30fcd194af8dfa # v2.12.0 
-      with:
-        arguments: build
-        build-root-directory: sandbox
+      run: |
+        cd sandbox
+        ./gradlew build
