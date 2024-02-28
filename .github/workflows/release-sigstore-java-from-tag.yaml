@@ -35,9 +35,7 @@ jobs:
     permissions:
       id-token: write # To sign the artifacts
     runs-on: ubuntu-latest
-    needs: [ci, process-tag]
-    outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
+    needs: [ci]
     steps:
       - name: checkout tag
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -48,6 +46,9 @@ jobs:
           java-version: 11
           distribution: 'temurin'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
+
       - name: Build, Sign and Release to Maven Central
         run: |
           ./gradlew clean :sigstore-java:publishMavenJavaPublicationToSonatypeRepository -Prelease
@@ -57,56 +58,14 @@ jobs:
           ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
 
-      - name: SLSA -- Hash Artifacts
-        id: hash
-        run: |
-          mkdir slsa-files
-          cp sigstore-java/build/libs/*.jar slsa-files
-          cp sigstore-java/build/publications/mavenJava/pom-default.xml slsa-files/sigstore-java-${{ needs.process-tag.outputs.version }}.pom
-          cp sigstore-java/build/publications/mavenJava/module.json slsa-files/sigstore-java-${{ needs.process-tag.outputs.version }}.module
-          cd slsa-files
-          echo "hashes=$(sha256sum ./* | base64 -w0)" >> $GITHUB_OUTPUT
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-        with:
-          name: project-release-artifacts
-          path: ./slsa-files
-          if-no-files-found: error
-
-  provenance:
-    needs: [build, process-tag]
-    permissions:
-      actions: read # To read the workflow path.
-      id-token: write # To sign the provenance.
-      contents: write # To add assets to a release.
-    # use tags here: https://github.com/slsa-framework/slsa-github-generator#referencing-slsa-builders-and-generators
-    # remember to update "Download Attestations" when SLSA updates to actions/download-artifact@v4
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
-    with:
-      provenance-name: "sigstore-java-${{ needs.process-tag.outputs.version }}.attestation.intoto.jsonl"
-      base64-subjects: "${{ needs.build.outputs.hashes }}"
-
   create-release-on-github:
     runs-on: ubuntu-latest
-    needs: [provenance, build, process-tag]
+    needs: [build]
     permissions:
       contents: write
     steps:
-      - name: Download attestation
-        # keep at v3.x since slsa generator uses 3.x (update this when slsa-framework updates)
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
-        with:
-          name: "${{ needs.provenance.outputs.attestation-name }}"
-          path: ./release/
-      - name: Download gradle release artifacts
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
-        with:
-          name: project-release-artifacts
-          path: ./release/
       - name: Create release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # tag=v0.1.15
         with:
-          tag_name: v${{ needs.process-tag.outputs.version }}
+          tag_name: ${{ github.ref_name }}
           body: "See [CHANGELOG.md](https://github.com/${{ vars.GITHUB_REPOSITORY }}/blob/main/CHANGELOG.md) for more details."
-          files: ./release/*
