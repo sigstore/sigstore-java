@@ -34,6 +34,8 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.List;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.edec.EdECObjectIdentifiers;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -137,9 +139,24 @@ public class Keys {
       case "ed25519":
         {
           final KeyFactory kf = KeyFactory.getInstance("Ed25519");
-          final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(contents);
+          X509EncodedKeySpec keySpec;
+          // tuf allows raw keys only for ed25519 (non PEM):
+          // https://github.com/theupdateframework/specification/blob/c51875f445d8a57efca9dadfbd5dbdece06d87e6/tuf-spec.md#key-objects--file-formats-keys
+          if (contents.length == 32) {
+            var params =
+                new SubjectPublicKeyInfo(
+                    new AlgorithmIdentifier(EdECObjectIdentifiers.id_Ed25519), contents);
+            try {
+              keySpec = new X509EncodedKeySpec(params.getEncoded());
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          } else {
+            keySpec = new X509EncodedKeySpec(contents);
+          }
           return kf.generatePublic(keySpec);
         }
+      case "ecdsa":
       case "ecdsa-sha2-nistp256":
         {
           // spec for P-256 curve

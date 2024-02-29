@@ -164,6 +164,28 @@ class KeysTest {
   }
 
   @Test
+  @EnabledForJreRange(min = JRE.JAVA_15)
+  void parseTufPublicKey_ed25519_rawBytes_java15plus() throws Exception {
+    PublicKey key =
+        Keys.constructTufPublicKey(
+            Hex.decode("2d7218ce609f85de4b0d29d9e679cfd73e96756652f7069a0cf00acb752e5d3c"),
+            "ed25519");
+    assertNotNull(key);
+    assertEquals("EdDSA", key.getAlgorithm());
+  }
+
+  @Test
+  @EnabledForJreRange(max = JRE.JAVA_14)
+  void parseTufPublicKey_ed25519_rawBytes_lteJava14() throws Exception {
+    PublicKey key =
+        Keys.constructTufPublicKey(
+            Hex.decode("2d7218ce609f85de4b0d29d9e679cfd73e96756652f7069a0cf00acb752e5d3c"),
+            "ed25519");
+    assertNotNull(key);
+    assertEquals("Ed25519", key.getAlgorithm());
+  }
+
+  @Test
   void parseTufPublicKey_ed25519Bad() {
     Assertions.assertThrows(
         InvalidKeySpecException.class,
