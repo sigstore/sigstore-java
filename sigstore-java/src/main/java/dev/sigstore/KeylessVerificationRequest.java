@@ -37,7 +37,10 @@ public interface KeylessVerificationRequest {
      * rekor entry in a {@link KeylessSignature}. Verifier may still connect to Rekor to obtain an
      * entry if no {@link KeylessSignature#getEntry()} is empty.
      */
-    boolean alwaysUseRemoteRekorEntry();
+    @Default
+    default boolean alwaysUseRemoteRekorEntry() {
+      return false;
+    }
 
     List<CertificateIdentity> getCertificateIdentities();
 
