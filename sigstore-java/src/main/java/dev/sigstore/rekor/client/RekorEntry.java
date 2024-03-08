@@ -25,6 +25,7 @@ import org.erdtman.jcs.JsonCanonicalizer;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Derived;
+import org.immutables.value.Value.Lazy;
 
 /** A local representation of a rekor entry in the log. */
 @Gson.TypeAdapters
@@ -68,6 +69,44 @@ public interface RekorEntry {
 
     /** The checkpoint (signed tree head) that the inclusion proof is based on. */
     String getCheckpoint();
+
+    /**
+     * The checkpoint that {@link #getCheckpoint} provides, but parsed into component parts.
+     *
+     * @return a Checkpoint
+     * @throws RekorParseException if the checkpoint is invalid
+     */
+    @Lazy
+    default Checkpoint parsedCheckpoint() throws RekorParseException {
+      return Checkpoints.from(getCheckpoint());
+    }
+  }
+
+  @Value.Immutable
+  interface Checkpoint {
+    /** Unique identity for the log. */
+    String getOrigin();
+
+    /** Size of the log for this checkpoint. */
+    Long getSize();
+
+    /** Log root hash at the defined log size. */
+    String getBase64Hash();
+
+    /** A list of signatures associated with the checkpoint. */
+    List<CheckpointSignature> getSignatures();
+  }
+
+  @Value.Immutable
+  interface CheckpointSignature {
+    /** Human readable log identity */
+    String getIdentity();
+
+    /** First 4 bytes of sha256 key hash as a Public Key hint. */
+    byte[] getKeyHint();
+
+    /** Signature over the tree head. */
+    byte[] getSignature();
   }
 
   /** Returns the content of the log entry. */
