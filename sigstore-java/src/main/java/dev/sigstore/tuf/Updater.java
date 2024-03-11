@@ -308,17 +308,20 @@ public class Updater {
             Role.Name.SNAPSHOT,
             timestampSnapshotVersion,
             Snapshot.class,
-            timestamp.getSignedMeta().getSnapshotMeta().getLength());
+            timestamp.getSignedMeta().getSnapshotMeta().getLengthOrDefault());
     if (snapshotResult.isEmpty()) {
       throw new FileNotFoundException(
           timestampSnapshotVersion + ".snapshot.json", fetcher.getSource());
     }
-    // 2) check against timestamp.snapshot.hash
+    // 2) check against timestamp.snapshot.hash, this is optional, the fallback is
+    // that the version must match, which is handled in (4).
     var snapshot = snapshotResult.get();
-    verifyHashes(
-        "snapshot",
-        snapshot.getRawBytes(),
-        timestamp.getSignedMeta().getSnapshotMeta().getHashes());
+    if (timestamp.getSignedMeta().getSnapshotMeta().getHashes().isPresent()) {
+      verifyHashes(
+          "snapshot",
+          snapshot.getRawBytes(),
+          timestamp.getSignedMeta().getSnapshotMeta().getHashes().get());
+    }
     // 3) Check against threshold of root signing keys, else fail
     verifyDelegate(root, snapshot.getMetaResource());
     // 4) Check snapshot.version matches timestamp.snapshot.version, else fail.
@@ -392,17 +395,23 @@ public class Updater {
     SnapshotMeta.SnapshotTarget targetMeta = snapshot.getSignedMeta().getTargetMeta("targets.json");
     var targetsResultMaybe =
         fetcher.getMeta(
-            Role.Name.TARGETS, targetMeta.getVersion(), Targets.class, targetMeta.getLength());
+            Role.Name.TARGETS,
+            targetMeta.getVersion(),
+            Targets.class,
+            targetMeta.getLengthOrDefault());
     if (targetsResultMaybe.isEmpty()) {
       throw new FileNotFoundException(
           targetMeta.getVersion() + ".targets.json", fetcher.getSource());
     }
     var targetsResult = targetsResultMaybe.get();
-    // 2) check hash against snapshot.targets.hash, else fail.
-    verifyHashes(
-        targetMeta.getVersion() + ".targets.json",
-        targetsResult.getRawBytes(),
-        targetMeta.getHashes());
+    // 2) check hash against snapshot.targets.hash, else just make sure versions match, handled
+    // by (4)
+    if (targetMeta.getHashes().isPresent()) {
+      verifyHashes(
+          targetMeta.getVersion() + ".targets.json",
+          targetsResult.getRawBytes(),
+          targetMeta.getHashes().get());
+    }
     // 3) check against threshold of keys as specified by trusted root.json
     verifyDelegate(root, targetsResult.getMetaResource());
     // 4) check targets.version == snapshot.targets.version, else fail.

@@ -16,8 +16,10 @@
 package dev.sigstore.tuf.model;
 
 import java.util.Map;
+import java.util.Optional;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
+import org.immutables.value.Value.Derived;
 
 /**
  * The snapshot.json metadata file lists version numbers of all metadata files other than
@@ -28,6 +30,12 @@ import org.immutables.value.Value;
 @Gson.TypeAdapters
 @Value.Immutable
 public interface SnapshotMeta extends TufMeta {
+
+  /**
+   * If no length is provided, use a default, we just use the same default as the python client:
+   * https://github.com/theupdateframework/python-tuf/blob/22080157f438357935bfcb25b5b8429f4e4f610e/tuf/ngclient/config.py#L49
+   */
+  Integer DEFAULT_MAX_LENGTH = 2000000;
 
   /** Maps role and delegation role names (e.g. "targets.json") to snapshot metadata. */
   Map<String, SnapshotTarget> getMeta();
@@ -40,11 +48,20 @@ public interface SnapshotMeta extends TufMeta {
   @Value.Immutable
   interface SnapshotTarget {
 
-    /** The valid hashes for the given target's metadata. */
-    Hashes getHashes();
+    /** The valid hashes for the given target's metadata. This is optional and may not be present */
+    Optional<Hashes> getHashes();
 
-    /** The length in bytes of the given target's metadata. */
-    int getLength();
+    /**
+     * The length in bytes of the given target's metadata. This is optional and may not be present,
+     * use {@link #getLengthOrDefault} to delegate to the client default config.
+     */
+    Optional<Integer> getLength();
+
+    /** The length in bytes of the given target's metadata, or a default if not present */
+    @Derived
+    default Integer getLengthOrDefault() {
+      return getLength().orElse(DEFAULT_MAX_LENGTH);
+    }
 
     /** The expected version of the given target's metadata. */
     int getVersion();

@@ -1,10 +1,14 @@
 
 # TUF repo creation steps
 
-You'll need the TUF cli to run these commands. 
+You'll need the TUF cli to run these commands. This was generated pre v0.6.0,
+so use v0.5.2 for compatibility till this all this test data is upgraded
 ```shell
-go install github.com/theupdateframework/go-tuf/cmd/tuf@latest
+go install github.com/theupdateframework/go-tuf/cmd/tuf@v0.5.2
 ```
+
+if you are using the repo in root-signing-workspace, you do not need to regenerate
+the repository, you can work within this repo
 
 ```shell
 mkdir root-signing-workspace
