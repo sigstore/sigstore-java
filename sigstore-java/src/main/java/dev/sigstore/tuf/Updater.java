@@ -37,6 +37,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
@@ -51,6 +54,8 @@ public class Updater {
   // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in 5.3.3 of
   // spec.
   private static final int MAX_UPDATES = 1024;
+
+  private static final Logger log = Logger.getLogger(Updater.class.getName());
 
   private Clock clock;
   private Verifiers.Supplier verifiers;
@@ -197,8 +202,7 @@ public class Updater {
       Map<String, Key> publicKeys,
       Role role,
       byte[] verificationMaterial)
-      throws SignatureVerificationException, NoSuchAlgorithmException, InvalidKeyException,
-          InvalidKeySpecException, IOException {
+      throws InvalidKeySpecException, IOException, NoSuchAlgorithmException {
     // use set to not count the same key multiple times towards the threshold.
     var goodSigs = new HashSet<>(role.getKeyids().size() * 4 / 3);
     // role.getKeyIds() defines the keys allowed to sign for this role.
@@ -221,13 +225,35 @@ public class Updater {
           } else {
             pubKey = Keys.constructTufPublicKey(Hex.decode(publicKeyContents), key.getScheme());
           }
-          byte[] signatureBytes = Hex.decode(signature.getSignature());
           try {
+            // while we error on keys that are not readable, we are intentionally more permissive
+            // about signatures. If for ANY reason (except unparsed keys) we cannot validate a
+            // signature, we continue as long as we find enough valid signatures within the
+            // threshold. We still warn the user as this could be an indicator of data issues
+            byte[] signatureBytes = Hex.decode(signature.getSignature());
             if (verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
               goodSigs.add(signature.getKeyId());
             }
           } catch (SignatureException e) {
-            throw new TufException(e);
+            log.log(
+                Level.FINE,
+                () ->
+                    String.format(
+                        Locale.ROOT,
+                        "TUF: ignored unverifiable signature: '%s' for keyid: '%s'",
+                        signature.getSignature(),
+                        signature.getKeyId()));
+          } catch (DecoderException | NoSuchAlgorithmException | InvalidKeyException e) {
+            log.log(
+                Level.WARNING,
+                e,
+                () ->
+                    String.format(
+                        Locale.ROOT,
+                        "TUF: ignored invalid signature: '%s' for keyid: '%s', because '%s'",
+                        signature.getSignature(),
+                        keyid,
+                        e.getMessage()));
           }
         }
       }
