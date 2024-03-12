@@ -74,6 +74,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -967,6 +968,31 @@ class UpdaterTest {
       assertEquals(
           2, e.getRequiredSignatures(), "required signature count did not match expectations.");
     }
+  }
+
+  @Test
+  public void testUpdate_snapshotsAndTimestampHaveNoSizeAndNoHashesInMeta()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/no-size-no-hash-snapshot-timestamp",
+        "2.root.json",
+        "timestamp.json",
+        "3.snapshot.json");
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath,
+            UPDATER_SYNTHETIC_TRUSTED_ROOT,
+            "2022-11-20T18:07:27Z"); // one day after
+    Root root = updater.updateRoot();
+    Timestamp timestamp = updater.updateTimestamp(root).get();
+    Snapshot snapshot = updater.updateSnapshot(root, timestamp);
+
+    Assertions.assertTrue(timestamp.getSignedMeta().getSnapshotMeta().getHashes().isEmpty());
+    Assertions.assertTrue(timestamp.getSignedMeta().getSnapshotMeta().getLength().isEmpty());
+    Assertions.assertTrue(
+        snapshot.getSignedMeta().getMeta().get("targets.json").getHashes().isEmpty());
+    Assertions.assertTrue(
+        snapshot.getSignedMeta().getMeta().get("targets.json").getLength().isEmpty());
   }
 
   @Test

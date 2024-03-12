@@ -96,11 +96,11 @@ public class TestTufJsonLoading {
     assertNotNull(rekorSnapshot.getHashes());
     assertEquals(
         "9d2e1a5842937d8e0d3e3759170b0ad15c56c5df36afc5cf73583ddd283a463b",
-        rekorSnapshot.getHashes().getSha256());
+        rekorSnapshot.getHashes().get().getSha256());
     assertEquals(
         "176e9e710ddddd1b357a7d7970831bae59763395a0c18976110cbd35b25e5412dc50f356ec421a7a30265670cf7aec9ed84ee944ba700ec2394b9c876645b960",
-        rekorSnapshot.getHashes().getSha512());
-    assertEquals(797, rekorSnapshot.getLength());
+        rekorSnapshot.getHashes().get().getSha512());
+    assertEquals(797, rekorSnapshot.getLength().get());
     assertEquals(3, rekorSnapshot.getVersion());
   }
 
