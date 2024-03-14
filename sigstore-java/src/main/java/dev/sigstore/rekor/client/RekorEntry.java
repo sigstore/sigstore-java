@@ -37,7 +37,8 @@ public interface RekorEntry {
     /** Return the signed entry timestamp. */
     String getSignedEntryTimestamp();
 
-    Optional<InclusionProof> getInclusionProof();
+    /** Return the inclusion proof. */
+    InclusionProof getInclusionProof();
   }
 
   /**

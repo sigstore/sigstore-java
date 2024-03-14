@@ -41,7 +41,6 @@ import org.junit.jupiter.api.Test;
 
 public class RekorVerifierTest {
   public String rekorResponse;
-  public String rekorQueryResponse;
   public byte[] rekorPub;
 
   public static SigstoreTrustedRoot trustRoot;
@@ -50,15 +49,11 @@ public class RekorVerifierTest {
   public void loadResources() throws IOException {
     rekorResponse =
         Resources.toString(
-            Resources.getResource("dev/sigstore/samples/rekor-response/valid/response.json"),
+            Resources.getResource("dev/sigstore/samples/rekor-response/valid/entry.json"),
             StandardCharsets.UTF_8);
     rekorPub =
         Resources.toByteArray(
             Resources.getResource("dev/sigstore/samples/rekor-response/valid/rekor.pub"));
-    rekorQueryResponse =
-        Resources.toString(
-            Resources.getResource("dev/sigstore/samples/rekor-response/valid/query-response.json"),
-            StandardCharsets.UTF_8);
   }
 
   @BeforeAll
@@ -74,17 +69,9 @@ public class RekorVerifierTest {
   }
 
   @Test
-  public void verifyEntry_valid() throws Exception {
-    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
-    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
-
-    verifier.verifyEntry(response.getEntry());
-  }
-
-  @Test
   public void verifyEntry_invalid() throws Exception {
     // change the logindex
-    var invalidResponse = rekorResponse.replace("79", "80");
+    var invalidResponse = rekorResponse.replace("1688", "1700");
     var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), invalidResponse);
     var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
@@ -95,29 +82,27 @@ public class RekorVerifierTest {
   }
 
   @Test
-  public void verifyEntry_withInclusionProof() throws Exception {
-    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorQueryResponse);
+  public void verifyEntry() throws Exception {
+    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
     var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
     var entry = response.getEntry();
     verifier.verifyEntry(entry);
-    verifier.verifyInclusionProof(entry);
   }
 
   @Test
   public void verifyEntry_withInvalidInclusionProof() throws Exception {
     // replace a hash in the inclusion proof to make it bad
-    var invalidResponse = rekorQueryResponse.replace("b4439e", "aaaaaa");
+    var invalidResponse = rekorResponse.replace("b4439e", "aaaaaa");
 
     var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), invalidResponse);
     var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
     var entry = response.getEntry();
-    verifier.verifyEntry(entry);
-
     var thrown =
         Assertions.assertThrows(
-            RekorVerificationException.class, () -> verifier.verifyInclusionProof(entry));
+            RekorVerificationException.class, () -> verifier.verifyEntry(entry));
+
     MatcherAssert.assertThat(
         thrown.getMessage(),
         CoreMatchers.startsWith(

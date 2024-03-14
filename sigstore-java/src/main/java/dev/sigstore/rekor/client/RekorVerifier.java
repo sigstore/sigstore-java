@@ -81,24 +81,15 @@ public class RekorVerifier {
     } catch (NoSuchAlgorithmException nsae) {
       throw new AssertionError("Required verification algorithm 'SHA256withECDSA' not found.");
     }
+
+    // verify inclusion proof
+    verifyInclusionProof(entry);
   }
 
-  /**
-   * Verify that a Rekor Entry is in the log by checking inclusion proof.
-   *
-   * @param entry the entry to verify
-   * @throws RekorVerificationException if the entry cannot be verified
-   */
-  public void verifyInclusionProof(RekorEntry entry) throws RekorVerificationException {
+  /** Verify that a Rekor Entry is in the log by checking inclusion proof. */
+  private void verifyInclusionProof(RekorEntry entry) throws RekorVerificationException {
 
-    var inclusionProof =
-        entry
-            .getVerification()
-            .getInclusionProof()
-            .orElseThrow(
-                () ->
-                    new RekorVerificationException(
-                        "No inclusion proof was found in the rekor entry"));
+    var inclusionProof = entry.getVerification().getInclusionProof();
 
     var leafHash =
         Hashing.sha256()

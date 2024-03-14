@@ -69,6 +69,7 @@ public class KeylessVerifierTest {
 
   @Test
   public void testVerify_canVerifyV01Bundle() throws Exception {
+    // note that this v1 bundle contains an inclusion proof
     verifyBundle(
         "dev/sigstore/samples/bundles/artifact.txt",
         "dev/sigstore/samples/bundles/bundle.v1.sigstore");

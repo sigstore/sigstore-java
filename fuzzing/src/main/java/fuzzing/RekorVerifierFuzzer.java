@@ -40,7 +40,6 @@ public class RekorVerifierFuzzer {
       RekorVerifier verifier = RekorVerifier.newRekorVerifier(tLogs);
 
       verifier.verifyEntry(entry);
-      verifier.verifyInclusionProof(entry);
     } catch (URISyntaxException | RekorParseException | RekorVerificationException e) {
       // Known exception
     }

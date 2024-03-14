@@ -43,7 +43,6 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -127,14 +126,7 @@ class BundleFactoryInternal {
 
   private static void addInclusionProof(
       TransparencyLogEntry.Builder transparencyLogEntry, RekorEntry entry) {
-    RekorEntry.InclusionProof inclusionProof =
-        entry
-            .getVerification()
-            .getInclusionProof()
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "An inclusion proof must be present in the log entry in the signing result"));
+    RekorEntry.InclusionProof inclusionProof = entry.getVerification().getInclusionProof();
     transparencyLogEntry.setInclusionProof(
         InclusionProof.newBuilder()
             .setLogIndex(inclusionProof.getLogIndex())
@@ -166,9 +158,8 @@ class BundleFactoryInternal {
     var bundleEntry = bundle.getVerificationMaterial().getTlogEntries(0);
     RekorEntry.InclusionProof inclusionProof = null;
     if (!bundleEntry.hasInclusionProof()) {
-      if (!bundle.getMediaType().equals(BUNDLE_V_0_1)) {
-        throw new BundleParseException("Could not find an inclusion proof");
-      }
+      // all consumed bundles must have an inclusion proof
+      throw new BundleParseException("Could not find an inclusion proof");
     } else {
       var bundleInclusionProof = bundleEntry.getInclusionProof();
 
@@ -192,7 +183,7 @@ class BundleFactoryInternal {
                 Base64.getEncoder()
                     .encodeToString(
                         bundleEntry.getInclusionPromise().getSignedEntryTimestamp().toByteArray()))
-            .inclusionProof(Optional.ofNullable(inclusionProof))
+            .inclusionProof(inclusionProof)
             .build();
 
     var rekorEntry =

@@ -32,7 +32,7 @@ public class RekorTypesTest {
 
   @Test
   public void getHashedRekord_pass() throws Exception {
-    var entry = fromResource("dev/sigstore/samples/rekor-response/valid/response.json");
+    var entry = fromResource("dev/sigstore/samples/rekor-response/valid/entry.json");
 
     var hashedRekord = RekorTypes.getHashedRekord(entry);
     Assertions.assertNotNull(hashedRekord);
@@ -40,7 +40,7 @@ public class RekorTypesTest {
 
   @Test
   public void getHashedRekord_badType() throws Exception {
-    var entry = fromResource("dev/sigstore/samples/rekor-response/valid/jar-response.json");
+    var entry = fromResource("dev/sigstore/samples/rekor-response/valid/jar-entry.json");
 
     var exception =
         Assertions.assertThrows(RekorTypeException.class, () -> RekorTypes.getHashedRekord(entry));
