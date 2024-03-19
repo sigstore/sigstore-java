@@ -170,11 +170,10 @@ public class RekorClientTest {
   private void assertEntry(RekorResponse resp, Optional<RekorEntry> entry) {
     assertTrue(entry.isPresent());
     assertEquals(resp.getEntry().getLogID(), entry.get().getLogID());
-    assertTrue(entry.get().getVerification().getInclusionProof().isPresent());
-    assertNotNull(entry.get().getVerification().getInclusionProof().get().getTreeSize());
-    assertNotNull(entry.get().getVerification().getInclusionProof().get().getRootHash());
-    assertNotNull(entry.get().getVerification().getInclusionProof().get().getLogIndex());
-    assertTrue(entry.get().getVerification().getInclusionProof().get().getHashes().size() > 0);
+    assertNotNull(entry.get().getVerification().getInclusionProof().getTreeSize());
+    assertNotNull(entry.get().getVerification().getInclusionProof().getRootHash());
+    assertNotNull(entry.get().getVerification().getInclusionProof().getLogIndex());
+    assertTrue(entry.get().getVerification().getInclusionProof().getHashes().size() > 0);
   }
 
   @Test

@@ -180,17 +180,6 @@ public class KeylessVerifier {
       throw new KeylessVerificationException("Rekor entry signature was not valid");
     }
 
-    // verify any inclusion proof
-    if (rekorEntry.getVerification().getInclusionProof().isPresent()) {
-      try {
-        rekorVerifier.verifyInclusionProof(rekorEntry);
-      } catch (RekorVerificationException ex) {
-        throw new KeylessVerificationException("Rekor entry inclusion proof was not valid");
-      }
-    } else if (request.getVerificationOptions().alwaysUseRemoteRekorEntry()) {
-      throw new KeylessVerificationException("Rekor entry did not contain inclusion proof");
-    }
-
     // check if the time of entry inclusion in the log (a stand-in for signing time) is within the
     // validity period for the certificate
     var entryTime = Date.from(rekorEntry.getIntegratedTimeInstant());
