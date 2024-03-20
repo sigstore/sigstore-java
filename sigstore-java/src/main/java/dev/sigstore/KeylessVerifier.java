@@ -177,7 +177,7 @@ public class KeylessVerifier {
     try {
       rekorVerifier.verifyEntry(rekorEntry);
     } catch (RekorVerificationException ex) {
-      throw new KeylessVerificationException("Rekor entry signature was not valid");
+      throw new KeylessVerificationException("Rekor entry signature was not valid", ex);
     }
 
     // check if the time of entry inclusion in the log (a stand-in for signing time) is within the
