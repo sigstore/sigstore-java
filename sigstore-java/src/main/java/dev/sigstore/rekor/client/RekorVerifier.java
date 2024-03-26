@@ -17,12 +17,15 @@ package dev.sigstore.rekor.client;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.signers.Verifiers;
+import dev.sigstore.rekor.client.RekorEntry.Checkpoint;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.trustroot.TransparencyLog;
 import dev.sigstore.trustroot.TransparencyLogs;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.Base64;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -84,6 +87,7 @@ public class RekorVerifier {
 
     // verify inclusion proof
     verifyInclusionProof(entry);
+    verifyCheckpoint(entry, tlog);
   }
 
   /** Verify that a Rekor Entry is in the log by checking inclusion proof. */
@@ -131,6 +135,43 @@ public class RekorVerifier {
               + calcuatedRootHash
               + "\n"
               + inclusionProof.getRootHash());
+    }
+  }
+
+  private void verifyCheckpoint(RekorEntry entry, TransparencyLog tlog)
+      throws RekorVerificationException {
+    Checkpoint checkpoint;
+    try {
+      checkpoint = entry.getVerification().getInclusionProof().parsedCheckpoint();
+    } catch (RekorParseException ex) {
+      throw new RekorVerificationException("Could not parse checkpoint", ex);
+    }
+
+    byte[] inclusionRootHash =
+        Hex.decode(entry.getVerification().getInclusionProof().getRootHash());
+    byte[] checkpointRootHash = Base64.getDecoder().decode(checkpoint.getBase64Hash());
+
+    if (!Arrays.equals(inclusionRootHash, checkpointRootHash)) {
+      throw new RekorVerificationException(
+          "Checkpoint root hash does not match root hash provided in inclusion proof");
+    }
+    var keyHash = Hashing.sha256().hashBytes(tlog.getPublicKey().getRawBytes()).asBytes();
+    // checkpoint 0 is always the log, not any of the cross signing verifiers/monitors
+    var sig = checkpoint.getSignatures().get(0);
+    for (int i = 0; i < 4; i++) {
+      if (sig.getKeyHint()[i] != keyHash[i]) {
+        throw new RekorVerificationException(
+            "Checkpoint key hint did not match provided log public key");
+      }
+    }
+    try {
+      Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey())
+          .verifyDigest(inclusionRootHash, sig.getSignature());
+    } catch (NoSuchAlgorithmException
+        | InvalidKeySpecException
+        | SignatureException
+        | InvalidKeyException ex) {
+      throw new RekorVerificationException("Could not verify checkpoint signature", ex);
     }
   }
 
