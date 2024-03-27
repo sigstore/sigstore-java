@@ -22,12 +22,9 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpResponseException;
-import com.google.common.base.Preconditions;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
-import dev.sigstore.trustroot.SigstoreTrustedRoot;
-import dev.sigstore.trustroot.TransparencyLog;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -42,20 +39,20 @@ public class RekorClient {
   public static final String REKOR_INDEX_SEARCH_PATH = "/api/v1/index/retrieve";
 
   private final HttpParams httpParams;
-  private final TransparencyLog tlog;
+  private final URI uri;
 
   public static RekorClient.Builder builder() {
     return new RekorClient.Builder();
   }
 
-  private RekorClient(HttpParams httpParams, TransparencyLog tlog) {
-    this.tlog = tlog;
+  private RekorClient(HttpParams httpParams, URI uri) {
+    this.uri = uri;
     this.httpParams = httpParams;
   }
 
   public static class Builder {
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
-    private TransparencyLog tlog;
+    private URI uri = URI.create("https://rekor.sigstore.dev");
 
     private Builder() {}
 
@@ -65,21 +62,14 @@ public class RekorClient {
       return this;
     }
 
-    /** Configure the remote rekor instance to communicate with. */
-    public Builder setTransparencyLog(TransparencyLog tlog) {
-      this.tlog = tlog;
-      return this;
-    }
-
-    /** Configure the remote rekor instance to communicate with, inferred from a trusted root. */
-    public Builder setTransparencyLog(SigstoreTrustedRoot trustedRoot) {
-      this.tlog = trustedRoot.getTLogs().current();
+    /** Base url of the remote rekor instance. */
+    public Builder setUri(URI uri) {
+      this.uri = uri;
       return this;
     }
 
     public RekorClient build() {
-      Preconditions.checkNotNull(tlog);
-      return new RekorClient(httpParams, tlog);
+      return new RekorClient(httpParams, uri);
     }
   }
 
@@ -91,7 +81,7 @@ public class RekorClient {
    */
   public RekorResponse putEntry(HashedRekordRequest hashedRekordRequest)
       throws IOException, RekorParseException {
-    URI rekorPutEndpoint = tlog.getBaseUrl().resolve(REKOR_ENTRIES_PATH);
+    URI rekorPutEndpoint = uri.resolve(REKOR_ENTRIES_PATH);
 
     HttpRequest req =
         HttpClients.newRequestFactory(httpParams)
@@ -112,7 +102,7 @@ public class RekorClient {
               resp.parseAsString()));
     }
 
-    URI rekorEntryUri = tlog.getBaseUrl().resolve(resp.getHeaders().getLocation());
+    URI rekorEntryUri = uri.resolve(resp.getHeaders().getLocation());
     String entry = resp.parseAsString();
     return RekorResponse.newRekorResponse(rekorEntryUri, entry);
   }
@@ -123,7 +113,7 @@ public class RekorClient {
   }
 
   public Optional<RekorEntry> getEntry(String UUID) throws IOException, RekorParseException {
-    URI getEntryURI = tlog.getBaseUrl().resolve(REKOR_ENTRIES_PATH + "/" + UUID);
+    URI getEntryURI = uri.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
     HttpRequest req =
         HttpClients.newRequestFactory(httpParams).buildGetRequest(new GenericUrl(getEntryURI));
     req.getHeaders().set("Accept", "application/json");
@@ -149,7 +139,7 @@ public class RekorClient {
   public List<String> searchEntry(
       String email, String hash, String publicKeyFormat, String publicKeyContent)
       throws IOException {
-    URI rekorSearchEndpoint = tlog.getBaseUrl().resolve(REKOR_INDEX_SEARCH_PATH);
+    URI rekorSearchEndpoint = uri.resolve(REKOR_INDEX_SEARCH_PATH);
 
     HashMap<String, Object> publicKeyParams = null;
     if (publicKeyContent != null) {

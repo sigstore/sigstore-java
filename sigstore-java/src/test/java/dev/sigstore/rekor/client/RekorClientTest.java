@@ -23,9 +23,6 @@ import com.google.common.collect.ImmutableList;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
-import dev.sigstore.trustroot.ImmutableTransparencyLog;
-import dev.sigstore.trustroot.LogId;
-import dev.sigstore.trustroot.PublicKey;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -44,7 +41,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 public class RekorClientTest {
 
@@ -55,16 +51,7 @@ public class RekorClientTest {
   public void setupClient() throws URISyntaxException {
     // this tests directly against rekor in staging, it's a bit hard to bring up a rekor instance
     // without docker compose.
-    client =
-        RekorClient.builder()
-            .setTransparencyLog(
-                ImmutableTransparencyLog.builder()
-                    .baseUrl(URI.create(REKOR_URL))
-                    .hashAlgorithm("ignored")
-                    .publicKey(Mockito.mock(PublicKey.class))
-                    .logId(Mockito.mock(LogId.class))
-                    .build())
-            .build();
+    client = RekorClient.builder().setUri(URI.create(REKOR_URL)).build();
   }
 
   @Test
