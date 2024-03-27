@@ -150,6 +150,16 @@ public class FulcioVerifier {
     verifySct(fullCertPath);
   }
 
+  public CertPath trimTrustedParent(CertPath signingCertificate)
+      throws FulcioVerificationException, CertificateException {
+    for (var ca : cas) {
+      if (Certificates.containsParent(signingCertificate, ca.getCertPath())) {
+        return Certificates.trimParent(signingCertificate, ca.getCertPath());
+      }
+    }
+    throw new FulcioVerificationException("Certificate does not chain to trusted roots");
+  }
+
   /**
    * Find a valid cert path that chains back up to the trusted root certs and reconstruct a
    * certificate path combining the provided un-trusted certs and a known set of trusted and
