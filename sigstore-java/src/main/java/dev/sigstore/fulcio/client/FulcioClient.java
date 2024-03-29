@@ -19,7 +19,6 @@ import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.SIGNED_C
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
-import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.fulcio.v2.CAGrpc;
 import dev.sigstore.fulcio.v2.CertificateChain;
 import dev.sigstore.fulcio.v2.CreateSigningCertificateRequest;
@@ -29,9 +28,8 @@ import dev.sigstore.fulcio.v2.PublicKeyRequest;
 import dev.sigstore.http.GrpcChannels;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
-import dev.sigstore.trustroot.CertificateAuthority;
-import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.ByteArrayInputStream;
+import java.net.URI;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -45,19 +43,19 @@ import java.util.concurrent.TimeUnit;
 public class FulcioClient {
 
   private final HttpParams httpParams;
-  private final CertificateAuthority certificateAuthority;
+  private final URI uri;
 
   public static Builder builder() {
     return new Builder();
   }
 
-  private FulcioClient(HttpParams httpParams, CertificateAuthority certificateAuthority) {
-    this.certificateAuthority = certificateAuthority;
+  private FulcioClient(HttpParams httpParams, URI uri) {
+    this.uri = uri;
     this.httpParams = httpParams;
   }
 
   public static class Builder {
-    private CertificateAuthority certificateAuthority;
+    private URI uri = URI.create("https://fulcio.sigstore.dev");
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
 
     private Builder() {}
@@ -68,20 +66,14 @@ public class FulcioClient {
       return this;
     }
 
-    /** The remote fulcio instance. */
-    public Builder setCertificateAuthority(CertificateAuthority certificateAuthority) {
-      this.certificateAuthority = certificateAuthority;
-      return this;
-    }
-
-    /** The remote fulcio instance inferred from a trustedRoot. */
-    public Builder setCertificateAuthority(SigstoreTrustedRoot trustedRoot) {
-      this.certificateAuthority = trustedRoot.getCAs().current();
+    /** Base url of the remote fulcio instance. */
+    public Builder setUri(URI uri) {
+      this.uri = uri;
       return this;
     }
 
     public FulcioClient build() {
-      return new FulcioClient(httpParams, certificateAuthority);
+      return new FulcioClient(httpParams, uri);
     }
   }
 
@@ -93,16 +85,11 @@ public class FulcioClient {
    */
   public CertPath signingCertificate(CertificateRequest request)
       throws InterruptedException, CertificateException {
-    if (!certificateAuthority.isCurrent()) {
-      throw new RuntimeException(
-          "Certificate Authority '" + certificateAuthority.getUri() + "' is not current");
-    }
     // TODO: 1. If we want to reduce the cost of creating channels/connections, we could try
     // to make a new connection once per batch of fulcio requests, but we're not really
     // at that point yet.
     // TODO: 2. getUri().getAuthority() is potentially prone to error if we don't get a good URI
-    var channel =
-        GrpcChannels.newManagedChannel(certificateAuthority.getUri().getAuthority(), httpParams);
+    var channel = GrpcChannels.newManagedChannel(uri.getAuthority(), httpParams);
 
     try {
       var client = CAGrpc.newBlockingStub(channel);
@@ -135,9 +122,7 @@ public class FulcioClient {
       if (certs.getCertificateCase() == SIGNED_CERTIFICATE_DETACHED_SCT) {
         throw new CertificateException("Detached SCTs are not supported");
       }
-      return Certificates.trimParent(
-          decodeCerts(certs.getSignedCertificateEmbeddedSct().getChain()),
-          certificateAuthority.getCertPath());
+      return decodeCerts(certs.getSignedCertificateEmbeddedSct().getChain());
     } finally {
       channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
     }

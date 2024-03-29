@@ -23,19 +23,11 @@ import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
 import dev.sigstore.testing.grpc.GrpcTypes;
-import dev.sigstore.trustroot.CertificateAuthority;
-import dev.sigstore.trustroot.ImmutableCertificateAuthority;
-import dev.sigstore.trustroot.ImmutableValidFor;
-import dev.sigstore.trustroot.Subject;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
-import java.time.Instant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
 
 public class FulcioClientTest {
 
@@ -58,8 +50,7 @@ public class FulcioClientTest {
     var client =
         FulcioClient.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setCertificateAuthority(
-                createCA(fulcioWrapper.getGrpcURI2(), fulcioWrapper.getTrustBundle()))
+            .setUri(fulcioWrapper.getGrpcURI2())
             .build();
 
     var sc = client.signingCertificate(cReq);
@@ -89,21 +80,11 @@ public class FulcioClientTest {
     var client =
         FulcioClient.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setCertificateAuthority(
-                createCA(fulcioWrapper.getGrpcURI2(), fulcioWrapper.getTrustBundle()))
+            .setUri(fulcioWrapper.getGrpcURI2())
             .build();
     var ex =
         Assertions.assertThrows(CertificateException.class, () -> client.signingCertificate(cReq));
     Assertions.assertEquals(ex.getMessage(), "Detached SCTs are not supported");
-  }
-
-  private CertificateAuthority createCA(URI uri, CertPath trustBundle) {
-    return ImmutableCertificateAuthority.builder()
-        .uri(uri)
-        .certPath(trustBundle)
-        .subject(Mockito.mock(Subject.class))
-        .validFor(ImmutableValidFor.builder().start(Instant.EPOCH).build())
-        .build();
   }
 
   @Test

@@ -29,6 +29,7 @@ import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.trustroot.TransparencyLog;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -36,27 +37,31 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
 public class KeylessVerifier {
   private final FulcioVerifier fulcioVerifier;
   private final RekorVerifier rekorVerifier;
-  private final RekorClient rekorClient;
+
+  // a client per remote trusted log
+  private final List<RekorClient> rekorClients;
 
   private KeylessVerifier(
-      FulcioVerifier fulcioVerifier, RekorClient rekorClient, RekorVerifier rekorVerifier) {
+      FulcioVerifier fulcioVerifier, List<RekorClient> rekorClients, RekorVerifier rekorVerifier) {
     this.fulcioVerifier = fulcioVerifier;
-    this.rekorClient = rekorClient;
     this.rekorVerifier = rekorVerifier;
+    this.rekorClients = rekorClients;
   }
 
   public static KeylessVerifier.Builder builder() {
@@ -72,9 +77,14 @@ public class KeylessVerifier {
       Preconditions.checkNotNull(trustedRootProvider);
       var trustedRoot = trustedRootProvider.get();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
-      var rekorClient = RekorClient.builder().setTransparencyLog(trustedRoot).build();
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
-      return new KeylessVerifier(fulcioVerifier, rekorClient, rekorVerifier);
+      var rekorClients =
+          trustedRoot.getTLogs().getTransparencyLogs().stream()
+              .map(TransparencyLog::getBaseUrl)
+              .distinct()
+              .map(uri -> RekorClient.builder().setUri(uri).build())
+              .collect(Collectors.toList());
+      return new KeylessVerifier(fulcioVerifier, rekorClients, rekorVerifier);
     }
 
     public Builder sigstorePublicDefaults() throws IOException {
@@ -207,7 +217,7 @@ public class KeylessVerifier {
   }
 
   private RekorEntry getEntryFromRekor(
-      byte[] artifactDigest, Certificate leafCert, byte[] signature)
+      byte[] artifactDigest, X509Certificate leafCert, byte[] signature)
       throws KeylessVerificationException {
     // rebuild the hashedRekord so we can query the log for it
     HashedRekordRequest hashedRekordRequest = null;
@@ -221,15 +231,24 @@ public class KeylessVerifier {
     }
     Optional<RekorEntry> rekorEntry;
 
-    // attempt to grab the rekord from the rekor instance
+    // attempt to grab a valid rekord from all known rekor instances
     try {
-      rekorEntry = rekorClient.getEntry(hashedRekordRequest);
-      if (rekorEntry.isEmpty()) {
-        throw new KeylessVerificationException("Rekor entry was not found");
+      for (var rekorClient : rekorClients) {
+        rekorEntry = rekorClient.getEntry(hashedRekordRequest);
+        if (rekorEntry.isPresent()) {
+          var entryTime = Date.from(rekorEntry.get().getIntegratedTimeInstant());
+          try {
+            // only return this entry if it's valid for the certificate
+            leafCert.checkValidity(entryTime);
+          } catch (CertificateExpiredException | CertificateNotYetValidException ex) {
+            continue;
+          }
+          return rekorEntry.get();
+        }
       }
     } catch (IOException | RekorParseException e) {
       throw new KeylessVerificationException("Could not retrieve rekor entry", e);
     }
-    return rekorEntry.get();
+    throw new KeylessVerificationException("No valid rekor entry was not found in any known logs");
   }
 }

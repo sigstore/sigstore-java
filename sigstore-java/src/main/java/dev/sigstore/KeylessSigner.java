@@ -191,9 +191,11 @@ public class KeylessSigner implements AutoCloseable {
       Preconditions.checkNotNull(sigstoreTufClient, "sigstoreTufClient");
       sigstoreTufClient.update();
       var trustedRoot = sigstoreTufClient.getSigstoreTrustedRoot();
-      var fulcioClient = FulcioClient.builder().setCertificateAuthority(trustedRoot).build();
+      var fulcioClient =
+          FulcioClient.builder().setUri(trustedRoot.getCAs().current().getUri()).build();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
-      var rekorClient = RekorClient.builder().setTransparencyLog(trustedRoot).build();
+      var rekorClient =
+          RekorClient.builder().setUri(trustedRoot.getTLogs().current().getBaseUrl()).build();
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
       return new KeylessSigner(
           fulcioClient,
@@ -354,7 +356,7 @@ public class KeylessSigner implements AutoCloseable {
         }
       }
 
-      CertPath signingCert =
+      CertPath renewedSigningCert =
           fulcioClient.signingCertificate(
               CertificateRequest.newCertificateRequest(
                   signer.getPublicKey(),
@@ -363,8 +365,11 @@ public class KeylessSigner implements AutoCloseable {
                       tokenInfo.getSubjectAlternativeName().getBytes(StandardCharsets.UTF_8))));
       // TODO: this signing workflow mandates SCTs, but fulcio itself doesn't, figure out a way to
       // allow that to be known
-      fulcioVerifier.verifySigningCertificate(signingCert);
-      this.signingCert = signingCert;
+
+      var trimmed = fulcioVerifier.trimTrustedParent(renewedSigningCert);
+
+      fulcioVerifier.verifySigningCertificate(trimmed);
+      this.signingCert = trimmed;
       signingCertPemBytes = Certificates.toPemBytes(signingCert);
     } finally {
       lock.writeLock().unlock();
