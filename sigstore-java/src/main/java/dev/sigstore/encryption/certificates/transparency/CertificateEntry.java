@@ -150,6 +150,7 @@ public class CertificateEntry {
   }
 
   /** TLS encode the CertificateEntry structure. */
+  @SuppressWarnings("EnumOrdinal")
   public void encode(OutputStream output) throws SerializationException {
     Serialization.writeNumber(output, entryType.ordinal(), CTConstants.LOG_ENTRY_TYPE_LENGTH);
     if (entryType == LogEntryType.PRECERT_ENTRY) {

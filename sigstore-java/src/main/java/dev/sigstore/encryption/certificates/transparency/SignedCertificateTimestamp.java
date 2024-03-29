@@ -88,6 +88,7 @@ public class SignedCertificateTimestamp {
   }
 
   /** Decode a TLS encoded SignedCertificateTimestamp structure. */
+  @SuppressWarnings("EnumOrdinal")
   public static SignedCertificateTimestamp decode(InputStream input, Origin origin)
       throws SerializationException {
     int version = Serialization.readNumber(input, CTConstants.VERSION_LENGTH);
@@ -111,6 +112,7 @@ public class SignedCertificateTimestamp {
   }
 
   /** TLS encode the signed part of the SCT, as described by RFC6962 section 3.2. */
+  @SuppressWarnings("EnumOrdinal")
   public void encodeTBS(OutputStream output, CertificateEntry certEntry)
       throws SerializationException {
     Serialization.writeNumber(output, version.ordinal(), CTConstants.VERSION_LENGTH);
