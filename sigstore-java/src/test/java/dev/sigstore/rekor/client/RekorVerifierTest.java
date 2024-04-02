@@ -21,7 +21,6 @@ import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.ImmutableLogId;
 import dev.sigstore.trustroot.ImmutablePublicKey;
 import dev.sigstore.trustroot.ImmutableTransparencyLog;
-import dev.sigstore.trustroot.ImmutableTransparencyLogs;
 import dev.sigstore.trustroot.ImmutableValidFor;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
@@ -30,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import org.hamcrest.CoreMatchers;
@@ -128,9 +128,7 @@ public class RekorVerifierTest {
             .baseUrl(URI.create("ignored"))
             .build();
 
-    var verifier =
-        RekorVerifier.newRekorVerifier(
-            ImmutableTransparencyLogs.builder().addTransparencyLog(tlog).build());
+    var verifier = RekorVerifier.newRekorVerifier(List.of(tlog));
 
     // make sure the entry time is valid for the log -- so we can determine the logid is the error
     // creator
@@ -174,9 +172,7 @@ public class RekorVerifierTest {
             .baseUrl(URI.create("ignored"))
             .build();
 
-    var verifier =
-        RekorVerifier.newRekorVerifier(
-            ImmutableTransparencyLogs.builder().addTransparencyLog(tlog).build());
+    var verifier = RekorVerifier.newRekorVerifier(List.of(tlog));
 
     // make sure logId is equal -- so we can determine the time is the error creator
     Assertions.assertArrayEquals(

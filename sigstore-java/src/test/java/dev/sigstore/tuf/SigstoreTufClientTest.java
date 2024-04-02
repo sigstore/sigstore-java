@@ -54,9 +54,6 @@ class SigstoreTufClientTest {
 
   private void assertTrustedRootValid(SigstoreTrustedRoot trustedRoot) {
     Assertions.assertNotNull(trustedRoot);
-    Assertions.assertDoesNotThrow(() -> trustedRoot.getTLogs().current());
-    Assertions.assertDoesNotThrow(() -> trustedRoot.getCTLogs().current());
-    Assertions.assertDoesNotThrow(() -> trustedRoot.getCAs().current());
 
     for (var tlog : trustedRoot.getTLogs()) {
       Assertions.assertDoesNotThrow(() -> tlog.getPublicKey().toJavaPublicKey());

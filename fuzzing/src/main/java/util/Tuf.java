@@ -17,18 +17,14 @@ package util;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.google.common.hash.Hashing;
-import dev.sigstore.trustroot.CertificateAuthorities;
 import dev.sigstore.trustroot.CertificateAuthority;
-import dev.sigstore.trustroot.ImmutableCertificateAuthorities;
 import dev.sigstore.trustroot.ImmutableCertificateAuthority;
 import dev.sigstore.trustroot.ImmutableLogId;
 import dev.sigstore.trustroot.ImmutablePublicKey;
 import dev.sigstore.trustroot.ImmutableSubject;
 import dev.sigstore.trustroot.ImmutableTransparencyLog;
-import dev.sigstore.trustroot.ImmutableTransparencyLogs;
 import dev.sigstore.trustroot.ImmutableValidFor;
 import dev.sigstore.trustroot.TransparencyLog;
-import dev.sigstore.trustroot.TransparencyLogs;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.security.cert.CertPath;
@@ -47,17 +43,17 @@ public final class Tuf {
   // ecdsa key size in bytes
   private static final int ECDSA_KEY_BYTES = 91;
 
-  public static TransparencyLogs transparencyLogsFrom(FuzzedDataProvider data) {
-    return ImmutableTransparencyLogs.builder().addTransparencyLog(genTlog(data)).build();
+  public static List<TransparencyLog> transparencyLogsFrom(FuzzedDataProvider data) {
+    return List.of(genTlog(data));
   }
 
-  public static CertificateAuthorities certificateAuthoritiesFrom(FuzzedDataProvider data)
+  public static List<CertificateAuthority> certificateAuthoritiesFrom(FuzzedDataProvider data)
       throws CertificateException {
-    return ImmutableCertificateAuthorities.builder().addCertificateAuthority(genCA(data)).build();
+    return List.of(genCA(data));
   }
 
   private static CertPath genCertPath(FuzzedDataProvider data) throws CertificateException {
-    List<Certificate> certList = new ArrayList<Certificate>();
+    List<Certificate> certList = new ArrayList<>();
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     certList.add(
         cf.generateCertificate(new ByteArrayInputStream(data.consumeBytes(MAX_CERT_SIZE))));

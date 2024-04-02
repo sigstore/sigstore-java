@@ -42,6 +42,9 @@ import java.util.concurrent.TimeUnit;
 /** A client to communicate with a fulcio service instance over gRPC. */
 public class FulcioClient {
 
+  public static final URI PUBLIC_GOOD_URI = URI.create("https://fulcio.sigstore.dev");
+  public static final URI STAGING_URI = URI.create("https://fulcio.sigstage.dev");
+
   private final HttpParams httpParams;
   private final URI uri;
 
@@ -55,7 +58,7 @@ public class FulcioClient {
   }
 
   public static class Builder {
-    private URI uri = URI.create("https://fulcio.sigstore.dev");
+    private URI uri = PUBLIC_GOOD_URI;
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
 
     private Builder() {}

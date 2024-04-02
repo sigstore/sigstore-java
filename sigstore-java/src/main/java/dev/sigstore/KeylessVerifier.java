@@ -79,7 +79,7 @@ public class KeylessVerifier {
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
       var rekorClients =
-          trustedRoot.getTLogs().getTransparencyLogs().stream()
+          trustedRoot.getTLogs().stream()
               .map(TransparencyLog::getBaseUrl)
               .distinct()
               .map(uri -> RekorClient.builder().setUri(uri).build())
@@ -87,15 +87,15 @@ public class KeylessVerifier {
       return new KeylessVerifier(fulcioVerifier, rekorClients, rekorVerifier);
     }
 
-    public Builder sigstorePublicDefaults() throws IOException {
-      var sigstoreTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
-      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClient);
+    public Builder sigstorePublicDefaults() {
+      var sigstoreTufClientBuilder = SigstoreTufClient.builder().usePublicGoodInstance();
+      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
       return this;
     }
 
-    public Builder sigstoreStagingDefaults() throws IOException {
-      var sigstoreTufClient = SigstoreTufClient.builder().useStagingInstance().build();
-      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClient);
+    public Builder sigstoreStagingDefaults() {
+      var sigstoreTufClientBuilder = SigstoreTufClient.builder().useStagingInstance();
+      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
       return this;
     }
 
@@ -220,7 +220,7 @@ public class KeylessVerifier {
       byte[] artifactDigest, X509Certificate leafCert, byte[] signature)
       throws KeylessVerificationException {
     // rebuild the hashedRekord so we can query the log for it
-    HashedRekordRequest hashedRekordRequest = null;
+    HashedRekordRequest hashedRekordRequest;
     try {
       hashedRekordRequest =
           HashedRekordRequest.newHashedRekordRequest(

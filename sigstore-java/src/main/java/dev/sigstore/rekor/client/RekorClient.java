@@ -35,6 +35,9 @@ import java.util.Optional;
 
 /** A client to communicate with a rekor service instance. */
 public class RekorClient {
+  public static final URI PUBLIC_GOOD_URI = URI.create("https://rekor.sigstore.dev");
+  public static final URI STAGING_URI = URI.create("https://rekor.sigstage.dev");
+
   public static final String REKOR_ENTRIES_PATH = "/api/v1/log/entries";
   public static final String REKOR_INDEX_SEARCH_PATH = "/api/v1/index/retrieve";
 
@@ -52,7 +55,7 @@ public class RekorClient {
 
   public static class Builder {
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
-    private URI uri = URI.create("https://rekor.sigstore.dev");
+    private URI uri = PUBLIC_GOOD_URI;
 
     private Builder() {}
 

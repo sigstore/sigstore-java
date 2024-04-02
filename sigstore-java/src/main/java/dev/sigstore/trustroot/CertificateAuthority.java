@@ -25,6 +25,8 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Lazy;
 
@@ -63,5 +65,16 @@ public abstract class CertificateAuthority {
         .uri(URI.create(proto.getUri()))
         .subject(Subject.from(proto.getSubject()))
         .build();
+  }
+
+  /**
+   * Find a CA by validity time, users of this method will need to then compare the key in the leaf
+   * to find the exact CA to validate against
+   *
+   * @param time the time the CA was expected to be valid (usually tlog entry time)
+   * @return a list of CAs that were valid at {@code time}
+   */
+  public static List<CertificateAuthority> find(List<CertificateAuthority> all, Instant time) {
+    return all.stream().filter(ca -> ca.getValidFor().contains(time)).collect(Collectors.toList());
   }
 }

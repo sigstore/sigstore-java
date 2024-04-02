@@ -22,6 +22,7 @@ import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import dev.sigstore.KeylessVerifier.Builder;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -41,6 +42,7 @@ import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.InvalidAlgorithmParameterException;
@@ -132,15 +134,29 @@ public class KeylessSigner implements AutoCloseable {
   }
 
   public static class Builder {
-    private SigstoreTufClient sigstoreTufClient;
+    private TrustedRootProvider trustedRootProvider;
     private OidcClients oidcClients;
     private List<OidcIdentity> oidcIdentities = Collections.emptyList();
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
+    private URI fulcioUri;
+    private URI rekorUri;
 
     @CanIgnoreReturnValue
-    public Builder sigstoreTufClient(SigstoreTufClient sigstoreTufClient) {
-      this.sigstoreTufClient = sigstoreTufClient;
+    public Builder fulcioUrl(URI uri) {
+      this.fulcioUri = uri;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder rekorUrl(URI uri) {
+      this.rekorUri = uri;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder trustedRoot(Path trustedRoot) {
+      trustedRootProvider = TrustedRootProvider.from(trustedRoot);
       return this;
     }
 
@@ -152,7 +168,8 @@ public class KeylessSigner implements AutoCloseable {
 
     /**
      * An allow list OIDC identities to be used during signing. If the OidcClients are misconfigured
-     * or pick up unexpected credentials, this should prevent signing from proceeding
+     * or pick up unexpected credentials, this should prevent signing from proceeding. Cannot be
+     * null but can be an empty list and will allow all identities.
      */
     @CanIgnoreReturnValue
     public Builder allowedOidcIdentities(List<OidcIdentity> oidcIdentities) {
@@ -188,14 +205,17 @@ public class KeylessSigner implements AutoCloseable {
     public KeylessSigner build()
         throws CertificateException, IOException, NoSuchAlgorithmException, InvalidKeySpecException,
             InvalidKeyException, InvalidAlgorithmParameterException {
-      Preconditions.checkNotNull(sigstoreTufClient, "sigstoreTufClient");
-      sigstoreTufClient.update();
-      var trustedRoot = sigstoreTufClient.getSigstoreTrustedRoot();
-      var fulcioClient =
-          FulcioClient.builder().setUri(trustedRoot.getCAs().current().getUri()).build();
+      Preconditions.checkNotNull(trustedRootProvider);
+      var trustedRoot = trustedRootProvider.get();
+      Preconditions.checkNotNull(fulcioUri);
+      Preconditions.checkNotNull(rekorUri);
+      Preconditions.checkNotNull(oidcClients);
+      Preconditions.checkNotNull(oidcIdentities);
+      Preconditions.checkNotNull(signer);
+      Preconditions.checkNotNull(minSigningCertificateLifetime);
+      var fulcioClient = FulcioClient.builder().setUri(fulcioUri).build();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
-      var rekorClient =
-          RekorClient.builder().setUri(trustedRoot.getTLogs().current().getBaseUrl()).build();
+      var rekorClient = RekorClient.builder().setUri(rekorUri).build();
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
       return new KeylessSigner(
           fulcioClient,
@@ -213,9 +233,12 @@ public class KeylessSigner implements AutoCloseable {
      * ecdsa signing.
      */
     @CanIgnoreReturnValue
-    public Builder sigstorePublicDefaults() throws IOException, NoSuchAlgorithmException {
-      sigstoreTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
-      oidcClients(OidcClients.DEFAULTS);
+    public Builder sigstorePublicDefaults() {
+      var sigstoreTufClientBuilder = SigstoreTufClient.builder().usePublicGoodInstance();
+      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
+      fulcioUri = FulcioClient.PUBLIC_GOOD_URI;
+      rekorUri = RekorClient.PUBLIC_GOOD_URI;
+      oidcClients(OidcClients.PUBLIC_GOOD);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
@@ -226,9 +249,12 @@ public class KeylessSigner implements AutoCloseable {
      * signing.
      */
     @CanIgnoreReturnValue
-    public Builder sigstoreStagingDefaults() throws IOException, NoSuchAlgorithmException {
-      sigstoreTufClient = SigstoreTufClient.builder().useStagingInstance().build();
-      oidcClients(OidcClients.STAGING_DEFAULTS);
+    public Builder sigstoreStagingDefaults() {
+      var sigstoreTufClientBuilder = SigstoreTufClient.builder().useStagingInstance();
+      trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
+      fulcioUri = FulcioClient.STAGING_URI;
+      rekorUri = RekorClient.STAGING_URI;
+      oidcClients(OidcClients.STAGING);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
