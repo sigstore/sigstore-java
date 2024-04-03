@@ -22,16 +22,24 @@ import java.security.NoSuchAlgorithmException;
 public class Signers {
 
   /** Create a new ECDSA signer with 256 bit keysize. */
-  public static EcdsaSigner newEcdsaSigner() throws NoSuchAlgorithmException {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
-    keyGen.initialize(256);
-    return new EcdsaSigner(keyGen.generateKeyPair());
+  public static EcdsaSigner newEcdsaSigner() {
+    try {
+      KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC");
+      keyGen.initialize(256);
+      return new EcdsaSigner(keyGen.generateKeyPair());
+    } catch (NoSuchAlgorithmException nse) {
+      throw new RuntimeException("No EC algorithm found in Runtime", nse);
+    }
   }
 
   /** Create a new RSA signer with 2048 bit keysize. */
-  public static RsaSigner newRsaSigner() throws NoSuchAlgorithmException {
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-    keyGen.initialize(2048);
-    return new RsaSigner(keyGen.generateKeyPair());
+  public static RsaSigner newRsaSigner() {
+    try {
+      KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+      keyGen.initialize(2048);
+      return new RsaSigner(keyGen.generateKeyPair());
+    } catch (NoSuchAlgorithmException nse) {
+      throw new RuntimeException("No RSA algorithm found in Runtime", nse);
+    }
   }
 }

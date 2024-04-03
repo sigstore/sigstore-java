@@ -20,10 +20,10 @@ import com.google.common.collect.ImmutableList;
 /** An ordered list of oidc clients to use when looking for credentials. */
 public class OidcClients {
 
-  public static final OidcClients DEFAULTS =
+  public static final OidcClients PUBLIC_GOOD =
       of(GithubActionsOidcClient.builder().build(), WebOidcClient.builder().build());
 
-  public static final OidcClients STAGING_DEFAULTS =
+  public static final OidcClients STAGING =
       of(
           GithubActionsOidcClient.builder().build(),
           WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build());

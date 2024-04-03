@@ -20,9 +20,9 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.certificates.transparency.CTLogInfo;
 import dev.sigstore.encryption.certificates.transparency.CTVerificationResult;
 import dev.sigstore.encryption.certificates.transparency.CTVerifier;
-import dev.sigstore.trustroot.CertificateAuthorities;
+import dev.sigstore.trustroot.CertificateAuthority;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
-import dev.sigstore.trustroot.TransparencyLogs;
+import dev.sigstore.trustroot.TransparencyLog;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
@@ -46,8 +46,8 @@ import java.util.stream.Collectors;
 
 /** Verifier for fulcio generated signing cerificates */
 public class FulcioVerifier {
-  private final CertificateAuthorities cas;
-  private final TransparencyLogs ctLogs;
+  private final List<CertificateAuthority> cas;
+  private final List<TransparencyLog> ctLogs;
   private final CTVerifier ctVerifier;
 
   public static FulcioVerifier newFulcioVerifier(SigstoreTrustedRoot trustRoot)
@@ -57,11 +57,11 @@ public class FulcioVerifier {
   }
 
   public static FulcioVerifier newFulcioVerifier(
-      CertificateAuthorities cas, TransparencyLogs ctLogs)
+      List<CertificateAuthority> cas, List<TransparencyLog> ctLogs)
       throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
           CertificateException {
     List<CTLogInfo> logs = new ArrayList<>();
-    for (var ctLog : ctLogs.all()) {
+    for (var ctLog : ctLogs) {
       logs.add(
           new CTLogInfo(
               ctLog.getPublicKey().toJavaPublicKey(), "CT Log", ctLog.getBaseUrl().toString()));
@@ -75,7 +75,7 @@ public class FulcioVerifier {
                     .orElse(null));
 
     // check to see if we can use all fulcio roots (this is a bit eager)
-    for (var ca : cas.all()) {
+    for (var ca : cas) {
       ca.asTrustAnchor();
     }
 
@@ -83,7 +83,7 @@ public class FulcioVerifier {
   }
 
   private FulcioVerifier(
-      CertificateAuthorities cas, TransparencyLogs ctLogs, CTVerifier ctVerifier) {
+      List<CertificateAuthority> cas, List<TransparencyLog> ctLogs, CTVerifier ctVerifier) {
     this.cas = cas;
     this.ctLogs = ctLogs;
     this.ctVerifier = ctVerifier;
@@ -122,7 +122,7 @@ public class FulcioVerifier {
       var logId = sct.getLogID();
       var entryTime = Instant.ofEpochMilli(sct.getTimestamp());
 
-      var ctLog = ctLogs.find(logId, entryTime);
+      var ctLog = TransparencyLog.find(ctLogs, logId, entryTime);
       if (ctLog.isPresent()) {
         // TODO: currently we only require one valid SCT, but maybe this should be configurable?
         // found at least one valid sct with a matching valid log
@@ -178,7 +178,7 @@ public class FulcioVerifier {
     }
 
     var leaf = Certificates.getLeaf(signingCertificate);
-    var validCAs = cas.find(leaf.getNotBefore().toInstant());
+    var validCAs = CertificateAuthority.find(cas, leaf.getNotBefore().toInstant());
 
     if (validCAs.size() == 0) {
       throw new FulcioVerificationException(

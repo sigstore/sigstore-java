@@ -39,6 +39,7 @@ class ValidForTest {
     Assertions.assertFalse(range.contains(end.plus(10, ChronoUnit.SECONDS)));
   }
 
+  @Test
   public void contains_withNoEnd() {
     var start = Instant.now().minus(10, ChronoUnit.MINUTES);
     var range = ImmutableValidFor.builder().start(start).build();

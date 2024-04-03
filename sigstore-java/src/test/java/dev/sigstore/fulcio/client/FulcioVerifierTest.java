@@ -22,12 +22,12 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.ImmutableLogId;
 import dev.sigstore.trustroot.ImmutableTransparencyLog;
-import dev.sigstore.trustroot.ImmutableTransparencyLogs;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -73,12 +73,7 @@ public class FulcioVerifierTest {
   public void testVerifySct_nullCtLogKey() throws Exception {
     var signingCertificate = Certificates.fromPemChain(certsWithEmbeddedSct);
     var fulcioVerifier =
-        FulcioVerifier.newFulcioVerifier(
-            trustRoot.getCAs(),
-            ImmutableTransparencyLogs.builder()
-                .addAllTransparencyLogs(Collections.emptyList())
-                .build());
-
+        FulcioVerifier.newFulcioVerifier(trustRoot.getCAs(), Collections.emptyList());
     try {
       fulcioVerifier.verifySigningCertificate(signingCertificate);
       Assertions.fail();
@@ -123,16 +118,14 @@ public class FulcioVerifierTest {
     var fulcioVerifier =
         FulcioVerifier.newFulcioVerifier(
             trustRoot.getCAs(),
-            ImmutableTransparencyLogs.builder()
-                .addTransparencyLog(
-                    ImmutableTransparencyLog.builder()
-                        .from(trustRoot.getCTLogs().all().get(0))
-                        .logId(
-                            ImmutableLogId.builder()
-                                .keyId("abcd".getBytes(StandardCharsets.UTF_8))
-                                .build())
-                        .build())
-                .build());
+            List.of(
+                ImmutableTransparencyLog.builder()
+                    .from(trustRoot.getCTLogs().get(0))
+                    .logId(
+                        ImmutableLogId.builder()
+                            .keyId("abcd".getBytes(StandardCharsets.UTF_8))
+                            .build())
+                    .build()));
 
     var fve =
         Assertions.assertThrows(

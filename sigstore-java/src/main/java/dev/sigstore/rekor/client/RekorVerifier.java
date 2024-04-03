@@ -20,28 +20,28 @@ import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.rekor.client.RekorEntry.Checkpoint;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import dev.sigstore.trustroot.TransparencyLog;
-import dev.sigstore.trustroot.TransparencyLogs;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
 public class RekorVerifier {
-  private final TransparencyLogs tlogs;
+  private final List<TransparencyLog> tlogs;
 
   public static RekorVerifier newRekorVerifier(SigstoreTrustedRoot trustRoot) {
     return newRekorVerifier(trustRoot.getTLogs());
   }
 
-  public static RekorVerifier newRekorVerifier(TransparencyLogs tlogs) {
+  public static RekorVerifier newRekorVerifier(List<TransparencyLog> tlogs) {
     return new RekorVerifier(tlogs);
   }
 
-  private RekorVerifier(TransparencyLogs tlogs) {
+  private RekorVerifier(List<TransparencyLog> tlogs) {
     this.tlogs = tlogs;
   }
 
@@ -61,8 +61,7 @@ public class RekorVerifier {
     }
 
     var tlog =
-        tlogs
-            .find(Hex.decode(entry.getLogID()), entry.getIntegratedTimeInstant())
+        TransparencyLog.find(tlogs, Hex.decode(entry.getLogID()), entry.getIntegratedTimeInstant())
             .orElseThrow(
                 () ->
                     new RekorVerificationException(

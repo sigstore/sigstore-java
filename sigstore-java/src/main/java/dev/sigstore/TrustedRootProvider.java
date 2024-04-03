@@ -37,9 +37,10 @@ public interface TrustedRootProvider {
       throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
           NoSuchAlgorithmException, IOException, InvalidKeyException;
 
-  static TrustedRootProvider from(SigstoreTufClient tufClient) {
-    Preconditions.checkNotNull(tufClient);
+  static TrustedRootProvider from(SigstoreTufClient.Builder tufClientBuilder) {
+    Preconditions.checkNotNull(tufClientBuilder);
     return () -> {
+      var tufClient = tufClientBuilder.build();
       tufClient.update();
       return tufClient.getSigstoreTrustedRoot();
     };
