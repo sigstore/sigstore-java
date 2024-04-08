@@ -20,13 +20,11 @@ dependencies {
 
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
 
-    implementation("dev.sigstore:protobuf-specs:0.3.0") {
-        because("It generates Sigstore Bundle file")
-    }
-    implementation(platform("com.google.protobuf:protobuf-bom:3.25.3"))
-    implementation("com.google.protobuf:protobuf-java-util") {
-        because("It converts protobuf to json")
-    }
+    protobuf("dev.sigstore:protobuf-specs:0.3.0")
+    protobuf("com.google.api.grpc:proto-google-common-protos:2.37.1")
+
+    implementation(platform("com.google.protobuf:protobuf-bom:4.26.1"))
+    implementation("com.google.protobuf:protobuf-java-util")
 
     // grpc deps
     implementation(platform("io.grpc:grpc-bom:1.62.2"))
@@ -64,7 +62,7 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.3"
+        artifact = "com.google.protobuf:protoc:4.26.1"
     }
     plugins {
         id("grpc") {
