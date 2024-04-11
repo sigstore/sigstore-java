@@ -15,15 +15,18 @@
  */
 package dev.sigstore.oidc.client;
 
+import java.util.Map;
+
 public interface OidcClient {
 
   /**
    * Determine if this client can be used in the current environment. For example, we can ignore
    * Oidc Clients that are scoped to a specific CI environment
    *
+   * @param env the configured system environment
    * @return true if we should use credentials from this client
    */
-  boolean isEnabled();
+  boolean isEnabled(Map<String, String> env);
 
-  OidcToken getIDToken() throws OidcException;
+  OidcToken getIDToken(Map<String, String> env) throws OidcException;
 }

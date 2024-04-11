@@ -129,7 +129,8 @@ public class KeylessSignerTest {
     // silly way to get the right oidc identity to make sure our simple matcher works
     var jws =
         JsonWebSignature.parse(
-            new GsonFactory(), GithubActionsOidcClient.builder().build().getIDToken().getIdToken());
+            new GsonFactory(),
+            GithubActionsOidcClient.builder().build().getIDToken(System.getenv()).getIdToken());
     var expectedGithubSubject = jws.getPayload().getSubject();
     var signer =
         KeylessSigner.builder()
