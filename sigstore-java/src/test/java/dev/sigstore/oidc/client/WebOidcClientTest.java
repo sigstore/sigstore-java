@@ -17,14 +17,20 @@ package dev.sigstore.oidc.client;
 
 import com.gargoylesoftware.htmlunit.WebClient;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
+import io.github.netmikey.logunit.api.LogCapturer;
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.event.Level;
 
 public class WebOidcClientTest {
 
   @RegisterExtension
   private static final MockOAuth2ServerExtension server = new MockOAuth2ServerExtension();
+
+  @RegisterExtension
+  LogCapturer logs = LogCapturer.create().captureForType(WebOidcClient.class, Level.DEBUG);
 
   @Test
   public void testAuthFlow() throws OidcException {
@@ -35,9 +41,22 @@ public class WebOidcClientTest {
               .setBrowser(webClient::getPage)
               .build();
 
-      var eid = oidcClient.getIDToken();
+      var eid = oidcClient.getIDToken(System.getenv());
       Assertions.assertEquals(
           MockOAuth2ServerExtension.DEFAULT_CONFIGURED_EMAIL, eid.getSubjectAlternativeName());
     }
+  }
+
+  @Test
+  public void isEnabled_CI() {
+    var client = WebOidcClient.builder().build();
+    Assertions.assertFalse(client.isEnabled(Map.of("CI", "true")));
+    logs.assertContains("Skipping browser based oidc provider because CI detected");
+  }
+
+  @Test
+  public void isEnabled_notCI() {
+    var client = WebOidcClient.builder().build();
+    Assertions.assertTrue(client.isEnabled(Map.of("CI", "false")));
   }
 }

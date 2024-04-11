@@ -70,7 +70,7 @@ public class MockOAuth2ServerExtension
               .setBrowser(webClient::getPage)
               .build();
 
-      return oidcClient.getIDToken();
+      return oidcClient.getIDToken(System.getenv());
     }
   }
 

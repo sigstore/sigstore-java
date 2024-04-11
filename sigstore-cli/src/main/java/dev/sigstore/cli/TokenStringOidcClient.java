@@ -22,6 +22,7 @@ import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
 import java.io.IOException;
+import java.util.Map;
 
 public class TokenStringOidcClient implements OidcClient {
 
@@ -32,12 +33,12 @@ public class TokenStringOidcClient implements OidcClient {
   }
 
   @Override
-  public boolean isEnabled() {
+  public boolean isEnabled(Map<String, String> env) {
     return true;
   }
 
   @Override
-  public OidcToken getIDToken() throws OidcException {
+  public OidcToken getIDToken(Map<String, String> env) throws OidcException {
     try {
       var jws = JsonWebSignature.parse(new GsonFactory(), idToken);
       return ImmutableOidcToken.builder()

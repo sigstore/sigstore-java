@@ -38,12 +38,16 @@ import dev.sigstore.http.ImmutableHttpParams;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * A client to obtain oidc tokens from an oauth provider via web workflow for use with sigstore. By
  * default this client is configued to use the public sigstore dex instance.
  */
 public class WebOidcClient implements OidcClient {
+  private static final Logger log = Logger.getLogger(WebOidcClient.class.getName());
+
   public static final String PUBLIC_DEX_ISSUER = "https://oauth2.sigstore.dev/auth";
   public static final String STAGING_DEX_ISSUER = "https://oauth2.sigstage.dev/auth";
 
@@ -112,12 +116,13 @@ public class WebOidcClient implements OidcClient {
     }
   }
 
-  /**
-   * This provider is always enabled by default, however it should be lower priority over other
-   * providers which obtain ambient credentials.
-   */
+  /** This provider is usually enabled unless we're in CI. */
   @Override
-  public boolean isEnabled() {
+  public boolean isEnabled(Map<String, String> env) {
+    if ("true".equalsIgnoreCase(env.get("CI"))) {
+      log.info("Skipping browser based oidc provider because CI detected");
+      return false;
+    }
     return true;
   }
 
@@ -128,7 +133,7 @@ public class WebOidcClient implements OidcClient {
    * @throws OidcException if an error occurs doing the authorization flow
    */
   @Override
-  public OidcToken getIDToken() throws OidcException {
+  public OidcToken getIDToken(Map<String, String> env) throws OidcException {
     JsonFactory jsonFactory = new GsonFactory();
     HttpTransport httpTransport = HttpClients.newHttpTransport(httpParams);
     DataStoreFactory memStoreFactory = new MemoryDataStoreFactory();
