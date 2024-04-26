@@ -45,7 +45,7 @@ class SigstoreSignTest: BaseGradleTest() {
             }
             def signFile = tasks.register("signFile", SigstoreSignFilesTask) {
                 signFile(helloProps.map { it.outputFile })
-                    .outputSignature.set(file("build/helloProps.txt.sigstore"))
+                    .outputSignature.set(file("build/helloProps.txt.sigstore.json"))
             }
             """.trimIndent()
         )
@@ -57,7 +57,7 @@ class SigstoreSignTest: BaseGradleTest() {
         enableConfigurationCache(case.gradle)
         prepare(case.gradle.version, "signFile", "-s")
             .build()
-        assertThat(projectDir.resolve("build/helloProps.txt.sigstore"))
+        assertThat(projectDir.resolve("build/helloProps.txt.sigstore.json"))
             .content()
             .basicSigstoreStructure()
 

@@ -17,9 +17,7 @@
 package dev.sigstore.gradle
 
 import dev.sigstore.testkit.BaseGradleTest
-import dev.sigstore.testkit.TestedGradle
 import dev.sigstore.testkit.TestedGradleAndSigstoreJava
-import dev.sigstore.testkit.TestedSigstoreJava
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
@@ -70,16 +68,16 @@ class SigstorePublishSignTest : BaseGradleTest() {
         prepare(case.gradle.version, "publishAllPublicationsToTmpRepository", "-s")
             .build()
 
-        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0.pom.sigstore"))
+        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0.pom.sigstore.json"))
             .content()
             .basicSigstoreStructure()
-        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0.jar.sigstore"))
+        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0.jar.sigstore.json"))
             .content()
             .basicSigstoreStructure()
-        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0-sources.jar.sigstore"))
+        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0-sources.jar.sigstore.json"))
             .content()
             .basicSigstoreStructure()
-        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0.module.sigstore"))
+        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/sigstore-test-1.0.module.sigstore.json"))
             .content()
             .basicSigstoreStructure()
 
