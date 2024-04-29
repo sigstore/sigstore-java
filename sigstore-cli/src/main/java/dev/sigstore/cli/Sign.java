@@ -42,6 +42,13 @@ public class Sign implements Callable<Integer> {
   SignatureFiles signatureFiles;
 
   @Option(
+      names = {"--staging"},
+      description = "test against staging",
+      required = false,
+      defaultValue = "false")
+  Boolean staging;
+
+  @Option(
       names = {"--identity-token"},
       description = "the OIDC identity token to use",
       required = false)
@@ -49,7 +56,10 @@ public class Sign implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    var signerBuilder = KeylessSigner.builder().sigstorePublicDefaults();
+    var signerBuilder =
+        staging
+            ? KeylessSigner.builder().sigstoreStagingDefaults()
+            : KeylessSigner.builder().sigstorePublicDefaults();
     if (identityToken != null) {
       // If we've explicitly provided an identity token, customize the signer to only use the token
       // string OIDC client.
