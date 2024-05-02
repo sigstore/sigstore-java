@@ -25,7 +25,8 @@ import javax.inject.Inject
 
 abstract class SigstoreSignature @Inject constructor(private val name: String) : Named {
     companion object {
-        const val EXTENSION = "sigstore"
+        const val EXTENSION = "sigstore.json"
+        const val DOT_EXTENSION = ".$EXTENSION";
     }
 
     // Gradle 6.8.3: Cannot have abstract method SigstoreSignature.getName
@@ -73,7 +74,7 @@ abstract class SigstoreSignature @Inject constructor(private val name: String) :
 
     init {
         outputSignature.convention(
-            signatureDirectory.map { it.file(file.singleFile.name + ".$EXTENSION") }
+            signatureDirectory.map { it.file(file.singleFile.name + DOT_EXTENSION) }
         )
     }
 }

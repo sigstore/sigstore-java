@@ -39,17 +39,17 @@ class PluginSmokeTest : BaseGradleTest() {
         project {
             apply(plugin = "dev.sigstore.sign-base")
             val hello by tasks.registering(WriteProperties::class) {
-                outputFile = layout.buildDirectory.file("props/$name.properties").get().asFile
+                destinationFile = layout.buildDirectory.file("props/$name.properties")
                 property("hello", "world")
             }
 
             // It should be eagerly created to access signOutput
             val signFile by tasks.registering(SigstoreSignFilesTask::class) {
-                signFile(hello.map { it.outputFile })
+                signFile(hello.map { it.destinationFile.asFile.get() })
             }
 
             Assertions.assertThat(signFile.flatMap { it.singleSignature() }.get().asFile)
-                .hasFileName("hello.properties.sigstore")
+                .hasFileName("hello.properties.sigstore.json")
         }
     }
 

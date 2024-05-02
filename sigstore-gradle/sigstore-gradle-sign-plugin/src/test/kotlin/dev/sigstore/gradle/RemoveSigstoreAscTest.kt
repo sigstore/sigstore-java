@@ -19,14 +19,11 @@ package dev.sigstore.gradle
 import dev.sigstore.testkit.BaseGradleTest
 import dev.sigstore.testkit.TestedGradle
 import dev.sigstore.testkit.TestedGradleAndSigstoreJava
-import dev.sigstore.testkit.TestedSigstoreJava
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.SoftAssertions
 import org.gradle.util.GradleVersion
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.Arguments.arguments
 import org.junit.jupiter.params.provider.MethodSource
 
 @EnabledIfOidcExists
@@ -89,8 +86,8 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
         projectDir.resolve("gradle.properties").toFile().appendText(
             """
 
-            # By default, dev.sigstore.sign asks Gradle to avoid signing .sigstore as .sigstore.asc
-            # This is an opt-out hatch for those who need .sigstore.asc
+            # By default, dev.sigstore.sign asks Gradle to avoid signing .sigstore.json as
+            # .sigstore.json.asc This is an opt-out hatch for those who need .sigstore.json.asc
             dev.sigstore.sign.remove.sigstore.asc=false
             """.trimIndent()
         )
@@ -153,7 +150,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
     }
 
     private fun SoftAssertions.assertSignatures(name: String, expectSigstoreAsc: Boolean = false) {
-        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/$name.sigstore"))
+        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/$name.sigstore.json"))
             .describedAs("$name should be signed with Sigstore")
             .content()
             .basicSigstoreStructure()
@@ -163,14 +160,14 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
         assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/$name.asc.sigstore"))
             .describedAs("$name.asc should NOT be signed with Sigstore")
             .doesNotExist()
-        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/$name.sigstore.asc"))
+        assertThat(projectDir.resolve("build/tmp-repo/dev/sigstore/test/sigstore-test/1.0/$name.sigstore.json.asc"))
             .apply {
                 if (expectSigstoreAsc) {
-                    describedAs("$name.sigstore should be signed with PGP")
+                    describedAs("$name.sigstore.json should be signed with PGP")
                     exists()
                 } else {
-                    // We don't want to sign .sigstore files with PGP
-                    describedAs("$name.sigstore should NOT be signed with PGP")
+                    // We don't want to sign .sigstore.json files with PGP
+                    describedAs("$name.sigstore.json should NOT be signed with PGP")
                     doesNotExist()
                 }
             }

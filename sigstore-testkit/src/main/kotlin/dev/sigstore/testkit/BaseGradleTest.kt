@@ -35,6 +35,7 @@ open class BaseGradleTest {
         ON, OFF
     }
 
+    // to debug these tests, add .withDebug(true) before running a test in debug mode
     protected val gradleRunner = GradleRunner.create().withPluginClasspath()
 
     companion object {
