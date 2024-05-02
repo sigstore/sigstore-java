@@ -5,4 +5,7 @@ tasks.withType<Test>().configureEach {
     if (project.hasProperty("org.gradle.jvmargs")) {
         systemProperty("sigstore-java.test.org.gradle.jvmargs", project.findProperty("org.gradle.jvmargs")!!)
     }
+    if (project.hasProperty("skipStaging")) {
+        systemProperty("sigstore-java.test.skipStaging", project.findProperty("skipStaging")!!)
+    }
 }

@@ -20,6 +20,7 @@ import dev.sigstore.bundle.BundleFactory;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
+import dev.sigstore.testkit.annotations.DisabledIfSkipStaging;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
 import java.io.IOException;
@@ -77,6 +78,7 @@ public class KeylessTest {
 
   @Test
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
+  @DisabledIfSkipStaging
   public void sign_staging() throws Exception {
     var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
     var results = signer.sign(artifactDigests);
@@ -114,6 +116,8 @@ public class KeylessTest {
       Assertions.assertArrayEquals(
           Base64.getDecoder().decode(hr.getSignature().getPublicKey().getContent()),
           Certificates.toPemBytes(result.getCertPath().getCertificates().get(0)));
+      // check if required inclusion proof exists
+      Assertions.assertNotNull(result.getEntry().get().getVerification().getInclusionProof());
     }
   }
 
