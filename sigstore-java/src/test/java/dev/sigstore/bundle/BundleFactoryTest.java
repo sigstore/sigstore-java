@@ -67,6 +67,20 @@ class BundleFactoryTest {
   }
 
   @Test
+  public void readV3_1Bundle() throws Exception {
+    readBundle("dev/sigstore/samples/bundles/bundle.v3_1.sigstore");
+  }
+
+  @Test
+  public void readV3_1Bundle_noInclusion() {
+    var ex =
+        Assertions.assertThrows(
+            BundleParseException.class,
+            () -> readBundle("dev/sigstore/samples/bundles/bundle.v3_1.no.inclusion.sigstore"));
+    Assertions.assertEquals("Could not find an inclusion proof", ex.getMessage());
+  }
+
+  @Test
   public void readDSSEBundle() throws Exception {
     var ex =
         Assertions.assertThrows(
