@@ -24,8 +24,6 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -39,30 +37,31 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class RekorClientTest {
 
-  private static final String REKOR_URL = "https://rekor.sigstage.dev";
-  private RekorClient client;
+  private static RekorClient client;
+  private static HashedRekordRequest req;
+  private static RekorResponse resp;
 
-  @BeforeEach
-  public void setupClient() throws URISyntaxException {
-    // this tests directly against rekor in staging, it's a bit hard to bring up a rekor instance
-    // without docker compose.
-    client = RekorClient.builder().setUri(URI.create(REKOR_URL)).build();
+  @BeforeAll
+  public static void setupClient() throws Exception {
+    // this tests directly against rekor in prod, it's a bit hard to bring up a rekor instance
+    client = RekorClient.builder().build();
+    req = createdRekorRequest();
+    resp = client.putEntry(req);
   }
 
   @Test
-  public void putEntry_toStaging() throws Exception {
+  public void putEntry() throws Exception {
     HashedRekordRequest req = createdRekorRequest();
     var resp = client.putEntry(req);
-
     // pretty basic testing
     MatcherAssert.assertThat(
         resp.getEntryLocation().toString(),
-        CoreMatchers.startsWith(REKOR_URL + "/api/v1/log/entries/"));
+        CoreMatchers.startsWith(RekorClient.PUBLIC_GOOD_URI + "/api/v1/log/entries/"));
 
     assertNotNull(resp.getUuid());
     assertNotNull(resp.getRaw());
@@ -72,11 +71,9 @@ public class RekorClientTest {
     assertNotNull(entry.getLogID());
     Assertions.assertTrue(entry.getLogIndex() > 0);
     assertNotNull(entry.getVerification().getSignedEntryTimestamp());
-    //    Assertions.assertNotNull(entry.getVerification().getInclusionProof());
+    Assertions.assertNotNull(entry.getVerification().getInclusionProof());
   }
 
-  // TODO(patrick@chainguard.dev): don't use data from prod, create the data as part of the test
-  // setup in staging.
   @Test
   public void searchEntries_nullParams() throws IOException {
     assertEquals(ImmutableList.of(), client.searchEntry(null, null, null, null));
@@ -84,20 +81,15 @@ public class RekorClientTest {
 
   @Test
   public void searchEntries_oneResult_hash() throws Exception {
-    var newRekordRequest = createdRekorRequest();
-    client.putEntry(newRekordRequest);
     assertEquals(
         1,
         client
-            .searchEntry(
-                null, newRekordRequest.getHashedRekord().getData().getHash().getValue(), null, null)
+            .searchEntry(null, req.getHashedRekord().getData().getHash().getValue(), null, null)
             .size());
   }
 
   @Test
   public void searchEntries_oneResult_publicKey() throws Exception {
-    var newRekordRequest = createdRekorRequest();
-    var resp = client.putEntry(newRekordRequest);
     assertEquals(
         1,
         client
@@ -138,29 +130,24 @@ public class RekorClientTest {
 
   @Test
   public void getEntry_entryExists() throws Exception {
-    var newRekordRequest = createdRekorRequest();
-    var resp = client.putEntry(newRekordRequest);
     var entry = client.getEntry(resp.getUuid());
-    assertEntry(resp, entry);
+    assertEntry(resp, entry.get());
   }
 
   @Test
   public void getEntry_hashedRekordRequest_byCalculatedUuid() throws Exception {
-    var hashedRekordRequest = createdRekorRequest();
-    var resp = client.putEntry(hashedRekordRequest);
     // getting an entry by hashedrekordrequest should implicitly calculate uuid
     // from the contents of the hashedrekord
-    var entry = client.getEntry(hashedRekordRequest);
-    assertEntry(resp, entry);
+    var entry = client.getEntry(req);
+    assertEntry(resp, entry.get());
   }
 
-  private void assertEntry(RekorResponse resp, Optional<RekorEntry> entry) {
-    assertTrue(entry.isPresent());
-    assertEquals(resp.getEntry().getLogID(), entry.get().getLogID());
-    assertNotNull(entry.get().getVerification().getInclusionProof().getTreeSize());
-    assertNotNull(entry.get().getVerification().getInclusionProof().getRootHash());
-    assertNotNull(entry.get().getVerification().getInclusionProof().getLogIndex());
-    assertTrue(entry.get().getVerification().getInclusionProof().getHashes().size() > 0);
+  private void assertEntry(RekorResponse resp, RekorEntry entry) {
+    assertEquals(resp.getEntry().getLogID(), entry.getLogID());
+    assertNotNull(entry.getVerification().getInclusionProof().getTreeSize());
+    assertNotNull(entry.getVerification().getInclusionProof().getRootHash());
+    assertNotNull(entry.getVerification().getInclusionProof().getLogIndex());
+    assertTrue(entry.getVerification().getInclusionProof().getHashes().size() > 0);
   }
 
   @Test
@@ -172,7 +159,7 @@ public class RekorClientTest {
   }
 
   @NotNull
-  private HashedRekordRequest createdRekorRequest()
+  private static HashedRekordRequest createdRekorRequest()
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException,
           OperatorCreationException, CertificateException, IOException {
     // the data we want to sign

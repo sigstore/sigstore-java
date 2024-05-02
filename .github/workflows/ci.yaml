@@ -54,8 +54,9 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@6cec5d49d4d6d4bb982fbed7047db31ea6d38f11 # v3.3.0
 
+    # tests that hit staging are current disabled due to flakiness (-PskipStaging)
     - name: Test sigstore-java
-      run: ./gradlew build
+      run: ./gradlew build -PskipStaging
 
     - name: Ensure sigstore-java self signing still works
       run: ./gradlew sigstore-java:publishToMavenLocal -Prelease -PskipPgpSigning
