@@ -5,12 +5,15 @@ on:
     branches:
       - '**'
   pull_request:
+  # TODO: add cron
 
 jobs:
   conformance:
     strategy:
+      max-parallel: 1
       matrix:
         java-version: [11, 17]
+        sigstore-env: [production, staging]
       fail-fast: false
 
     runs-on: ubuntu-latest
@@ -35,4 +38,5 @@ jobs:
       - uses: sigstore/sigstore-conformance@ee4de0e602873beed74cf9e49d5332529fe69bf6 # v0.0.11
         with:
           entrypoint: ${{ github.workspace }}/bin/sigstore-cli
+          environment: ${{ matrix.sigstore-env }}
           xfail: "test_verify_dsse_bundle_with_trust_root"

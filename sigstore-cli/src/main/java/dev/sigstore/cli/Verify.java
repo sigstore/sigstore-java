@@ -51,11 +51,27 @@ public class Verify implements Callable<Integer> {
   @ArgGroup(multiplicity = "0..1", exclusive = false)
   Policy policy;
 
-  @Option(
-      names = {"--trusted-root"},
-      description = "an alternative to the TUF managed sigstore public good trusted root",
-      required = false)
-  Path trustedRoot;
+  @ArgGroup(multiplicity = "0..1", exclusive = true)
+  Target target;
+
+  /**
+   * Chose one trusted root provider target, (staging or prod or custom trusted_root), default is
+   * prod.
+   */
+  static class Target {
+    @Option(
+        names = {"--staging"},
+        description = "test against staging",
+        required = false,
+        defaultValue = "false")
+    Boolean staging;
+
+    @Option(
+        names = {"--trusted-root"},
+        description = "an alternative to the TUF managed sigstore public good trusted root",
+        required = false)
+    Path trustedRoot;
+  }
 
   static class Policy {
     @Option(
@@ -101,9 +117,11 @@ public class Verify implements Callable<Integer> {
     var verificationOptions = verificationOptionsBuilder.alwaysUseRemoteRekorEntry(false).build();
 
     var verifier =
-        (trustedRoot == null)
+        target == null
             ? new KeylessVerifier.Builder().sigstorePublicDefaults().build()
-            : new KeylessVerifier.Builder().fromTrustedRoot(trustedRoot).build();
+            : target.staging
+                ? new KeylessVerifier.Builder().sigstoreStagingDefaults().build()
+                : new KeylessVerifier.Builder().fromTrustedRoot(target.trustedRoot).build();
     verifier.verify(
         artifact,
         KeylessVerificationRequest.builder()
