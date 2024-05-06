@@ -59,8 +59,10 @@ class BundleFactoryInternal {
   private static final String BUNDLE_V_0_1 = "application/vnd.dev.sigstore.bundle+json;version=0.1";
   private static final String BUNDLE_V_0_2 = "application/vnd.dev.sigstore.bundle+json;version=0.2";
   private static final String BUNDLE_V_0_3 = "application/vnd.dev.sigstore.bundle+json;version=0.3";
+  // media_type format switch: https://github.com/sigstore/protobuf-specs/pull/279
+  private static final String BUNDLE_V_0_3_1 = "application/vnd.dev.sigstore.bundle.v0.3+json";
   private static final List<String> SUPPORTED_MEDIA_TYPES =
-      List.of(BUNDLE_V_0_1, BUNDLE_V_0_2, BUNDLE_V_0_3);
+      List.of(BUNDLE_V_0_1, BUNDLE_V_0_2, BUNDLE_V_0_3, BUNDLE_V_0_3_1);
 
   /**
    * Generates Sigstore Bundle Builder from {@link KeylessSignature}. This might be useful in case
@@ -75,7 +77,7 @@ class BundleFactoryInternal {
           "keyless signature must have artifact digest when serializing to bundle");
     }
     return Bundle.newBuilder()
-        .setMediaType(BUNDLE_V_0_3)
+        .setMediaType(BUNDLE_V_0_3_1)
         .setVerificationMaterial(buildVerificationMaterial(signingResult))
         .setMessageSignature(
             MessageSignature.newBuilder()

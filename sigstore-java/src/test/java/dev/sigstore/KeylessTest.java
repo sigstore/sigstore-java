@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -127,5 +128,9 @@ public class KeylessTest {
     var bundleJson2 = BundleFactory.createBundle(keylessSignatureFromBundle);
     Assertions.assertEquals(bundleJson, bundleJson2);
     Assertions.assertEquals(keylessSignature, keylessSignatureFromBundle);
+    // match mediatype
+    Assertions.assertEquals(1, StringUtils.countMatches(bundleJson, "mediaType"));
+    Assertions.assertTrue(
+        bundleJson.contains("\"mediaType\": \"application/vnd.dev.sigstore.bundle.v0.3+json\""));
   }
 }
