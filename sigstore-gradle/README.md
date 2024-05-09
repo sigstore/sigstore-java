@@ -2,10 +2,8 @@
 
 A Gradle plugin for signing artifacts with Sigstore.
 
-## The current state
-
-`dev.sigstore.sign` has no releases yet.
-Signature format uses [Sigstore bundle](https://github.com/sigstore/cosign/pull/2204) JSON which is still experimental.
+`dev.sigstore.sign` is available on the gradle plugin portal.
+Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto) JSON as the output format.
 
 ## Requirements
 
@@ -46,7 +44,7 @@ plugins {
 
 dependencies {
     // Override sigstore-java clients
-    sigstoreClient("dev.sigstore:sigstore-java:0.1.0")
+    sigstoreClient("dev.sigstore:sigstore-java:<alternate-version>")
 }
 
 sigstoreSign {
@@ -121,8 +119,8 @@ val zip by tasks.registering(Zip::class) {
 
 ### Signature format
 
-The signature uses [Sigstore bundle](https://github.com/sigstore/cosign/pull/2204) JSON
-stored as `.sigstore` file.
+The signature uses [Sigstore bundle](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto) JSON
+stored as `.sigstore.json` file.
 
 The file includes all the information for offline signature verification.
 
@@ -136,8 +134,8 @@ Provides `SigstoreSignFilesTask` task for signing files in Sigstore.
 The plugin adds no tasks by default.
 
 Properties:
-* `dev.sigstore.sign.remove.sigstore.asc` (since 0.6.0, default: `true`). Removes `.sigstore.asc` files from the publication.
-  Sonatype OSSRH supports publishing `.sigstore` signatures, and it does not require `.sigstore.asc` files, so
+* `dev.sigstore.sign.remove.sigstore.asc` (since 0.6.0, default: `true`). Removes `.sigstore.json.asc` files from the publication.
+  Sonatype OSSRH supports publishing `.sigstore.json` signatures, and it does not require `.sigstore.json.asc` files, so
   `dev.sigstore.sign` plugin removes them by default. If you need to sign all the files, set this property to `false`.
 
 Extensions:
