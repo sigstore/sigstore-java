@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Sigstore Authors.
+ * Copyright 2024 The Sigstore Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,54 +15,11 @@
  */
 package dev.sigstore.bundle;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import dev.sigstore.KeylessSignature;
-import dev.sigstore.proto.bundle.v1.Bundle;
-import java.io.Reader;
-import java.util.List;
 
-/**
- * Generates Sigstore Bundle.
- *
- * @see <a href="https://github.com/sigstore/protobuf-specs">Sigstore Bundle Protobuf
- *     specifications</a>
- */
+/** Compat class, needed for build to continue to work while we make API changes. */
 public class BundleFactory {
-  /**
-   * Generates Sigstore Bundle JSON from {@link KeylessSignature}.
-   *
-   * @param signingResult Keyless signing result.
-   * @return Sigstore Bundle in JSON format
-   */
-  public static String createBundle(KeylessSignature signingResult) {
-    Bundle bundle = BundleFactoryInternal.createBundleBuilder(signingResult).build();
-    try {
-      String jsonBundle = BundleFactoryInternal.JSON_PRINTER.print(bundle);
-      List<String> missingFields = BundleVerifierInternal.findMissingFields(bundle);
-      if (!missingFields.isEmpty()) {
-        throw new IllegalStateException(
-            "Some of the fields were not initialized: "
-                + String.join(", ", missingFields)
-                + "; bundle JSON: "
-                + jsonBundle);
-      }
-      return jsonBundle;
-    } catch (InvalidProtocolBufferException e) {
-      throw new IllegalArgumentException(
-          "Can't serialize signing result to Sigstore Bundle JSON", e);
-    }
-  }
-
-  /**
-   * Read a bundle json and convert it back into a keyless signing result for use within this
-   * library
-   *
-   * @param jsonReader a reader to a valid bundle json file
-   * @return the converted signing result object
-   * @throws BundleParseException if all or parts of the bundle were not convertible to library
-   *     types
-   */
-  public static KeylessSignature readBundle(Reader jsonReader) throws BundleParseException {
-    return BundleFactoryInternal.readBundle(jsonReader);
+  public static String createBundle(KeylessSignature keylessSignature) {
+    return Bundle.from(keylessSignature).toJson();
   }
 }

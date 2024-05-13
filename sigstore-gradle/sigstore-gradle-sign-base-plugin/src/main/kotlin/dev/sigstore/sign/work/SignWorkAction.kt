@@ -17,7 +17,7 @@
 package dev.sigstore.sign.work
 
 import dev.sigstore.KeylessSigner
-import dev.sigstore.bundle.BundleFactory
+import dev.sigstore.bundle.Bundle
 import dev.sigstore.oidc.client.OidcClient
 import dev.sigstore.oidc.client.OidcClients
 import dev.sigstore.sign.OidcClientConfiguration
@@ -56,7 +56,7 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
         }
 
         val result = signer.signFile(inputFile.toPath())
-        val bundleJson = BundleFactory.createBundle(result)
+        val bundleJson = Bundle.from(result).toJson()
         parameters.outputSignature.get().asFile.writeText(bundleJson)
     }
 }

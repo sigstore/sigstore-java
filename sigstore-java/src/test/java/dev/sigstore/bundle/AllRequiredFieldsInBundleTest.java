@@ -85,7 +85,6 @@ public class AllRequiredFieldsInBundleTest {
             + "    log_id\n"
             + "    kind_version\n"
             + "    integrated_time\n"
-            + "    inclusion_promise\n"
             + "    inclusion_proof\n"
             + "\n"
             + "dev.sigstore.common.v1.RFC3161SignedTimestamp\n"
@@ -111,11 +110,11 @@ public class AllRequiredFieldsInBundleTest {
    * from the given root.
    *
    * <p>Note: the implementation resembles {@link
-   * BundleVerifierInternal#findMissingFields(MessageOrBuilder)}, however, the difference is that
-   * this method finds all the required fields of all the messages, while {@link
-   * BundleVerifierInternal#findMissingFields(MessageOrBuilder)} verifies an actual given message
+   * BundleVerifier#findMissingFields(MessageOrBuilder)}, however, the difference is that this
+   * method finds all the required fields of all the messages, while {@link
+   * BundleVerifier#findMissingFields(MessageOrBuilder)} verifies an actual given message
    *
-   * @see BundleVerifierInternal#findMissingFields(MessageOrBuilder)
+   * @see BundleVerifier#findMissingFields(MessageOrBuilder)
    */
   private void collectRequiredFields(
       Descriptors.Descriptor descriptor,
@@ -131,7 +130,7 @@ public class AllRequiredFieldsInBundleTest {
           collectRequiredFields(messageType, messages, seen);
         }
       }
-      if (!BundleVerifierInternal.isRequired(field)) {
+      if (!BundleVerifier.isRequired(field)) {
         continue;
       }
       if (field.getContainingOneof() == null) {
@@ -140,7 +139,7 @@ public class AllRequiredFieldsInBundleTest {
       }
     }
     for (Descriptors.OneofDescriptor oneof : descriptor.getRealOneofs()) {
-      if (oneof.getFields().stream().anyMatch(BundleVerifierInternal::isRequired)) {
+      if (oneof.getFields().stream().anyMatch(BundleVerifier::isRequired)) {
         fields.add(oneof);
       }
     }

@@ -17,7 +17,7 @@ package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
 import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.bundle.BundleFactory;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.ImmutableLogId;
@@ -105,7 +105,7 @@ public class FulcioVerifierTest {
 
   @Test
   public void validBundle() throws Exception {
-    var bundle = BundleFactory.readBundle(new StringReader(bundleFile));
+    var bundle = Bundle.from(new StringReader(bundleFile));
     var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustRoot);
 
     Assertions.assertEquals(1, bundle.getCertPath().getCertificates().size());

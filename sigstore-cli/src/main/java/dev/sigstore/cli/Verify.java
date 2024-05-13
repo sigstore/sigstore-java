@@ -24,7 +24,7 @@ import dev.sigstore.KeylessVerificationRequest;
 import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
 import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
 import dev.sigstore.KeylessVerifier;
-import dev.sigstore.bundle.BundleFactory;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -101,9 +101,9 @@ public class Verify implements Callable<Integer> {
       keylessSignature =
           KeylessSignature.builder().signature(signature).certPath(certPath).digest(digest).build();
     } else {
-      keylessSignature =
-          BundleFactory.readBundle(
-              newReader(signatureFiles.bundleFile.toFile(), StandardCharsets.UTF_8));
+      Bundle bundle =
+          Bundle.from(newReader(signatureFiles.bundleFile.toFile(), StandardCharsets.UTF_8));
+      keylessSignature = bundle.toKeylessSignature();
     }
 
     var verificationOptionsBuilder = VerificationOptions.builder();

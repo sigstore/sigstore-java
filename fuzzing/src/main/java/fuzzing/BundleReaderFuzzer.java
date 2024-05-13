@@ -16,15 +16,15 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import dev.sigstore.bundle.BundleFactory;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.BundleParseException;
 import java.io.StringReader;
 
-public class BundleFactoryFuzzer {
+public class BundleReaderFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
       String string = data.consumeRemainingAsString();
-      BundleFactory.createBundle(BundleFactory.readBundle(new StringReader(string)));
+      Bundle.from(new StringReader(string));
     } catch (BundleParseException | IllegalArgumentException e) {
       // Known exception
     }

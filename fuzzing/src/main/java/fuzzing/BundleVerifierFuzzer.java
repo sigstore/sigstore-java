@@ -22,7 +22,7 @@ public class BundleVerifierFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
       String string = data.consumeRemainingAsString();
-      BundleVerifier.findMissingFields(string);
+      BundleVerifier.allMissingFields(string);
     } catch (IllegalArgumentException e) {
       // Known exception
     }

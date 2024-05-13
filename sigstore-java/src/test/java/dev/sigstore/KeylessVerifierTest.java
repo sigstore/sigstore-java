@@ -17,7 +17,7 @@ package dev.sigstore;
 
 import com.google.common.io.Resources;
 import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
-import dev.sigstore.bundle.BundleFactory;
+import dev.sigstore.bundle.Bundle;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -40,7 +40,7 @@ public class KeylessVerifierTest {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     var verificationReq =
         KeylessVerificationRequest.builder()
-            .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
+            .keylessSignature(Bundle.from(new StringReader(bundleFile)).toKeylessSignature())
             .verificationOptions(
                 VerificationOptions.builder().alwaysUseRemoteRekorEntry(isOnline).build())
             .build();
@@ -60,7 +60,7 @@ public class KeylessVerifierTest {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     var verificationReq =
         KeylessVerificationRequest.builder()
-            .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
+            .keylessSignature(Bundle.from(new StringReader(bundleFile)).toKeylessSignature())
             .build();
     Assertions.assertThrows(
         KeylessVerificationException.class,
@@ -98,7 +98,7 @@ public class KeylessVerifierTest {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     var verificationReq =
         KeylessVerificationRequest.builder()
-            .keylessSignature(BundleFactory.readBundle(new StringReader(bundleFile)))
+            .keylessSignature(Bundle.from(new StringReader(bundleFile)).toKeylessSignature())
             .verificationOptions(VerificationOptions.builder().build())
             .build();
 
