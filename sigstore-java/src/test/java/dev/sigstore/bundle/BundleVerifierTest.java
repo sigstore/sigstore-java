@@ -46,7 +46,7 @@ public class BundleVerifierTest {
   @ParameterizedTest
   @MethodSource("findMissingFields_data")
   void findMissingFields(String name, MessageOrBuilder message, List<String> missingFields) {
-    Assertions.assertThat(BundleVerifierInternal.findMissingFields(message))
+    Assertions.assertThat(BundleVerifier.findMissingFields(message))
         .describedAs(name)
         .isEqualTo(missingFields);
   }

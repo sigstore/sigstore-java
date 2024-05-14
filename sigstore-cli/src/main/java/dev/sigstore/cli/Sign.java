@@ -16,7 +16,7 @@
 package dev.sigstore.cli;
 
 import dev.sigstore.KeylessSigner;
-import dev.sigstore.bundle.BundleFactory;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.OidcClients;
 import java.nio.charset.StandardCharsets;
@@ -77,7 +77,7 @@ public class Sign implements Callable<Integer> {
     } else {
       Files.write(
           signatureFiles.bundleFile,
-          BundleFactory.createBundle(signingResult).getBytes(StandardCharsets.UTF_8));
+          Bundle.from(signingResult).toJson().getBytes(StandardCharsets.UTF_8));
     }
     return 0;
   }

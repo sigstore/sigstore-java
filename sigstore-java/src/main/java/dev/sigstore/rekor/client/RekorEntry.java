@@ -21,6 +21,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
+import javax.annotation.Nullable;
 import org.erdtman.jcs.JsonCanonicalizer;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
@@ -36,6 +37,7 @@ public interface RekorEntry {
   @Value.Immutable
   interface Verification {
     /** Return the signed entry timestamp. */
+    @Nullable
     String getSignedEntryTimestamp();
 
     /** Return the inclusion proof. */

@@ -17,7 +17,9 @@ package dev.sigstore.proto;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.proto.common.v1.HashAlgorithm;
 import dev.sigstore.proto.common.v1.X509Certificate;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
@@ -49,5 +51,12 @@ public class ProtoMutators {
     byte[] encoded;
     encoded = certificate.getEncoded();
     return X509Certificate.newBuilder().setRawBytes(ByteString.copyFrom(encoded)).build();
+  }
+
+  public static HashAlgorithm from(Bundle.HashAlgorithm algorithm) {
+    if (algorithm == Bundle.HashAlgorithm.SHA2_256) {
+      return HashAlgorithm.SHA2_256;
+    }
+    throw new IllegalStateException("Unknown hash algorithm: " + algorithm);
   }
 }

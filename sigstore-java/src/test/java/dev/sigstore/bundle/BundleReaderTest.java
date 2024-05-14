@@ -16,14 +16,12 @@
 package dev.sigstore.bundle;
 
 import com.google.common.io.Resources;
-import dev.sigstore.KeylessSignature;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class BundleFactoryTest {
+class BundleReaderTest {
   @Test
   public void readV1Bundle() throws Exception {
     readBundle("dev/sigstore/samples/bundles/bundle.v1.sigstore");
@@ -82,20 +80,15 @@ class BundleFactoryTest {
 
   @Test
   public void readDSSEBundle() throws Exception {
-    var ex =
-        Assertions.assertThrows(
-            BundleParseException.class,
-            () -> readBundle("dev/sigstore/samples/bundles/bundle.dsse.sigstore"));
-    Assertions.assertEquals(
-        "DSSE envelope signatures are not supported by this client", ex.getMessage());
+    var bundle = readBundle("dev/sigstore/samples/bundles/bundle.dsse.sigstore");
+    Assertions.assertTrue(bundle.getDSSESignature().isPresent());
   }
 
-  private KeylessSignature readBundle(String resourcePath)
-      throws IOException, BundleParseException {
+  private Bundle readBundle(String resourcePath) throws Exception {
     try (var reader =
         new InputStreamReader(
             Resources.getResource(resourcePath).openStream(), StandardCharsets.UTF_8)) {
-      return BundleFactory.readBundle(reader);
+      return Bundle.from(reader);
     }
   }
 }

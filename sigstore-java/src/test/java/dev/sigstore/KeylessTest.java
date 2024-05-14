@@ -16,7 +16,7 @@
 package dev.sigstore;
 
 import com.google.common.hash.Hashing;
-import dev.sigstore.bundle.BundleFactory;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
@@ -123,9 +123,9 @@ public class KeylessTest {
   }
 
   private void checkBundleSerialization(KeylessSignature keylessSignature) throws Exception {
-    var bundleJson = BundleFactory.createBundle(keylessSignature);
-    var keylessSignatureFromBundle = BundleFactory.readBundle(new StringReader(bundleJson));
-    var bundleJson2 = BundleFactory.createBundle(keylessSignatureFromBundle);
+    var bundleJson = Bundle.from(keylessSignature).toJson();
+    var keylessSignatureFromBundle = Bundle.from(new StringReader(bundleJson)).toKeylessSignature();
+    var bundleJson2 = Bundle.from(keylessSignatureFromBundle).toJson();
     Assertions.assertEquals(bundleJson, bundleJson2);
     Assertions.assertEquals(keylessSignature, keylessSignatureFromBundle);
     // match mediatype
