@@ -18,6 +18,7 @@ package dev.sigstore;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.json.webtoken.JsonWebSignature;
 import com.google.common.hash.Hashing;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.oidc.client.GithubActionsOidcClient;
 import dev.sigstore.testing.matchers.ByteArrayListMatcher;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
@@ -48,7 +49,7 @@ public class KeylessSignerTest {
 
   public static List<byte[]> artifactHashes;
   public static List<Path> artifacts;
-  public static List<KeylessSignature> signingResults;
+  public static List<Bundle> signingResults;
   public static KeylessSigner signer;
 
   @BeforeAll
@@ -67,7 +68,7 @@ public class KeylessSignerTest {
               .asBytes();
       artifactHashes.add(hash);
       artifacts.add(artifact);
-      signingResults.add(Mockito.mock(KeylessSignature.class));
+      signingResults.add(Mockito.mock(Bundle.class));
     }
 
     // make sure our mock signing results are not equal
@@ -84,12 +85,12 @@ public class KeylessSignerTest {
 
   @Test
   public void sign_file() throws Exception {
-    Assertions.assertEquals(signingResults.get(0), signer.signFile(artifacts.get(0)));
+    Assertions.assertEquals(signingResults.get(0), signer.signFile2(artifacts.get(0)));
   }
 
   @Test
   public void sign_files() throws Exception {
-    var signingResultsMap = new HashMap<Path, KeylessSignature>();
+    var signingResultsMap = new HashMap<Path, Bundle>();
     for (int i = 0; i < signingResults.size(); i++) {
       signingResultsMap.put(artifacts.get(i), signingResults.get(i));
     }

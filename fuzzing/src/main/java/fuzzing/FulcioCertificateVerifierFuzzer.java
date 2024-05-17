@@ -16,7 +16,7 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
+import dev.sigstore.VerificationOptions.CertificateIdentity;
 import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import java.io.ByteArrayInputStream;

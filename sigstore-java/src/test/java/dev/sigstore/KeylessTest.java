@@ -17,6 +17,7 @@ package dev.sigstore;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.bundle.Bundle.HashAlgorithm;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorTypes;
@@ -70,9 +71,7 @@ public class KeylessTest {
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     for (int i = 0; i < results.size(); i++) {
-      verifier.verify(
-          artifactDigests.get(i),
-          KeylessVerificationRequest.builder().keylessSignature(results.get(i)).build());
+      verifier.verify(artifactDigests.get(i), results.get(i), VerificationOptions.empty());
       checkBundleSerialization(results.get(i));
     }
   }
@@ -87,50 +86,54 @@ public class KeylessTest {
 
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
     for (int i = 0; i < results.size(); i++) {
-      verifier.verify(
-          artifactDigests.get(i),
-          KeylessVerificationRequest.builder().keylessSignature(results.get(i)).build());
+      verifier.verify(artifactDigests.get(i), results.get(i), VerificationOptions.empty());
       checkBundleSerialization(results.get(i));
     }
   }
 
-  private void verifySigningResult(List<KeylessSignature> results)
-      throws IOException, RekorTypeException {
+  private void verifySigningResult(List<Bundle> results) throws IOException, RekorTypeException {
 
     Assertions.assertEquals(artifactDigests.size(), results.size());
 
     for (int i = 0; i < results.size(); i++) {
       var result = results.get(i);
       var artifactDigest = artifactDigests.get(i);
-      Assertions.assertNotNull(result.getDigest());
+      Assertions.assertNotNull(
+          result.getMessageSignature().get().getMessageDigest().get().getDigest());
       Assertions.assertNotNull(result.getCertPath());
-      Assertions.assertNotNull(result.getEntry());
-      Assertions.assertNotNull(result.getSignature());
+      Assertions.assertEquals(1, result.getEntries().size());
+      Assertions.assertNotNull(result.getMessageSignature().get().getSignature());
 
-      var hr = RekorTypes.getHashedRekord(result.getEntry().get());
+      var hr = RekorTypes.getHashedRekord(result.getEntries().get(0));
       // check if the rekor entry has the digest we sent
-      Assertions.assertArrayEquals(artifactDigest, result.getDigest());
+      Assertions.assertArrayEquals(
+          artifactDigest, result.getMessageSignature().get().getMessageDigest().get().getDigest());
+      Assertions.assertEquals(
+          HashAlgorithm.SHA2_256,
+          result.getMessageSignature().get().getMessageDigest().get().getHashAlgorithm());
       // check if the rekor entry has the signature we sent
       Assertions.assertArrayEquals(
-          Base64.getDecoder().decode(hr.getSignature().getContent()), result.getSignature());
+          Base64.getDecoder().decode(hr.getSignature().getContent()),
+          result.getMessageSignature().get().getSignature());
       // check if the rekor entry has the certificate we sent
       Assertions.assertArrayEquals(
           Base64.getDecoder().decode(hr.getSignature().getPublicKey().getContent()),
           Certificates.toPemBytes(result.getCertPath().getCertificates().get(0)));
       // check if required inclusion proof exists
-      Assertions.assertNotNull(result.getEntry().get().getVerification().getInclusionProof());
+      Assertions.assertNotNull(result.getEntries().get(0).getVerification().getInclusionProof());
     }
   }
 
-  private void checkBundleSerialization(KeylessSignature keylessSignature) throws Exception {
-    var bundleJson = Bundle.from(keylessSignature).toJson();
-    var keylessSignatureFromBundle = Bundle.from(new StringReader(bundleJson)).toKeylessSignature();
-    var bundleJson2 = Bundle.from(keylessSignatureFromBundle).toJson();
-    Assertions.assertEquals(bundleJson, bundleJson2);
-    Assertions.assertEquals(keylessSignature, keylessSignatureFromBundle);
+  private void checkBundleSerialization(Bundle bundle) throws Exception {
+    var stringFromBundle = bundle.toJson();
+    var bundleFromString = Bundle.from(new StringReader(stringFromBundle));
+    var stringFromBundle2 = bundleFromString.toJson();
+    Assertions.assertEquals(stringFromBundle, stringFromBundle2);
+    Assertions.assertEquals(bundle, bundleFromString);
     // match mediatype
-    Assertions.assertEquals(1, StringUtils.countMatches(bundleJson, "mediaType"));
+    Assertions.assertEquals(1, StringUtils.countMatches(stringFromBundle, "mediaType"));
     Assertions.assertTrue(
-        bundleJson.contains("\"mediaType\": \"application/vnd.dev.sigstore.bundle.v0.3+json\""));
+        stringFromBundle.contains(
+            "\"mediaType\": \"application/vnd.dev.sigstore.bundle.v0.3+json\""));
   }
 }

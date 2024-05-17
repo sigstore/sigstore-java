@@ -16,7 +16,6 @@
 package dev.sigstore.cli;
 
 import dev.sigstore.KeylessSigner;
-import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.OidcClients;
 import java.nio.charset.StandardCharsets;
@@ -66,18 +65,15 @@ public class Sign implements Callable<Integer> {
       signerBuilder.oidcClients(OidcClients.of(new TokenStringOidcClient(identityToken)));
     }
     var signer = signerBuilder.build();
-    var signingResult = signer.signFile(artifact);
+    var bundle = signer.signFile2(artifact);
     if (signatureFiles.sigAndCert != null) {
       Files.write(
           signatureFiles.sigAndCert.signatureFile,
-          Base64.getEncoder().encode(signingResult.getSignature()));
+          Base64.getEncoder().encode(bundle.getMessageSignature().get().getSignature()));
       Files.write(
-          signatureFiles.sigAndCert.certificateFile,
-          Certificates.toPemBytes(signingResult.getCertPath()));
+          signatureFiles.sigAndCert.certificateFile, Certificates.toPemBytes(bundle.getCertPath()));
     } else {
-      Files.write(
-          signatureFiles.bundleFile,
-          Bundle.from(signingResult).toJson().getBytes(StandardCharsets.UTF_8));
+      Files.write(signatureFiles.bundleFile, bundle.toJson().getBytes(StandardCharsets.UTF_8));
     }
     return 0;
   }

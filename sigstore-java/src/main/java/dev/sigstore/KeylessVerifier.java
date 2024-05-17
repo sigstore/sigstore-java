@@ -18,18 +18,15 @@ package dev.sigstore;
 import com.google.api.client.util.Preconditions;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
-import dev.sigstore.rekor.client.HashedRekordRequest;
-import dev.sigstore.rekor.client.RekorClient;
 import dev.sigstore.rekor.client.RekorEntry;
-import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
-import dev.sigstore.trustroot.TransparencyLog;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -40,13 +37,9 @@ import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
-import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
@@ -54,14 +47,9 @@ public class KeylessVerifier {
   private final FulcioVerifier fulcioVerifier;
   private final RekorVerifier rekorVerifier;
 
-  // a client per remote trusted log
-  private final List<RekorClient> rekorClients;
-
-  private KeylessVerifier(
-      FulcioVerifier fulcioVerifier, List<RekorClient> rekorClients, RekorVerifier rekorVerifier) {
+  private KeylessVerifier(FulcioVerifier fulcioVerifier, RekorVerifier rekorVerifier) {
     this.fulcioVerifier = fulcioVerifier;
     this.rekorVerifier = rekorVerifier;
-    this.rekorClients = rekorClients;
   }
 
   public static KeylessVerifier.Builder builder() {
@@ -78,13 +66,7 @@ public class KeylessVerifier {
       var trustedRoot = trustedRootProvider.get();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
-      var rekorClients =
-          trustedRoot.getTLogs().stream()
-              .map(TransparencyLog::getBaseUrl)
-              .distinct()
-              .map(uri -> RekorClient.builder().setUri(uri).build())
-              .collect(Collectors.toList());
-      return new KeylessVerifier(fulcioVerifier, rekorClients, rekorVerifier);
+      return new KeylessVerifier(fulcioVerifier, rekorVerifier);
     }
 
     public Builder sigstorePublicDefaults() {
@@ -105,13 +87,13 @@ public class KeylessVerifier {
     }
   }
 
-  /** Convenience wrapper around {@link #verify(byte[], KeylessVerificationRequest)}. */
-  public void verify(Path artifact, KeylessVerificationRequest request)
+  /** Convenience wrapper around {@link #verify(byte[], Bundle, VerificationOptions)}. */
+  public void verify(Path artifact, Bundle bundle, VerificationOptions options)
       throws KeylessVerificationException {
     try {
       byte[] artifactDigest =
           Files.asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
-      verify(artifactDigest, request);
+      verify(artifactDigest, bundle, options);
     } catch (IOException e) {
       throw new KeylessVerificationException("Could not hash provided artifact path: " + artifact);
     }
@@ -122,25 +104,51 @@ public class KeylessVerifier {
    * infrastructure. If no exception is thrown, it should be assumed verification has passed.
    *
    * @param artifactDigest the sha256 digest of the artifact that is being verified
-   * @param request the keyless verification data and options
+   * @param bundle the sigstore signature bundle to verify
+   * @param options the keyless verification data and options
    * @throws KeylessVerificationException if the signing information could not be verified
    */
-  public void verify(byte[] artifactDigest, KeylessVerificationRequest request)
+  public void verify(byte[] artifactDigest, Bundle bundle, VerificationOptions options)
       throws KeylessVerificationException {
-    var signingCert = request.getKeylessSignature().getCertPath();
+
+    if (bundle.getDSSESignature().isPresent()) {
+      throw new KeylessVerificationException("Cannot verify DSSE signature based bundles");
+    }
+
+    if (bundle.getMessageSignature().isEmpty()) {
+      // this should be unreachable
+      throw new IllegalStateException("Bundle must contain a message signature to verify");
+    }
+    var messageSignature = bundle.getMessageSignature().get();
+
+    if (bundle.getEntries().isEmpty()) {
+      throw new KeylessVerificationException("Cannot verify bundle without tlog entry");
+    }
+
+    if (bundle.getEntries().size() > 1) {
+      throw new KeylessVerificationException(
+          "Bundle verification expects 1 entry, but found " + bundle.getEntries().size());
+    }
+
+    if (!bundle.getTimestamps().isEmpty()) {
+      throw new KeylessVerificationException(
+          "Cannot verify bundles with timestamp verification material");
+    }
+
+    var signingCert = bundle.getCertPath();
     var leafCert = Certificates.getLeaf(signingCert);
 
     // this ensures the provided artifact digest matches what may have come from a bundle (in
     // keyless signature)
-    var digest = request.getKeylessSignature().getDigest();
-    if (digest.length > 0) {
-      if (!Arrays.equals(artifactDigest, digest)) {
+    if (messageSignature.getMessageDigest().isPresent()) {
+      var bundleDigest = messageSignature.getMessageDigest().get().getDigest();
+      if (!Arrays.equals(artifactDigest, bundleDigest)) {
         throw new KeylessVerificationException(
-            "Provided artifact sha256 digest does not match digest used for verification"
+            "Provided artifact digest does not match digest used for verification"
                 + "\nprovided(hex) : "
                 + Hex.toHexString(artifactDigest)
                 + "\nverification  : "
-                + Hex.toHexString(digest));
+                + Hex.toHexString(bundleDigest));
       }
     }
 
@@ -154,34 +162,19 @@ public class KeylessVerifier {
     }
 
     // verify the certificate identity if options are present
-    if (request.getVerificationOptions().getCertificateIdentities().size() > 0) {
+    if (options.getCertificateIdentities().size() > 0) {
       try {
         new FulcioCertificateVerifier()
-            .verifyCertificateMatches(
-                leafCert, request.getVerificationOptions().getCertificateIdentities());
+            .verifyCertificateMatches(leafCert, options.getCertificateIdentities());
       } catch (FulcioVerificationException fve) {
         throw new KeylessVerificationException(
             "Could not verify certificate identities: " + fve.getMessage(), fve);
       }
     }
 
-    var signature = request.getKeylessSignature().getSignature();
+    var signature = messageSignature.getSignature();
 
-    RekorEntry rekorEntry;
-    if (request.getVerificationOptions().alwaysUseRemoteRekorEntry()
-        || request.getKeylessSignature().getEntry().isEmpty()) {
-      // this setting means we ignore any provided entry
-      rekorEntry = getEntryFromRekor(artifactDigest, leafCert, signature);
-    } else {
-      rekorEntry =
-          request
-              .getKeylessSignature()
-              .getEntry()
-              .orElseThrow(
-                  () ->
-                      new KeylessVerificationException(
-                          "No rekor entry was provided for offline verification"));
-    }
+    RekorEntry rekorEntry = bundle.getEntries().get(0);
 
     // verify the rekor entry is signed by the log keys
     try {
@@ -214,41 +207,5 @@ public class KeylessVerifier {
       throw new KeylessVerificationException(
           "Signature could not be processed: " + ex.getMessage(), ex);
     }
-  }
-
-  private RekorEntry getEntryFromRekor(
-      byte[] artifactDigest, X509Certificate leafCert, byte[] signature)
-      throws KeylessVerificationException {
-    // rebuild the hashedRekord so we can query the log for it
-    HashedRekordRequest hashedRekordRequest;
-    try {
-      hashedRekordRequest =
-          HashedRekordRequest.newHashedRekordRequest(
-              artifactDigest, Certificates.toPemBytes(leafCert), signature);
-    } catch (IOException e) {
-      throw new KeylessVerificationException(
-          "Could not convert certificate to PEM when recreating hashrekord", e);
-    }
-    Optional<RekorEntry> rekorEntry;
-
-    // attempt to grab a valid rekord from all known rekor instances
-    try {
-      for (var rekorClient : rekorClients) {
-        rekorEntry = rekorClient.getEntry(hashedRekordRequest);
-        if (rekorEntry.isPresent()) {
-          var entryTime = Date.from(rekorEntry.get().getIntegratedTimeInstant());
-          try {
-            // only return this entry if it's valid for the certificate
-            leafCert.checkValidity(entryTime);
-          } catch (CertificateExpiredException | CertificateNotYetValidException ex) {
-            continue;
-          }
-          return rekorEntry.get();
-        }
-      }
-    } catch (IOException | RekorParseException e) {
-      throw new KeylessVerificationException("Could not retrieve rekor entry", e);
-    }
-    throw new KeylessVerificationException("No valid rekor entry was not found in any known logs");
   }
 }

@@ -15,7 +15,7 @@
  */
 package dev.sigstore.fulcio.client;
 
-import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
+import dev.sigstore.VerificationOptions.CertificateIdentity;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateParsingException;

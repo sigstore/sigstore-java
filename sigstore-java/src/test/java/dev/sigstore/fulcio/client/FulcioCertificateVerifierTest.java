@@ -18,7 +18,7 @@ package dev.sigstore.fulcio.client;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
+import dev.sigstore.VerificationOptions.CertificateIdentity;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;

@@ -16,21 +16,17 @@
 package dev.sigstore;
 
 import com.google.common.io.Resources;
-import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
 import dev.sigstore.bundle.Bundle;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 public class KeylessVerifierTest {
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
-  public void testVerify_noDigestInBundle(boolean isOnline) throws Exception {
+  @Test
+  public void testVerify_noDigestInBundle() throws Exception {
     var bundleFile =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/bundles/bundle-no-digest.sigstore"),
@@ -38,13 +34,8 @@ public class KeylessVerifierTest {
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    var verificationReq =
-        KeylessVerificationRequest.builder()
-            .keylessSignature(Bundle.from(new StringReader(bundleFile)).toKeylessSignature())
-            .verificationOptions(
-                VerificationOptions.builder().alwaysUseRemoteRekorEntry(isOnline).build())
-            .build();
-    verifier.verify(Path.of(artifact), verificationReq);
+    verifier.verify(
+        Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
 
   @Test
@@ -58,13 +49,33 @@ public class KeylessVerifierTest {
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    var verificationReq =
-        KeylessVerificationRequest.builder()
-            .keylessSignature(Bundle.from(new StringReader(bundleFile)).toKeylessSignature())
-            .build();
     Assertions.assertThrows(
         KeylessVerificationException.class,
-        () -> verifier.verify(Path.of(artifact), verificationReq));
+        () ->
+            verifier.verify(
+                Path.of(artifact),
+                Bundle.from(new StringReader(bundleFile)),
+                VerificationOptions.empty()));
+  }
+
+  @Test
+  public void testVerify_errorsOnDSSEBundle() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.sigstore"),
+            StandardCharsets.UTF_8);
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () ->
+                verifier.verify(
+                    Path.of(artifact),
+                    Bundle.from(new StringReader(bundleFile)),
+                    VerificationOptions.empty()));
+    Assertions.assertEquals("Cannot verify DSSE signature based bundles", ex.getMessage());
   }
 
   @Test
@@ -96,12 +107,7 @@ public class KeylessVerifierTest {
         Resources.toString(Resources.getResource(bundleResourcePath), StandardCharsets.UTF_8);
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    var verificationReq =
-        KeylessVerificationRequest.builder()
-            .keylessSignature(Bundle.from(new StringReader(bundleFile)).toKeylessSignature())
-            .verificationOptions(VerificationOptions.builder().build())
-            .build();
-
-    verifier.verify(Path.of(artifact), verificationReq);
+    verifier.verify(
+        Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
 }

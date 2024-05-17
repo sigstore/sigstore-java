@@ -81,7 +81,7 @@ class BundleWriter {
           "keyless signature must have artifact digest when serializing to bundle");
     }
     return dev.sigstore.proto.bundle.v1.Bundle.newBuilder()
-        .setMediaType(Bundle.BUNDLE_V_0_3_1)
+        .setMediaType(bundle.getMediaType())
         .setVerificationMaterial(buildVerificationMaterial(bundle))
         .setMessageSignature(
             MessageSignature.newBuilder()
