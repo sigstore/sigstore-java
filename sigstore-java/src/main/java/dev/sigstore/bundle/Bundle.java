@@ -23,6 +23,7 @@ import java.security.cert.CertPath;
 import java.util.List;
 import java.util.Optional;
 import org.immutables.value.Value;
+import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Lazy;
 
@@ -46,7 +47,10 @@ public abstract class Bundle {
       List.of(BUNDLE_V_0_1, BUNDLE_V_0_2, BUNDLE_V_0_3, BUNDLE_V_0_3_1);
 
   /** The bundle version */
-  public abstract String getMediaType();
+  @Default
+  public String getMediaType() {
+    return BUNDLE_V_0_3_1;
+  }
 
   /** A signature represented as a signature and digest */
   public abstract Optional<MessageSignature> getMessageSignature();
@@ -91,7 +95,7 @@ public abstract class Bundle {
   public abstract List<Timestamp> getTimestamps();
 
   @Immutable
-  interface MessageSignature {
+  public interface MessageSignature {
 
     /**
      * An optional message digest, this should not be used to verify signature validity. A digest
@@ -101,10 +105,18 @@ public abstract class Bundle {
 
     /** Signature over an artifact. */
     byte[] getSignature();
+
+    static MessageSignature of(HashAlgorithm algorithm, byte[] digest, byte[] signature) {
+      return ImmutableMessageSignature.builder()
+          .signature(signature)
+          .messageDigest(
+              ImmutableMessageDigest.builder().digest(digest).hashAlgorithm(algorithm).build())
+          .build();
+    }
   }
 
   @Immutable
-  interface MessageDigest {
+  public interface MessageDigest {
 
     /** The algorithm used to compute the digest. */
     HashAlgorithm getHashAlgorithm();
@@ -117,7 +129,7 @@ public abstract class Bundle {
   }
 
   @Immutable
-  interface DSSESignature {
+  public interface DSSESignature {
 
     /** An arbitrary payload that does not need to be parsed to be validated */
     String getPayload();
@@ -130,7 +142,7 @@ public abstract class Bundle {
   }
 
   @Immutable
-  interface Timestamp {
+  public interface Timestamp {
 
     /** Raw bytes of an rfc31616 timestamp */
     byte[] getRfc3161Timestamp();
@@ -158,7 +170,6 @@ public abstract class Bundle {
             .build();
 
     return ImmutableBundle.builder()
-        .mediaType(BUNDLE_V_0_3_1)
         .messageSignature(sig)
         .addEntries(keylessSignature.getEntry().get())
         .certPath(keylessSignature.getCertPath())

@@ -22,7 +22,10 @@ import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import dev.sigstore.KeylessVerifier.Builder;
+import dev.sigstore.bundle.Bundle;
+import dev.sigstore.bundle.Bundle.HashAlgorithm;
+import dev.sigstore.bundle.Bundle.MessageSignature;
+import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -270,13 +273,13 @@ public class KeylessSigner implements AutoCloseable {
    * @return a list of keyless singing results.
    */
   @CheckReturnValue
-  public List<KeylessSignature> sign(List<byte[]> artifactDigests) throws KeylessSignerException {
+  public List<Bundle> sign(List<byte[]> artifactDigests) throws KeylessSignerException {
 
     if (artifactDigests.size() == 0) {
       throw new IllegalArgumentException("Require one or more digests");
     }
 
-    var result = ImmutableList.<KeylessSignature>builder();
+    var result = ImmutableList.<Bundle>builder();
 
     for (var artifactDigest : artifactDigests) {
       byte[] signature;
@@ -334,11 +337,11 @@ public class KeylessSigner implements AutoCloseable {
       }
 
       result.add(
-          KeylessSignature.builder()
-              .digest(artifactDigest)
+          ImmutableBundle.builder()
               .certPath(signingCert)
-              .signature(signature)
-              .entry(rekorResponse.getEntry())
+              .addEntries(rekorResponse.getEntry())
+              .messageSignature(
+                  MessageSignature.of(HashAlgorithm.SHA2_256, artifactDigest, signature))
               .build());
     }
     return result.build();
@@ -409,7 +412,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a keyless singing results.
    */
   @CheckReturnValue
-  public KeylessSignature sign(byte[] artifactDigest) throws KeylessSignerException {
+  public Bundle sign(byte[] artifactDigest) throws KeylessSignerException {
     return sign(List.of(artifactDigest)).get(0);
   }
 
@@ -420,7 +423,7 @@ public class KeylessSigner implements AutoCloseable {
    * @return a map of artifacts and their keyless singing results.
    */
   @CheckReturnValue
-  public Map<Path, KeylessSignature> signFiles(List<Path> artifacts) throws KeylessSignerException {
+  public Map<Path, Bundle> signFiles(List<Path> artifacts) throws KeylessSignerException {
     if (artifacts.size() == 0) {
       throw new IllegalArgumentException("Require one or more paths");
     }
@@ -434,7 +437,7 @@ public class KeylessSigner implements AutoCloseable {
       }
     }
     var signingResult = sign(digests);
-    var result = ImmutableMap.<Path, KeylessSignature>builder();
+    var result = ImmutableMap.<Path, Bundle>builder();
     for (int i = 0; i < artifacts.size(); i++) {
       result.put(artifacts.get(i), signingResult.get(i));
     }
@@ -442,13 +445,24 @@ public class KeylessSigner implements AutoCloseable {
   }
 
   /**
-   * Convenience wrapper around {@link #sign(List)} to accept a file instead of digests
+   * Convenience wrapper around {@link #sign(List)} to accept a single file This is a compat method
+   * and will be switched out with signFile2
    *
    * @param artifact the artifacts to sign.
    * @return a keyless singing results.
    */
   @CheckReturnValue
   public KeylessSignature signFile(Path artifact) throws KeylessSignerException {
+    return signFiles(List.of(artifact)).get(artifact).toKeylessSignature();
+  }
+
+  /**
+   * Convenience wrapper around {@link #sign(List)} to accept a signe file
+   *
+   * @param artifact the artifacts to sign
+   * @return a sigstore bundle
+   */
+  public Bundle signFile2(Path artifact) throws KeylessSignerException {
     return signFiles(List.of(artifact)).get(artifact);
   }
 }

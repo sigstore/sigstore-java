@@ -19,13 +19,15 @@ import static com.google.common.io.Files.asByteSource;
 import static com.google.common.io.Files.newReader;
 
 import com.google.common.hash.Hashing;
-import dev.sigstore.KeylessSignature;
-import dev.sigstore.KeylessVerificationRequest;
-import dev.sigstore.KeylessVerificationRequest.CertificateIdentity;
-import dev.sigstore.KeylessVerificationRequest.VerificationOptions;
 import dev.sigstore.KeylessVerifier;
+import dev.sigstore.VerificationOptions;
+import dev.sigstore.VerificationOptions.CertificateIdentity;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.bundle.Bundle.HashAlgorithm;
+import dev.sigstore.bundle.Bundle.MessageSignature;
+import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.rekor.client.RekorEntryFetcher;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -90,20 +92,29 @@ public class Verify implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
     byte[] digest = asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
-    KeylessSignature keylessSignature;
 
+    Bundle bundle;
     if (signatureFiles.sigAndCert != null) {
       byte[] signature =
           Base64.getMimeDecoder()
               .decode(Files.readAllBytes(signatureFiles.sigAndCert.signatureFile));
       CertPath certPath =
           Certificates.fromPemChain(Files.readAllBytes(signatureFiles.sigAndCert.certificateFile));
-      keylessSignature =
-          KeylessSignature.builder().signature(signature).certPath(certPath).digest(digest).build();
+      RekorEntryFetcher fetcher =
+          target == null
+              ? RekorEntryFetcher.sigstorePublicGood()
+              : target.staging
+                  ? RekorEntryFetcher.sigstoreStaging()
+                  : RekorEntryFetcher.fromTrustedRoot(target.trustedRoot);
+      bundle =
+          ImmutableBundle.builder()
+              .messageSignature(MessageSignature.of(HashAlgorithm.SHA2_256, digest, signature))
+              .certPath(certPath)
+              .addEntries(
+                  fetcher.getEntryFromRekor(digest, Certificates.getLeaf(certPath), signature))
+              .build();
     } else {
-      Bundle bundle =
-          Bundle.from(newReader(signatureFiles.bundleFile.toFile(), StandardCharsets.UTF_8));
-      keylessSignature = bundle.toKeylessSignature();
+      bundle = Bundle.from(newReader(signatureFiles.bundleFile.toFile(), StandardCharsets.UTF_8));
     }
 
     var verificationOptionsBuilder = VerificationOptions.builder();
@@ -114,7 +125,7 @@ public class Verify implements Callable<Integer> {
               .subjectAlternativeName(policy.certificateSan)
               .build());
     }
-    var verificationOptions = verificationOptionsBuilder.alwaysUseRemoteRekorEntry(false).build();
+    var verificationOptions = verificationOptionsBuilder.build();
 
     var verifier =
         target == null
@@ -122,12 +133,7 @@ public class Verify implements Callable<Integer> {
             : target.staging
                 ? new KeylessVerifier.Builder().sigstoreStagingDefaults().build()
                 : new KeylessVerifier.Builder().fromTrustedRoot(target.trustedRoot).build();
-    verifier.verify(
-        artifact,
-        KeylessVerificationRequest.builder()
-            .keylessSignature(keylessSignature)
-            .verificationOptions(verificationOptions)
-            .build());
+    verifier.verify(artifact, bundle, verificationOptions);
     return 0;
   }
 }
