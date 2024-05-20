@@ -68,4 +68,4 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}-gradle
-          body: "See [CHANGELOG.md](https://github.com/${{ vars.GITHUB_REPOSITORY }}/blob/main/CHANGELOG.md) for more details."
+          body: "See [CHANGELOG.md](https://github.com/${{ env.GITHUB_REPOSITORY }}/blob/main/CHANGELOG.md) for more details."
