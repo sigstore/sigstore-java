@@ -68,4 +68,4 @@ jobs:
         uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564 # v2.0.4
         with:
           tag_name: ${{ github.ref_name }}
-          body: "See [CHANGELOG.md](https://github.com/${{ env.GITHUB_REPOSITORY }}/blob/main/CHANGELOG.md) for more details."
+          body: "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for more details."
