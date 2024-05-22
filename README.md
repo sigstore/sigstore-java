@@ -22,52 +22,25 @@ message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL9
 Path testArtifact = Paths.get("path/to/my/file.jar")
 
 var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
-var result = signer.sign(testArtifact);
-
-// resulting signature information
+Bundle result = signer.sign(testArtifact);
 
 // sigstore bundle format (serialized as <artifact>.sigstore.json)
-String bundle = BundleFactory.createBundle(result)
-
-// artifact digest
-byte[] digest = result.getDigest();
-
-// certificate from fulcio
-CertPath certs = result.getCertPath() // java representation of a certificate path
-byte[] certsBytes = Certificates.toPemBytes(result.getCertPath()) // converted to PEM encoded byte array
-
-// artifact signature
-byte[] sig = result.getSignature()
-
+String bundleJson = result.toJson();
 ```
 
 #### Verification
 
-##### KeylessSignature from bundle
+##### Read bundle
 ```java
-var bundleFile = // java.nio.Path to a .sigstore.json signature bundle file
-var keylessSignature = BundleFactory.readBundle(Files.newBufferedReader(bundleFile, StandardCharsets.UTF_8));
+Path bundleFile = // java.nio.Path to a .sigstore.json signature bundle file
+Bundle bundle = Bundle.from(Files.newBufferedReader(bundleFile, StandardCharsets.UTF_8));
 ```
-
-##### KeylessSignature from certificate and signature
-```java
-byte[] digest = // byte array sha256 artifact digest
-byte[] certificateChain = // byte array of PEM encoded cert chain
-byte[] signature = // byte array of artifact signature
-var keylessSignature = 
-    KeylessSignature.builder()
-        .signature(signature)
-        .certPath(Certificates.fromPemChain(certPath))
-        .digest(digest)
-        .build();
-```
-
 
 ##### Configure verification options
 ```java
-var verificationOptions = 
+// add certificate policy to verify the identity of the signer
+VerificationOptions verificationOptions =
     VerificationOptions.builder()
-        // add certificate policy to verify the identity of the signer
         .addCertificateIdentities(
             CertificateIdentity.builder()
                 .issuer("https://accounts.example.com"))
@@ -78,15 +51,10 @@ var verificationOptions =
 
 ##### Do verification
 ```java
-var artifact = // java.nio.Path to artifact file
+Path artifact = // java.nio.Path to artifact file
 try {
   var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
-  verifier.verify(
-      artifact,
-      KeylessVerificationRequest.builder()
-          .keylessSignature(keylessSignature)
-          .verificationOptions(verificationOptions)
-          .build());
+  verifier.verify(artifact, bundle, verificationOptions);
   // verification passed!
 } catch (KeylessVerificationException e) {
   // verification failed
