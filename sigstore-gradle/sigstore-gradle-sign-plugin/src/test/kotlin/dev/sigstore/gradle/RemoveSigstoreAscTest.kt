@@ -88,7 +88,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
 
             # By default, dev.sigstore.sign asks Gradle to avoid signing .sigstore.json as
             # .sigstore.json.asc This is an opt-out hatch for those who need .sigstore.json.asc
-            dev.sigstore.sign.remove.sigstore.asc=false
+            dev.sigstore.sign.remove.sigstore.json.asc=false
             """.trimIndent()
         )
         prepare(case.gradle.version, "publishAllPublicationsToTmpRepository", "-s")

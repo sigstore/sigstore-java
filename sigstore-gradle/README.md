@@ -134,7 +134,7 @@ Provides `SigstoreSignFilesTask` task for signing files in Sigstore.
 The plugin adds no tasks by default.
 
 Properties:
-* `dev.sigstore.sign.remove.sigstore.asc` (since 0.6.0, default: `true`). Removes `.sigstore.json.asc` files from the publication.
+* `dev.sigstore.sign.remove.sigstore.json.asc` (since 0.6.0, default: `true`). Removes `.sigstore.json.asc` files from the publication.
   Sonatype OSSRH supports publishing `.sigstore.json` signatures, and it does not require `.sigstore.json.asc` files, so
   `dev.sigstore.sign` plugin removes them by default. If you need to sign all the files, set this property to `false`.
 
