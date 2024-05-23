@@ -85,7 +85,7 @@ public class KeylessSignerTest {
 
   @Test
   public void sign_file() throws Exception {
-    Assertions.assertEquals(signingResults.get(0), signer.signFile2(artifacts.get(0)));
+    Assertions.assertEquals(signingResults.get(0), signer.signFile(artifacts.get(0)));
   }
 
   @Test

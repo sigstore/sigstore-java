@@ -16,7 +16,6 @@
 package dev.sigstore.cli;
 
 import static com.google.common.io.Files.asByteSource;
-import static com.google.common.io.Files.newReader;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.KeylessVerifier;
@@ -114,7 +113,8 @@ public class Verify implements Callable<Integer> {
                   fetcher.getEntryFromRekor(digest, Certificates.getLeaf(certPath), signature))
               .build();
     } else {
-      bundle = Bundle.from(newReader(signatureFiles.bundleFile.toFile(), StandardCharsets.UTF_8));
+      bundle =
+          Bundle.from(Files.newBufferedReader(signatureFiles.bundleFile, StandardCharsets.UTF_8));
     }
 
     var verificationOptionsBuilder = VerificationOptions.builder();

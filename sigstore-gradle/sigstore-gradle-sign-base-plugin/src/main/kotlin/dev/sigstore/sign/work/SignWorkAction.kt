@@ -55,7 +55,7 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
             }.build()
         }
 
-        val result = signer.signFile2(inputFile.toPath())
+        val result = signer.signFile(inputFile.toPath())
         val bundleJson = result.toJson()
         parameters.outputSignature.get().asFile.writeText(bundleJson)
     }

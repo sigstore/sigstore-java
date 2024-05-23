@@ -16,7 +16,6 @@
 package dev.sigstore.bundle;
 
 import com.google.common.base.Preconditions;
-import dev.sigstore.KeylessSignature;
 import dev.sigstore.rekor.client.RekorEntry;
 import java.io.Reader;
 import java.security.cert.CertPath;
@@ -155,46 +154,5 @@ public abstract class Bundle {
   @Lazy
   public String toJson() {
     return BundleWriter.writeBundle(this);
-  }
-
-  /** Compat method to convert from keyless signature. Don't use, will be removed. */
-  public static Bundle from(KeylessSignature keylessSignature) {
-    var sig =
-        ImmutableMessageSignature.builder()
-            .messageDigest(
-                ImmutableMessageDigest.builder()
-                    .hashAlgorithm(HashAlgorithm.SHA2_256)
-                    .digest(keylessSignature.getDigest())
-                    .build())
-            .signature(keylessSignature.getSignature())
-            .build();
-
-    return ImmutableBundle.builder()
-        .messageSignature(sig)
-        .addEntries(keylessSignature.getEntry().get())
-        .certPath(keylessSignature.getCertPath())
-        .build();
-  }
-
-  /** Compat method to convert to keyless signature. Don't use, will be removed. */
-  @Lazy
-  public KeylessSignature toKeylessSignature() {
-    if (getDSSESignature().isPresent()) {
-      throw new IllegalStateException("This client can't process bundles with DSSE signatures.");
-    }
-    if (getTimestamps().size() >= 1) {
-      throw new IllegalStateException("This client can't process bundles with RFC3161 Timestamps");
-    }
-    var builder =
-        KeylessSignature.builder()
-            .certPath(getCertPath())
-            .signature(getMessageSignature().get().getSignature())
-            .entry(getEntries().get(0));
-    if (getMessageSignature().get().getMessageDigest().isPresent()) {
-      builder.digest(getMessageSignature().get().getMessageDigest().get().getDigest());
-    } else {
-      builder.digest();
-    }
-    return builder.build();
   }
 }

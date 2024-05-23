@@ -65,7 +65,7 @@ public class Sign implements Callable<Integer> {
       signerBuilder.oidcClients(OidcClients.of(new TokenStringOidcClient(identityToken)));
     }
     var signer = signerBuilder.build();
-    var bundle = signer.signFile2(artifact);
+    var bundle = signer.signFile(artifact);
     if (signatureFiles.sigAndCert != null) {
       Files.write(
           signatureFiles.sigAndCert.signatureFile,

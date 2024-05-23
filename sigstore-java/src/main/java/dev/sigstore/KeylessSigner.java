@@ -445,23 +445,21 @@ public class KeylessSigner implements AutoCloseable {
   }
 
   /**
-   * Convenience wrapper around {@link #sign(List)} to accept a single file This is a compat method
-   * and will be switched out with signFile2
-   *
-   * @param artifact the artifacts to sign.
-   * @return a keyless singing results.
-   */
-  @CheckReturnValue
-  public KeylessSignature signFile(Path artifact) throws KeylessSignerException {
-    return signFiles(List.of(artifact)).get(artifact).toKeylessSignature();
-  }
-
-  /**
-   * Convenience wrapper around {@link #sign(List)} to accept a signe file
+   * Convenience wrapper around {@link #sign(List)} to accept a single file
    *
    * @param artifact the artifacts to sign
    * @return a sigstore bundle
    */
+  @CheckReturnValue
+  public Bundle signFile(Path artifact) throws KeylessSignerException {
+    return signFiles(List.of(artifact)).get(artifact);
+  }
+
+  /**
+   * Convenience wrapper around {@link #sign(List)} to accept a single file Compat - to be removed
+   * before 1.0.0
+   */
+  @Deprecated
   public Bundle signFile2(Path artifact) throws KeylessSignerException {
     return signFiles(List.of(artifact)).get(artifact);
   }
