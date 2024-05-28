@@ -19,6 +19,7 @@ import static com.google.common.io.Files.asByteSource;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.KeylessVerifier;
+import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.VerificationOptions;
 import dev.sigstore.VerificationOptions.CertificateIdentity;
 import dev.sigstore.bundle.Bundle;
@@ -27,6 +28,9 @@ import dev.sigstore.bundle.Bundle.MessageSignature;
 import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.rekor.client.RekorEntryFetcher;
+import dev.sigstore.tuf.RootProvider;
+import dev.sigstore.tuf.SigstoreTufClient;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -72,6 +76,18 @@ public class Verify implements Callable<Integer> {
         description = "an alternative to the TUF managed sigstore public good trusted root",
         required = false)
     Path trustedRoot;
+
+    @Option(
+        names = {"--public-good-with-tuf-url-override"},
+        description = "use public good with a tuf remote repository override",
+        required = false)
+    String publicGoodWithTufUrlOverride;
+
+    @Option(
+        names = {"--staging-with-tuf-url-override"},
+        description = "use staging with a tuf remote repository override",
+        required = false)
+    String stagingWithTufUrlOverride;
   }
 
   static class Policy {
@@ -127,12 +143,41 @@ public class Verify implements Callable<Integer> {
     }
     var verificationOptions = verificationOptionsBuilder.build();
 
-    var verifier =
-        target == null
-            ? new KeylessVerifier.Builder().sigstorePublicDefaults().build()
-            : target.staging
-                ? new KeylessVerifier.Builder().sigstoreStagingDefaults().build()
-                : new KeylessVerifier.Builder().fromTrustedRoot(target.trustedRoot).build();
+    KeylessVerifier verifier;
+    if (target == null) {
+      verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
+    } else if (target.staging) {
+      verifier = new KeylessVerifier.Builder().sigstoreStagingDefaults().build();
+    } else if (target.trustedRoot != null) {
+      verifier =
+          new KeylessVerifier.Builder()
+              .trustedRootProvider(TrustedRootProvider.from(target.trustedRoot))
+              .build();
+    } else if (target.publicGoodWithTufUrlOverride != null) {
+      var tufClientBuilder =
+          SigstoreTufClient.builder()
+              .usePublicGoodInstance()
+              .tufMirror(
+                  new URL(target.publicGoodWithTufUrlOverride),
+                  RootProvider.fromResource(SigstoreTufClient.PUBLIC_GOOD_ROOT_RESOURCE));
+      verifier =
+          KeylessVerifier.builder()
+              .trustedRootProvider(TrustedRootProvider.from(tufClientBuilder))
+              .build();
+    } else if (target.stagingWithTufUrlOverride != null) {
+      var tufClientBuilder =
+          SigstoreTufClient.builder()
+              .useStagingInstance()
+              .tufMirror(
+                  new URL(target.stagingWithTufUrlOverride),
+                  RootProvider.fromResource(SigstoreTufClient.STAGING_ROOT_RESOURCE));
+      verifier =
+          KeylessVerifier.builder()
+              .trustedRootProvider(TrustedRootProvider.from(tufClientBuilder))
+              .build();
+    } else {
+      throw new IllegalStateException("Unable to initialize verifier");
+    }
     verifier.verify(artifact, bundle, verificationOptions);
     return 0;
   }

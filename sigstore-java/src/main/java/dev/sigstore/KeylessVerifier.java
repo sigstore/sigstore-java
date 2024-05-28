@@ -81,8 +81,8 @@ public class KeylessVerifier {
       return this;
     }
 
-    public Builder fromTrustedRoot(Path trustedRoot) {
-      trustedRootProvider = TrustedRootProvider.from(trustedRoot);
+    public Builder trustedRootProvider(TrustedRootProvider trustedRootProvider) {
+      this.trustedRootProvider = trustedRootProvider;
       return this;
     }
   }

@@ -16,8 +16,12 @@
 package dev.sigstore.cli;
 
 import dev.sigstore.KeylessSigner;
+import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.OidcClients;
+import dev.sigstore.tuf.RootProvider;
+import dev.sigstore.tuf.SigstoreTufClient;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,12 +44,29 @@ public class Sign implements Callable<Integer> {
   @ArgGroup(multiplicity = "1", exclusive = true)
   SignatureFiles signatureFiles;
 
-  @Option(
-      names = {"--staging"},
-      description = "test against staging",
-      required = false,
-      defaultValue = "false")
-  Boolean staging;
+  @ArgGroup(multiplicity = "0..1", exclusive = true)
+  Verify.Target target;
+
+  static class Target {
+    @Option(
+        names = {"--staging"},
+        description = "test against staging",
+        required = false,
+        defaultValue = "false")
+    Boolean staging;
+
+    @Option(
+        names = {"--public-good-with-tuf-url-override"},
+        description = "use public good with a tuf remote repository override",
+        required = false)
+    String publicGoodWithTufUrlOverride;
+
+    @Option(
+        names = {"--staging-with-tuf-url-override"},
+        description = "use staging with a tuf remote repository override",
+        required = false)
+    String stagingWithTufUrlOverride;
+  }
 
   @Option(
       names = {"--identity-token"},
@@ -55,10 +76,36 @@ public class Sign implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    var signerBuilder =
-        staging
-            ? KeylessSigner.builder().sigstoreStagingDefaults()
-            : KeylessSigner.builder().sigstorePublicDefaults();
+    KeylessSigner.Builder signerBuilder;
+    if (target == null) {
+      signerBuilder = new KeylessSigner.Builder().sigstorePublicDefaults();
+    } else if (target.staging) {
+      signerBuilder = new KeylessSigner.Builder().sigstoreStagingDefaults();
+    } else if (target.publicGoodWithTufUrlOverride != null) {
+      var tufClientBuilder =
+          SigstoreTufClient.builder()
+              .usePublicGoodInstance()
+              .tufMirror(
+                  new URL(target.publicGoodWithTufUrlOverride),
+                  RootProvider.fromResource(SigstoreTufClient.PUBLIC_GOOD_ROOT_RESOURCE));
+      signerBuilder =
+          KeylessSigner.builder()
+              .sigstorePublicDefaults()
+              .trustedRootProvider(TrustedRootProvider.from(tufClientBuilder));
+    } else if (target.stagingWithTufUrlOverride != null) {
+      var tufClientBuilder =
+          SigstoreTufClient.builder()
+              .useStagingInstance()
+              .tufMirror(
+                  new URL(target.stagingWithTufUrlOverride),
+                  RootProvider.fromResource(SigstoreTufClient.STAGING_ROOT_RESOURCE));
+      signerBuilder =
+          KeylessSigner.builder()
+              .sigstoreStagingDefaults()
+              .trustedRootProvider(TrustedRootProvider.from(tufClientBuilder));
+    } else {
+      throw new IllegalStateException("Unable to initialize signer");
+    }
     if (identityToken != null) {
       // If we've explicitly provided an identity token, customize the signer to only use the token
       // string OIDC client.
