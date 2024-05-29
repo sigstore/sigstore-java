@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-public class FulcioClientTest {
+public class FulcioClientGrpcTest {
 
   @Test
   @ExtendWith({FakeCTLogServer.class, MockOAuth2ServerExtension.class, FulcioWrapper.class})
@@ -48,7 +48,7 @@ public class FulcioClientTest {
 
     // ask fulcio for a signing cert
     var client =
-        FulcioClient.builder()
+        FulcioClientGrpc.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
             .setUri(fulcioWrapper.getGrpcURI2())
             .build();
@@ -78,7 +78,7 @@ public class FulcioClientTest {
 
     // ask fulcio for a signing cert
     var client =
-        FulcioClient.builder()
+        FulcioClientGrpc.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
             .setUri(fulcioWrapper.getGrpcURI2())
             .build();
@@ -94,7 +94,7 @@ public class FulcioClientTest {
             Resources.toString(
                 Resources.getResource("dev/sigstore/samples/fulcio-response/valid/certWithSct.pem"),
                 StandardCharsets.UTF_8));
-    var signingCert = FulcioClient.builder().build().decodeCerts(certs);
+    var signingCert = FulcioClientGrpc.builder().build().decodeCerts(certs);
     Assertions.assertTrue(
         Certificates.getEmbeddedSCTs(Certificates.getLeaf(signingCert)).isPresent());
     Assertions.assertEquals(3, signingCert.getCertificates().size());
