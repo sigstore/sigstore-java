@@ -72,8 +72,8 @@ public class RekorEntryFetcher {
         trustedRoot.getTLogs().stream()
             .map(TransparencyLog::getBaseUrl)
             .distinct()
-            .map(uri -> RekorClient.builder().setUri(uri).build())
-            .collect(Collectors.toList());
+            .map(uri -> RekorClientHttp.builder().setUri(uri).build())
+            .collect(Collectors.<RekorClient>toList());
     return new RekorEntryFetcher(rekorClients);
   }
 

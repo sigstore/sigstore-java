@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-public class RekorClientTest {
+public class RekorClientHttpTest {
 
   private static RekorClient client;
   private static HashedRekordRequest req;
@@ -49,7 +49,7 @@ public class RekorClientTest {
   @BeforeAll
   public static void setupClient() throws Exception {
     // this tests directly against rekor in prod, it's a bit hard to bring up a rekor instance
-    client = RekorClient.builder().build();
+    client = RekorClientHttp.builder().build();
     req = createdRekorRequest();
     resp = client.putEntry(req);
   }

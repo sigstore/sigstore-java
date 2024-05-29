@@ -31,6 +31,7 @@ import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.fulcio.client.CertificateRequest;
 import dev.sigstore.fulcio.client.FulcioClient;
+import dev.sigstore.fulcio.client.FulcioClientGrpc;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
@@ -39,6 +40,7 @@ import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorClient;
+import dev.sigstore.rekor.client.RekorClientHttp;
 import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
@@ -216,9 +218,9 @@ public class KeylessSigner implements AutoCloseable {
       Preconditions.checkNotNull(oidcIdentities);
       Preconditions.checkNotNull(signer);
       Preconditions.checkNotNull(minSigningCertificateLifetime);
-      var fulcioClient = FulcioClient.builder().setUri(fulcioUri).build();
+      var fulcioClient = FulcioClientGrpc.builder().setUri(fulcioUri).build();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
-      var rekorClient = RekorClient.builder().setUri(rekorUri).build();
+      var rekorClient = RekorClientHttp.builder().setUri(rekorUri).build();
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
       return new KeylessSigner(
           fulcioClient,
