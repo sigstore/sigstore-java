@@ -158,8 +158,8 @@ public class KeylessSigner implements AutoCloseable {
     }
 
     @CanIgnoreReturnValue
-    public Builder trustedRoot(Path trustedRoot) {
-      trustedRootProvider = TrustedRootProvider.from(trustedRoot);
+    public Builder trustedRootProvider(TrustedRootProvider trustedRootProvider) {
+      this.trustedRootProvider = trustedRootProvider;
       return this;
     }
 

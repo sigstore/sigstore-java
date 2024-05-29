@@ -41,6 +41,10 @@ public class SigstoreTufClient {
 
   @VisibleForTesting static final String TRUST_ROOT_FILENAME = "trusted_root.json";
 
+  public static final String PUBLIC_GOOD_ROOT_RESOURCE =
+      "dev/sigstore/tuf/sigstore-tuf-root/root.json";
+  public static final String STAGING_ROOT_RESOURCE = "dev/sigstore/tuf/tuf-root-staging/root.json";
+
   private final Updater updater;
   private Instant lastUpdate;
   private SigstoreTrustedRoot sigstoreTrustedRoot;
@@ -72,7 +76,7 @@ public class SigstoreTufClient {
       try {
         tufMirror(
             new URL("https://tuf-repo-cdn.sigstore.dev"),
-            RootProvider.fromResource("dev/sigstore/tuf/sigstore-tuf-root/root.json"));
+            RootProvider.fromResource(PUBLIC_GOOD_ROOT_RESOURCE));
       } catch (MalformedURLException e) {
         throw new AssertionError(e);
       }
@@ -87,7 +91,7 @@ public class SigstoreTufClient {
       try {
         tufMirror(
             new URL("https://tuf-repo-cdn.sigstage.dev"),
-            RootProvider.fromResource("dev/sigstore/tuf/tuf-root-staging/root.json"));
+            RootProvider.fromResource(STAGING_ROOT_RESOURCE));
       } catch (MalformedURLException e) {
         throw new AssertionError(e);
       }
