@@ -16,12 +16,14 @@
 package dev.sigstore;
 
 import com.google.api.client.util.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
+import dev.sigstore.VerificationOptions.CertificateMatcher;
+import dev.sigstore.VerificationOptions.UncheckedCertificateException;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
-import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.rekor.client.RekorEntry;
@@ -37,13 +39,17 @@ import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
 public class KeylessVerifier {
+
   private final FulcioVerifier fulcioVerifier;
   private final RekorVerifier rekorVerifier;
 
@@ -57,6 +63,7 @@ public class KeylessVerifier {
   }
 
   public static class Builder {
+
     private TrustedRootProvider trustedRootProvider;
 
     public KeylessVerifier build()
@@ -162,15 +169,7 @@ public class KeylessVerifier {
     }
 
     // verify the certificate identity if options are present
-    if (options.getCertificateIdentities().size() > 0) {
-      try {
-        new FulcioCertificateVerifier()
-            .verifyCertificateMatches(leafCert, options.getCertificateIdentities());
-      } catch (FulcioVerificationException fve) {
-        throw new KeylessVerificationException(
-            "Could not verify certificate identities: " + fve.getMessage(), fve);
-      }
-    }
+    checkCertificateMatchers(leafCert, options.getCertificateMatchers());
 
     var signature = messageSignature.getSignature();
 
@@ -206,6 +205,22 @@ public class KeylessVerifier {
     } catch (SignatureException ex) {
       throw new KeylessVerificationException(
           "Signature could not be processed: " + ex.getMessage(), ex);
+    }
+  }
+
+  @VisibleForTesting
+  void checkCertificateMatchers(X509Certificate cert, List<CertificateMatcher> matchers)
+      throws KeylessVerificationException {
+    try {
+      if (matchers.size() > 0 && matchers.stream().noneMatch(matcher -> matcher.test(cert))) {
+        var matcherSpec =
+            matchers.stream().map(Object::toString).collect(Collectors.joining(",", "[", "]"));
+        throw new KeylessVerificationException(
+            "No provided certificate identities matched values in certificate: " + matcherSpec);
+      }
+    } catch (UncheckedCertificateException ce) {
+      throw new KeylessVerificationException(
+          "Could not verify certificate identities: " + ce.getMessage());
     }
   }
 }

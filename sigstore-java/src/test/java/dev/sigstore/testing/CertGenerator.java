@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
@@ -102,9 +103,17 @@ public class CertGenerator {
         false,
         "https://fakeaccounts.test.com".getBytes(StandardCharsets.UTF_8));
     certificate.addExtension(
+        new ASN1ObjectIdentifier("1.3.6.1.4.1.57264.1.8"),
+        false,
+        new DERUTF8String("https://fakeaccounts.test.com").getEncoded());
+    certificate.addExtension(
         new ASN1ObjectIdentifier(("1.3.6.1.4.1.99999.42.42")),
         false,
         "test value".getBytes(StandardCharsets.UTF_8));
+    certificate.addExtension(
+        new ASN1ObjectIdentifier(("1.3.6.1.4.1.99999.42.43")),
+        false,
+        new DERUTF8String("test value der").getEncoded());
 
     // sign cert
     ContentSigner signer =

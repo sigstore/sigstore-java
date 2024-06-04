@@ -21,13 +21,14 @@ import com.google.common.hash.Hashing;
 import dev.sigstore.KeylessVerifier;
 import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.VerificationOptions;
-import dev.sigstore.VerificationOptions.CertificateIdentity;
+import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.Bundle.HashAlgorithm;
 import dev.sigstore.bundle.Bundle.MessageSignature;
 import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.rekor.client.RekorEntryFetcher;
+import dev.sigstore.strings.StringMatcher;
 import dev.sigstore.tuf.RootProvider;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.net.URL;
@@ -135,10 +136,10 @@ public class Verify implements Callable<Integer> {
 
     var verificationOptionsBuilder = VerificationOptions.builder();
     if (policy != null) {
-      verificationOptionsBuilder.addCertificateIdentities(
-          CertificateIdentity.builder()
-              .issuer(policy.certificateIssuer)
-              .subjectAlternativeName(policy.certificateSan)
+      verificationOptionsBuilder.addCertificateMatchers(
+          CertificateMatcher.fulcio()
+              .issuer(StringMatcher.string(policy.certificateIssuer))
+              .subjectAlternativeName(StringMatcher.string(policy.certificateSan))
               .build());
     }
     var verificationOptions = verificationOptionsBuilder.build();
