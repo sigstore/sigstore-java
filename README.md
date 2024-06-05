@@ -22,7 +22,7 @@ message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL9
 Path testArtifact = Paths.get("path/to/my/file.jar")
 
 var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
-Bundle result = signer.sign(testArtifact);
+Bundle result = signer.signFile(testArtifact);
 
 // sigstore bundle format (serialized as <artifact>.sigstore.json)
 String bundleJson = result.toJson();
@@ -53,7 +53,7 @@ VerificationOptions verificationOptions =
 ```java
 Path artifact = // java.nio.Path to artifact file
 try {
-  var verifier = new KeylessVerifier.Builder().sigstorePublicDefaults().build();
+  var verifier = new KeylessVerifier.builder().sigstorePublicDefaults().build();
   verifier.verify(artifact, bundle, verificationOptions);
   // verification passed!
 } catch (KeylessVerificationException e) {
@@ -63,7 +63,9 @@ try {
 
 ### Exploring the API
 
-You could browse Javadoc at https://javadoc.io/doc/dev.sigstore/sigstore-java.
+The public stable API is limited to `dev.sigstore.KeylessSigner`(https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessSigner.html) and `dev.sigstore.KeylessVerifier`(https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessVerifier.html) and the classes exposed by those APIs. Other classes in the library are subject to change without notice.
+
+You can browse Javadoc at https://javadoc.io/doc/dev.sigstore/sigstore-java.
 
 To build javadoc from the sources, use the following command:
 
