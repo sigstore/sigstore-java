@@ -15,11 +15,10 @@
  */
 package dev.sigstore;
 
-import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.client.json.webtoken.JsonWebSignature;
 import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.Bundle;
-import dev.sigstore.oidc.client.GithubActionsOidcClient;
+import dev.sigstore.oidc.client.OidcTokenMatcher;
+import dev.sigstore.strings.StringMatcher;
 import dev.sigstore.testing.matchers.ByteArrayListMatcher;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
@@ -104,12 +103,15 @@ public class KeylessSignerTest {
 
   @Test
   @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
-  // this test will only pass on the github.com/sigstore/sigstore-java repository
   public void sign_failGithubOidcCheck() throws Exception {
     var signer =
         KeylessSigner.builder()
             .sigstorePublicDefaults()
-            .allowedOidcIdentities(List.of(OidcIdentity.of("goose@goose.com", "goose.com")))
+            .allowedOidcIdentities(
+                List.of(
+                    OidcTokenMatcher.of(
+                        StringMatcher.string("goose@goose.com"),
+                        StringMatcher.string("goose.com"))))
             .build();
     var ex =
         Assertions.assertThrows(
@@ -127,20 +129,19 @@ public class KeylessSignerTest {
   @EnabledIfOidcExists(provider = OidcProviderType.GITHUB)
   // this test will only pass on the github.com/sigstore/sigstore-java repository
   public void sign_passGithubOidcCheck() throws Exception {
-    // silly way to get the right oidc identity to make sure our simple matcher works
-    var jws =
-        JsonWebSignature.parse(
-            new GsonFactory(),
-            GithubActionsOidcClient.builder().build().getIDToken(System.getenv()).getIdToken());
-    var expectedGithubSubject = jws.getPayload().getSubject();
     var signer =
         KeylessSigner.builder()
             .sigstorePublicDefaults()
             .allowedOidcIdentities(
                 List.of(
-                    OidcIdentity.of(
-                        expectedGithubSubject, "https://token.actions.githubusercontent.com"),
-                    OidcIdentity.of("some@other.com", "https://accounts.other.com")))
+                    OidcTokenMatcher.of(
+                        // this is bad matching, do not use it as an example of what to do in a
+                        // production environment
+                        StringMatcher.regex(".*sigstore/sigstore-java.*"),
+                        StringMatcher.string("https://token.actions.githubusercontent.com")),
+                    OidcTokenMatcher.of(
+                        StringMatcher.string("some@other.com"),
+                        StringMatcher.string("https://accounts.other.com"))))
             .build();
     Assertions.assertDoesNotThrow(
         () ->

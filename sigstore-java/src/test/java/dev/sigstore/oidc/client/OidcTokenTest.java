@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Sigstore Authors.
+ * Copyright 2024 The Sigstore Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,20 @@
  */
 package dev.sigstore.oidc.client;
 
-import org.immutables.value.Value;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-/** A token from a provider with both openid and email scope claims. */
-@Value.Immutable
-public interface OidcToken {
-  /** The subject or email claim from the token to include in the SAN on the certificate. */
-  String getSubjectAlternativeName();
+public class OidcTokenTest {
 
-  /** The issuer of the id token. */
-  String getIssuer();
-
-  /** The full oidc token obtained from the provider. */
-  @Value.Redacted
-  String getIdToken();
+  @Test
+  public void test_redacted() {
+    var testToken =
+        ImmutableOidcToken.builder()
+            .issuer("issuer")
+            .idToken("secret")
+            .subjectAlternativeName("name")
+            .build();
+    Assertions.assertEquals(
+        "OidcToken{subjectAlternativeName=name, issuer=issuer}", testToken.toString());
+  }
 }

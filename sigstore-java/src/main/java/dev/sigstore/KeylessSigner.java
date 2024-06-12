@@ -38,6 +38,7 @@ import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
+import dev.sigstore.oidc.client.OidcTokenMatcher;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorClient;
 import dev.sigstore.rekor.client.RekorClientHttp;
@@ -86,7 +87,7 @@ public class KeylessSigner implements AutoCloseable {
   private final RekorClient rekorClient;
   private final RekorVerifier rekorVerifier;
   private final OidcClients oidcClients;
-  private final List<OidcIdentity> oidcIdentities;
+  private final List<OidcTokenMatcher> oidcIdentities;
   private final Signer signer;
   private final Duration minSigningCertificateLifetime;
 
@@ -109,7 +110,7 @@ public class KeylessSigner implements AutoCloseable {
       RekorClient rekorClient,
       RekorVerifier rekorVerifier,
       OidcClients oidcClients,
-      List<OidcIdentity> oidcIdentities,
+      List<OidcTokenMatcher> oidcIdentities,
       Signer signer,
       Duration minSigningCertificateLifetime) {
     this.fulcioClient = fulcioClient;
@@ -141,7 +142,7 @@ public class KeylessSigner implements AutoCloseable {
   public static class Builder {
     private TrustedRootProvider trustedRootProvider;
     private OidcClients oidcClients;
-    private List<OidcIdentity> oidcIdentities = Collections.emptyList();
+    private List<OidcTokenMatcher> oidcIdentities = Collections.emptyList();
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
     private URI fulcioUri;
@@ -177,7 +178,7 @@ public class KeylessSigner implements AutoCloseable {
      * null but can be an empty list and will allow all identities.
      */
     @CanIgnoreReturnValue
-    public Builder allowedOidcIdentities(List<OidcIdentity> oidcIdentities) {
+    public Builder allowedOidcIdentities(List<OidcTokenMatcher> oidcIdentities) {
       this.oidcIdentities = ImmutableList.copyOf(oidcIdentities);
       return this;
     }
@@ -378,12 +379,9 @@ public class KeylessSigner implements AutoCloseable {
 
       // check if we have an allow list and if so, ensure the provided token is in there
       if (!oidcIdentities.isEmpty()) {
-        var obtainedToken = OidcIdentity.from(tokenInfo);
-        if (!oidcIdentities.contains(OidcIdentity.from(tokenInfo))) {
+        if (oidcIdentities.stream().noneMatch(id -> id.test(tokenInfo))) {
           throw new KeylessSignerException(
-              "Obtained Oidc Token "
-                  + obtainedToken
-                  + " does not match any identities in allow list");
+              "Obtained Oidc Token " + tokenInfo + " does not match any identities in allow list");
         }
       }
 
