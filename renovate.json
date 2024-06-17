@@ -15,7 +15,7 @@
       "groupName": "bouncycastle"
     },
     {
-      "matchPackagePrefixes": ["io.grpc", "com.google.protobuf"],
+      "matchPackagePrefixes": ["io.grpc", "com.google.protobuf", "com.google.api.grpc"],
       "groupName": "protobuf_grpc"
     },
     {
