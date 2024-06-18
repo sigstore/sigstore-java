@@ -3,6 +3,7 @@ import com.google.protobuf.gradle.id
 plugins {
     id("build-logic.java-published-library")
     id("build-logic.test-junit5")
+    id("build-logic.build-info")
     id("org.jsonschema2dataclass") version "5.0.0"
     id("com.google.protobuf") version "0.9.4"
 }
@@ -119,4 +120,8 @@ jsonSchema2Pojo {
 // TODO: keep until these code gen plugins explicitly declare dependencies
 tasks.named("sourcesJar") {
     dependsOn("generateJsonSchema2DataClassConfigRekor")
+}
+
+tasks.generateBuildInfo {
+    packageName.set("dev.sigstore.buildinfo")
 }

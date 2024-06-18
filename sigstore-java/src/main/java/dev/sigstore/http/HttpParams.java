@@ -16,6 +16,7 @@
 package dev.sigstore.http;
 
 import com.google.api.client.util.Preconditions;
+import dev.sigstore.buildinfo.BuildInfo;
 import org.immutables.value.Value;
 
 /**
@@ -24,7 +25,7 @@ import org.immutables.value.Value;
  */
 @Value.Immutable
 public abstract class HttpParams {
-  static final String DEFAULT_USER_AGENT = "sigstoreJavaClient/0.0.1";
+  static final String DEFAULT_USER_AGENT = "sigstoreJavaClient/" + BuildInfo.VERSION;
   static final int DEFAULT_TIMEOUT = 60;
   static final boolean DEFAULT_ALLOW_INSECURE_CONNECTIONS = false;
 
