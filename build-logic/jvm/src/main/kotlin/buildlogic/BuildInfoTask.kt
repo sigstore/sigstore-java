@@ -24,12 +24,12 @@ abstract class BuildInfoTask : DefaultTask() {
     @TaskAction
     fun run() {
         val output = """
-            |package ${packageName.get()};
-            |
-            |public class BuildInfo {
-            |  public static final String VERSION = "${version.get()}";
-            |}
-        """.trimMargin()
+            package ${packageName.get()};
+
+            public class BuildInfo {
+              public static final String VERSION = "${version.get()}";
+            }
+        """.trimIndent()
         val outputPath = genDir.file(packageName.get().replace(".", "/").plus("/BuildInfo.java")).get().asFile
         outputPath.parentFile.mkdirs()
         outputPath.writeText(output)
