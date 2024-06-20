@@ -22,6 +22,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.*;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -207,5 +208,10 @@ public class Certificates {
 
   public static X509Certificate getLeaf(CertPath certPath) {
     return (X509Certificate) certPath.getCertificates().get(0);
+  }
+
+  public static long validity(X509Certificate certificate, ChronoUnit unit) {
+    return unit.between(
+        certificate.getNotAfter().toInstant(), certificate.getNotBefore().toInstant());
   }
 }

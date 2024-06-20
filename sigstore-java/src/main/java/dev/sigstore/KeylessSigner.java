@@ -64,7 +64,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import javax.annotation.Nullable;
 
 /**
  * A full sigstore keyless signing flow.
@@ -93,14 +93,16 @@ public class KeylessSigner implements AutoCloseable {
 
   /** The code signing certificate from Fulcio. */
   @GuardedBy("lock")
-  private @Nullable CertPath signingCert;
+  @Nullable
+  private CertPath signingCert;
 
   /**
    * Representation {@link #signingCert} in PEM bytes format. This is used to avoid serializing the
    * certificate for each use.
    */
   @GuardedBy("lock")
-  private byte @Nullable [] signingCertPemBytes;
+  @Nullable
+  private byte[] signingCertPemBytes;
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
