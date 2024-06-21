@@ -15,26 +15,38 @@
  */
 package dev.sigstore;
 
+import dev.sigstore.fulcio.client.FulcioCertificateMatcher;
+import dev.sigstore.fulcio.client.ImmutableFulcioCertificateMatcher;
+import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Predicate;
 import org.immutables.value.Value.Immutable;
 
 @Immutable(singleton = true)
 public interface VerificationOptions {
 
   /** An allow list of certificate identities to match with. */
-  List<CertificateIdentity> getCertificateIdentities();
+  List<CertificateMatcher> getCertificateMatchers();
 
-  @Immutable
-  interface CertificateIdentity {
-    String getIssuer();
+  /**
+   * An interface for allowing matching of certificates. Use {@link #fulcio()} to instantiate the
+   * default {@link FulcioCertificateMatcher} implementation. Custom implementations may throw
+   * {@link UncheckedCertificateException} if an error occurs processing the certificate on calls to
+   * {@link #test(X509Certificate)}. Any other runtime exception will not be handled.
+   */
+  interface CertificateMatcher extends Predicate<X509Certificate> {
+    @Override
+    boolean test(X509Certificate certificate) throws UncheckedCertificateException;
 
-    String getSubjectAlternativeName();
+    static ImmutableFulcioCertificateMatcher.Builder fulcio() {
+      return ImmutableFulcioCertificateMatcher.builder();
+    }
+  }
 
-    Map<String, String> getOther();
-
-    static ImmutableCertificateIdentity.Builder builder() {
-      return ImmutableCertificateIdentity.builder();
+  /** Exceptions thrown by implementations of {@link CertificateMatcher#test(X509Certificate)} */
+  class UncheckedCertificateException extends RuntimeException {
+    public UncheckedCertificateException(String message, Throwable cause) {
+      super(message, cause);
     }
   }
 

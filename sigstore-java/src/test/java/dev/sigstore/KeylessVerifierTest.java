@@ -15,11 +15,18 @@
  */
 package dev.sigstore;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
+import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.encryption.signers.Signers;
+import dev.sigstore.strings.StringMatcher;
+import dev.sigstore.testing.CertGenerator;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.cert.X509Certificate;
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -109,5 +116,58 @@ public class KeylessVerifierTest {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     verifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
+  }
+
+  @Test
+  public void verifyCertificateMatches_noneProvided() throws Exception {
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var certificate =
+        (X509Certificate) CertGenerator.newCert(Signers.newEcdsaSigner().getPublicKey());
+    Assertions.assertDoesNotThrow(() -> verifier.checkCertificateMatchers(certificate, List.of()));
+  }
+
+  @Test
+  public void verifyCertificateMatches_anyOf() throws Exception {
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var certificate =
+        (X509Certificate) CertGenerator.newCert(Signers.newEcdsaSigner().getPublicKey());
+    Assertions.assertDoesNotThrow(
+        () ->
+            verifier.checkCertificateMatchers(
+                certificate,
+                ImmutableList.of(
+                    CertificateMatcher.fulcio()
+                        .subjectAlternativeName(StringMatcher.string("not-match"))
+                        .issuer(StringMatcher.string("not-match"))
+                        .build(),
+                    CertificateMatcher.fulcio()
+                        .subjectAlternativeName(StringMatcher.string("test@test.com"))
+                        .issuer(StringMatcher.string("https://fakeaccounts.test.com"))
+                        .build())));
+  }
+
+  @Test
+  public void verifyCertificateMatches_noneMatch() throws Exception {
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var certificate =
+        (X509Certificate) CertGenerator.newCert(Signers.newEcdsaSigner().getPublicKey());
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () ->
+                verifier.checkCertificateMatchers(
+                    certificate,
+                    ImmutableList.of(
+                        CertificateMatcher.fulcio()
+                            .subjectAlternativeName(StringMatcher.string("not-match"))
+                            .issuer(StringMatcher.string("not-match"))
+                            .build(),
+                        CertificateMatcher.fulcio()
+                            .subjectAlternativeName(StringMatcher.string("not-match-again"))
+                            .issuer(StringMatcher.string("not-match-again"))
+                            .build())));
+    Assertions.assertEquals(
+        "No provided certificate identities matched values in certificate: [{issuer:'String: not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String: not-match-again'}]",
+        ex.getMessage());
   }
 }

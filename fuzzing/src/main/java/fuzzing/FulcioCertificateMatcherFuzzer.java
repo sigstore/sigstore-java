@@ -16,19 +16,20 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import dev.sigstore.VerificationOptions.CertificateIdentity;
-import dev.sigstore.fulcio.client.FulcioCertificateVerifier;
-import dev.sigstore.fulcio.client.FulcioVerificationException;
+import dev.sigstore.VerificationOptions.UncheckedCertificateException;
+import dev.sigstore.fulcio.client.FulcioCertificateMatcher;
+import dev.sigstore.fulcio.client.ImmutableFulcioCertificateMatcher;
+import dev.sigstore.strings.StringMatcher;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.List;
 
-public class FulcioCertificateVerifierFuzzer {
+public class FulcioCertificateMatcherFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     byte[] byteArray = data.consumeRemainingAsBytes();
-    String string = new String(byteArray, Charset.defaultCharset());
+    String san = new String(byteArray, Charset.defaultCharset());
+    String issuer = new String(byteArray, Charset.defaultCharset());
 
     X509Certificate certificate;
     try {
@@ -40,14 +41,14 @@ public class FulcioCertificateVerifierFuzzer {
     }
 
     try {
-      FulcioCertificateVerifier verifier = new FulcioCertificateVerifier();
-      List<CertificateIdentity> list =
-          List.of(
-              CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build(),
-              CertificateIdentity.builder().subjectAlternativeName(string).issuer(string).build());
+      FulcioCertificateMatcher matcher =
+          ImmutableFulcioCertificateMatcher.builder()
+              .subjectAlternativeName(StringMatcher.string(san))
+              .issuer(StringMatcher.string(issuer))
+              .build();
 
-      verifier.verifyCertificateMatches(certificate, list);
-    } catch (FulcioVerificationException e) {
+      matcher.test(certificate);
+    } catch (UncheckedCertificateException e) {
       // Known exception
     }
   }
