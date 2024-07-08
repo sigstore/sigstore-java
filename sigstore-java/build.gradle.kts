@@ -22,7 +22,7 @@ dependencies {
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
 
     protobuf("dev.sigstore:protobuf-specs:0.3.2")
-    protobuf("com.google.api.grpc:proto-google-common-protos:2.40.0")
+    protobuf("com.google.api.grpc:proto-google-common-protos:2.41.0")
 
     implementation(platform("com.google.protobuf:protobuf-bom:4.26.1"))
     implementation("com.google.protobuf:protobuf-java-util")
