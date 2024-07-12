@@ -8,5 +8,6 @@ include("sigstore-gradle:sigstore-gradle-sign-base-plugin")
 include("sigstore-gradle:sigstore-gradle-sign-plugin")
 include("sigstore-testkit")
 include("sigstore-cli")
+include("sigstore-maven-plugin")
 
 include("fuzzing")
