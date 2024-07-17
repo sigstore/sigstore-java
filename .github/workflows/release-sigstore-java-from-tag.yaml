@@ -1,4 +1,4 @@
-name: Release sigstore-java to Maven Central
+name: Release sigstore-java and sigstore-maven-plugin to Maven Central
 on:
   workflow_dispatch:
   # user is expected to use a tag as the branch to run the action on
@@ -51,7 +51,7 @@ jobs:
 
       - name: Build, Sign and Release to Maven Central
         run: |
-          ./gradlew clean :sigstore-java:publishMavenJavaPublicationToSonatypeRepository -Prelease
+          ./gradlew clean :sigstore-java:publishMavenJavaPublicationToSonatypeRepository :sigstore-maven-plugin:publishMavenJavaPublicationToSonatypeRepository -Prelease
         env:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.PGP_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.PGP_PASSPHRASE }}
