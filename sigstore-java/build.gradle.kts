@@ -21,14 +21,14 @@ dependencies {
 
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
 
+    // this requires inclusion of protos is src/main/proto
     protobuf("dev.sigstore:protobuf-specs:0.3.2")
-    protobuf("com.google.api.grpc:proto-google-common-protos:2.41.0")
 
-    implementation(platform("com.google.protobuf:protobuf-bom:4.26.1"))
+    implementation(platform("com.google.protobuf:protobuf-bom:4.27.2"))
     implementation("com.google.protobuf:protobuf-java-util")
 
     // grpc deps
-    implementation(platform("io.grpc:grpc-bom:1.63.0"))
+    implementation(platform("io.grpc:grpc-bom:1.64.0"))
     implementation("io.grpc:grpc-protobuf")
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
@@ -63,11 +63,11 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.26.1"
+        artifact = "com.google.protobuf:protoc:4.27.2"
     }
     plugins {
         id("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.63.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.64.0"
         }
     }
     generateProtoTasks {
