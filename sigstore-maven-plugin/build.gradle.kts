@@ -6,6 +6,8 @@ plugins {
     id("de.benediktritter.maven-plugin-development") version "0.4.3"
 }
 
+description = "A Maven plugin for signing with Sigstore"
+
 dependencies {
     compileOnly("org.apache.maven:maven-plugin-api:3.9.8")
     compileOnly("org.apache.maven:maven-core:3.9.8")
