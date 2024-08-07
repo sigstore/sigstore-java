@@ -17,7 +17,11 @@ package dev.sigstore.bundle;
 
 import com.google.common.base.Preconditions;
 import dev.sigstore.rekor.client.RekorEntry;
+import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.cert.CertPath;
 import java.util.List;
 import java.util.Optional;
@@ -147,8 +151,14 @@ public abstract class Bundle {
     byte[] getRfc3161Timestamp();
   }
 
+  /** Read a json formatted bundle. */
   public static Bundle from(Reader bundleJson) throws BundleParseException {
     return BundleReader.readBundle(bundleJson);
+  }
+
+  /** Read a json formatted bundle from a file. */
+  public static Bundle from(Path file, Charset cs) throws BundleParseException, IOException {
+    return BundleReader.readBundle(Files.newBufferedReader(file, cs));
   }
 
   @Lazy

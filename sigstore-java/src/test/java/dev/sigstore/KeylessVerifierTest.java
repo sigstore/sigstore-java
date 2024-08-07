@@ -119,6 +119,27 @@ public class KeylessVerifierTest {
   }
 
   @Test
+  public void verifyWithVerificationOptions() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.sigstore"),
+            StandardCharsets.UTF_8);
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    verifier.verify(
+        Path.of(artifact),
+        Bundle.from(new StringReader(bundleFile)),
+        VerificationOptions.builder()
+            .addCertificateMatchers(
+                CertificateMatcher.fulcio()
+                    .subjectAlternativeName(StringMatcher.string("appu@google.com"))
+                    .issuer(StringMatcher.string("https://accounts.google.com"))
+                    .build())
+            .build());
+  }
+
+  @Test
   public void verifyCertificateMatches_noneProvided() throws Exception {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     var certificate =

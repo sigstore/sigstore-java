@@ -130,8 +130,7 @@ public class Verify implements Callable<Integer> {
                   fetcher.getEntryFromRekor(digest, Certificates.getLeaf(certPath), signature))
               .build();
     } else {
-      bundle =
-          Bundle.from(Files.newBufferedReader(signatureFiles.bundleFile, StandardCharsets.UTF_8));
+      bundle = Bundle.from(signatureFiles.bundleFile, StandardCharsets.UTF_8);
     }
 
     var verificationOptionsBuilder = VerificationOptions.builder();
