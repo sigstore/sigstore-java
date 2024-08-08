@@ -1,8 +1,9 @@
-## sigstore-gradle
+[![Gradle Plugin Portal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/dev/sigstore/sigstore-gradle-sign-plugin/maven-metadata.xml.svg?color&label=gradle%20plugin%20portal)](https://plugins.gradle.org/plugin/dev.sigstore.sign/)
+
+# sigstore-gradle
 
 A Gradle plugin for signing artifacts with Sigstore.
 
-`dev.sigstore.sign` is available on the gradle plugin portal.
 Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto) JSON as the output format.
 
 ## Requirements
@@ -18,10 +19,13 @@ plugins {
     id("dev.sigstore.sign")
 }
 
-// It would automatically sign all Maven publications
-// By default, it would use GitHub Actions OIDC when available,
-// and it would resort to Web Browser OIDC otherwise.
+// Automatically sign all Maven publications, using GitHub Actions OIDC when available,
+// and browser based OIDC otherwise.
 ```
+
+### Outputs
+
+For each file to be published an associated `<filename>.sigstore.json` signature file will be generated
 
 ### GitHub Actions OIDC support
 
@@ -34,6 +38,7 @@ permissions:
 ```
 
 See [GitHub documentation](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-cloud-providers#adding-permissions-settings) for details.
+
 
 ## Full configuration
 

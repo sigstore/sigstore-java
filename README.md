@@ -5,15 +5,20 @@
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
-⚠️ This project is not ready for general-purpose use! ⚠️
+## Requirements
+* Java 11 (https://github.com/sigstore/sigstore-java requires Java 11)
+This project requires a minimum of Java 11
 
-This project requires a minimum of Java 11 and is current in pre-release,
-apis and dependencies are likely to change
-
-You can files issues directly on this project or if you have any questions
-message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL92) slack channel
+You can file [issues directly](https://github.com/sigstore/sigstore-java/issues) on this project or
+if you have any questions message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL92)
+slack channel
 
 ## Usage
+
+### Build plugins
+
+For use directly with your java build. See [maven](https://github.com/sigstore/sigstore-java/tree/main/sigstore-maven-plugin) or [gradle](https://github.com/sigstore/sigstore-java/tree/main/sigstore-gradle)
+build plugin specifics.
 
 ### Keyless Signing And Verification
 
@@ -21,6 +26,7 @@ message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL9
 ```java
 Path testArtifact = Paths.get("path/to/my/file.jar")
 
+// sign using the sigstore public instance
 var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
 Bundle result = signer.signFile(testArtifact);
 
@@ -30,29 +36,29 @@ String bundleJson = result.toJson();
 
 #### Verification
 
-##### Read bundle
+##### Get artifact and bundle
 ```java
-Path bundleFile = // java.nio.Path to a .sigstore.json signature bundle file
-Bundle bundle = Bundle.from(Files.newBufferedReader(bundleFile, StandardCharsets.UTF_8));
+Path artifact = Paths.get("path/to/my-artifact");
+
+// import a json formatted sigstore bundle
+Path bundleFile = Paths.get("path/to/my-artifact.sigstore.json");
+Bundle bundle = Bundle.from(bundleFile, StandardCharsets.UTF_8);
 ```
 
 ##### Configure verification options
 ```java
 // add certificate policy to verify the identity of the signer
-VerificationOptions verificationOptions =
-    VerificationOptions.builder()
-        .addCertificateIdentities(
-            CertificateIdentity.builder()
-                .issuer("https://accounts.example.com"))
-                .subjectAlternativeName("test@example.com")
-                .build())
-        .build();
+VerificationOptions options = VerificationOptions.builder().addCertificateMatchers(
+  CertificateMatcher.fulcio()
+    .subjectAlternativeName(StringMatcher.string("test@example.com"))
+    .issuer(StringMatcher.string("https://accounts.example.com"))
+    .build());
 ```
 
 ##### Do verification
 ```java
-Path artifact = // java.nio.Path to artifact file
 try {
+  // verify using the sigstore public instance
   var verifier = new KeylessVerifier.builder().sigstorePublicDefaults().build();
   verifier.verify(artifact, bundle, verificationOptions);
   // verification passed!
@@ -67,7 +73,7 @@ The public stable API is limited to `dev.sigstore.KeylessSigner`(https://javadoc
 
 You can browse Javadoc at https://javadoc.io/doc/dev.sigstore/sigstore-java.
 
-To build javadoc from the sources, use the following command:
+To build and view javadoc from the sources, use the following command:
 
 ```sh
 $ ./gradlew javadoc
