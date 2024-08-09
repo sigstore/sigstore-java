@@ -32,7 +32,10 @@ fi
 sed -i "s/\(sigstore-gradle-sign-plugin:\)$previous_version/\1$release_version/" build-logic/publishing/build.gradle.kts
 sed -i "s/\(<version>\)$previous_version/\1$release_version/" sigstore-maven-plugin/README.md
 sed -i "s/\(dev.sigstore.sign\") version \"\)$previous_version/\1$release_version/" sigstore-gradle/README.md
+sed -i "s/\(sigstore.version.*\)$previous_version/\1$release_version/" examples/hello-world/build.gradle.kts
+sed -i "s/\(<sigstore.version>\)$previous_version/\1$release_version/" examples/hello-world/pom.xml
 
 # update to latest dev version
 sed -i "s/\(sigstoreJavaVersion.convention(\"\)$release_version/\1$next_version/" sigstore-gradle/sigstore-gradle-sign-base-plugin/src/main/kotlin/dev/sigstore/sign/SigstoreSignExtension.kt
 sed -i "s/version=$release_version/version=$next_version/" gradle.properties
+
