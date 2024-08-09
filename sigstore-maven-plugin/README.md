@@ -1,9 +1,10 @@
-# sigstore-maven-plugin
+[![Maven Central](https://img.shields.io/maven-central/v/dev.sigstore/sigstore-maven-plugin.svg?color&label=maven%20central)](https://central.sonatype.com/artifact/dev.sigstore/sigstore-maven-plugin)
 
-[![Maven Central](https://img.shields.io/maven-central/v/dev.sigstore/sigstore-maven-plugin.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/dev.sigstore/sigstore-maven-plugin)
+# sigstore-maven-plugin
 
 A Maven plugin for signing artifacts with Sigstore
 
+Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto) JSON as the output format.
 
 ## Requirements
 
@@ -26,6 +27,10 @@ A Maven plugin for signing artifacts with Sigstore
         </executions>
       </plugin>
 ```
+
+### Outputs
+
+For each file to be published an associated `<filename>.sigstore.json` signature file will be generated
 
 ### GitHub Actions OIDC support
 
