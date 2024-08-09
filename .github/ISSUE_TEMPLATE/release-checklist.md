@@ -20,3 +20,8 @@ Full release instructions are at: [RELEASING.md](/sigstore/sigstore-java/blob/ma
 - [ ] [sigstore-java](https://repo1.maven.org/maven2/dev/sigstore/sigstore-java)
 - [ ] [sigstore-maven-plugin](https://repo1.maven.org/maven2/dev/sigstore/sigstore-maven-plugin)
 - [ ] sigstore-gradle-plugin [[base](https://plugins.gradle.org/plugin/dev.sigstore.sign-base)], [[sign](https://plugins.gradle.org/plugin/dev.sigstore.sign)]
+
+## Post Release
+- [ ] Update README if required
+- [ ] Update versions (`./scripts/update_version.sh`)
+- [ ] Update CHANGELOG.md
