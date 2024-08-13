@@ -1,9 +1,14 @@
 .gradle
 /build
-/*/build
+/**/build
 /out
-/*/out
+/**/out
 /http
+
+/target
+/**/target
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
 
 # For occasional use of https://github.com/melix/includegit-gradle-plugin
 /checkouts
@@ -20,6 +25,9 @@
 .classpath
 .project
 .DS_Store
+.vscode
+.factorypath
 
 # except this icon
 !/.idea/icon.png
+

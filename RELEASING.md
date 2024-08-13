@@ -2,6 +2,10 @@
 
 Release is done on github. Do not release from your local machine.
 
+## Create an issue
+
+Create a release issue using the release template
+
 ## Create a tag
 
 Tag the release at the version you wish (ex `v0.5.3`), this *MUST* match the project version (`0.5.3`). See version info in [gradle.properties](gradle.properties).
