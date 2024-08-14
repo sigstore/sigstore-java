@@ -1,0 +1,61 @@
+name: Examples
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.ref }}-examples
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  examples:
+    name: Build and run examples
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: 11
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3.5.0
+
+    - name: run examples against released sigstore
+      working-directory: examples/hello-world
+      run: |
+        set -Eexo pipefail
+        ./gradlew clean publishMavenPublicationToExamplesRepository
+        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
+        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.module.sigstore.json
+        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
+        mvn clean deploy --no-transfer-progress
+        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
+        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
+
+    - name: install sigstore java development jars into mavenLocal
+      run: ./gradlew publishToMavenLocal -Prelease -PskipSigning
+
+    - name: run examples against development version
+      working-directory: examples/hello-world
+      run: |
+        set -Eexo pipefail
+        version="$(grep "^version=" ../../gradle.properties | cut -d'=' -f2)"
+        ./gradlew clean publishMavenPublicationToExamplesRepository -Dsigstore.version=$version
+        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
+        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.module.sigstore.json
+        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
+        mvn clean deploy -Dsigstore.version=$version --no-transfer-progress
+        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
+        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
