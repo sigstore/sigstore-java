@@ -25,6 +25,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
       </plugin>
+      <!-- sigstore signing config -->
       <plugin>
         <groupId>dev.sigstore</groupId>
         <artifactId>sigstore-maven-plugin</artifactId>
@@ -35,6 +36,26 @@
             <goals>
               <goal>sign</goal>
             </goals>
+            <!-- no config, sign using browser or CI credentials -->
+          </execution>
+        </executions>
+      </plugin>
+      <!-- pgp signing config -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>3.2.5</version>
+        <executions>
+          <execution>
+            <id>sign</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+            <configuration>
+              <!-- read key and passphrase from env -->
+              <signer>bc</signer>
+            </configuration>
           </execution>
         </executions>
       </plugin>

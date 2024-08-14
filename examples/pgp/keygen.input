@@ -1,0 +1,8 @@
+Key-Type: RSA
+Key-Length: 4096
+Key-Expiration: 0
+Name: Example Test Key
+Email Address: test@example.com
+Comment: DO NOT USE
+Passphrase: pass123
+Repeat the passphrase: pass123

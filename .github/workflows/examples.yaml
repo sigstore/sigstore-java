@@ -34,28 +34,17 @@ jobs:
 
     - name: run examples against released sigstore
       working-directory: examples/hello-world
-      run: |
-        set -Eexo pipefail
-        ./gradlew clean publishMavenPublicationToExamplesRepository
-        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
-        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.module.sigstore.json
-        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
-        mvn clean deploy --no-transfer-progress
-        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
-        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
+      run: ./test.sh
 
     - name: install sigstore java development jars into mavenLocal
       run: ./gradlew publishToMavenLocal -Prelease -PskipSigning
 
+    - name: calculate development version
+      id: dev_version
+      run: |
+        set -Exeo pipefail
+        echo "version=$(grep "^version=" gradle.properties | cut -d'=' -f2)" >> $GITHUB_OUTPUT
+
     - name: run examples against development version
       working-directory: examples/hello-world
-      run: |
-        set -Eexo pipefail
-        version="$(grep "^version=" ../../gradle.properties | cut -d'=' -f2)"
-        ./gradlew clean publishMavenPublicationToExamplesRepository -Dsigstore.version=$version
-        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
-        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.module.sigstore.json
-        test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
-        mvn clean deploy -Dsigstore.version=$version --no-transfer-progress
-        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
-        test -f target/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
+      run: ./test.sh -Dsigstore.version=${{ steps.dev_version.outputs.version }}
