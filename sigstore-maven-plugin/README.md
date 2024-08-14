@@ -47,8 +47,8 @@ See [GitHub documentation](https://docs.github.com/en/actions/deployment/securit
 
 Notes:
 
-<!-- TBD: (uncomment when gpg adding exclusion from .sigstore.java - GPG: Maven Central publication rules require GPG signing each files: to avoid GPG signing of `.sigstore.json` files, just use version 3.X.X minimum of [maven-gpg-plugin](https://maven.apache.org/plugins/maven-gpg-plugin/). -->
-- `.md5`/`.sha1`: to avoid unneeded checksum files for `.sigstore.java` files, use Maven 3.9.2 minimum or create `.mvn/maven.config` file containing `-Daether.checksums.omitChecksumsForExtensions=.asc,.sigstore.java`
+- GPG: Maven Central publication rules require GPG signing. To avoid GPG signing of `.sigstore.json` signature files, use version 3.2.5 or higher of [maven-gpg-plugin](https://maven.apache.org/plugins/maven-gpg-plugin/).
+- `.md5`/`.sha1`: to avoid unneeded checksum files for `.sigstore.java` files, use Maven 3.9.2 or higher, or create `.mvn/maven.config` file containing `-Daether.checksums.omitChecksumsForExtensions=.asc,.sigstore.java`
 
 Known limitations:
 

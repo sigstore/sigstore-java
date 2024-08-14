@@ -40,22 +40,13 @@ public class SigstoreSignAttachedMojo extends AbstractMojo {
 
   private static final String BUNDLE_EXTENSION = ".sigstore.json";
 
-  // TODO: this can potentially be derived from mvn-gpg-plugin:FilesCollector.java,
-  //   but that requires a change in that plugin before it makes sense here.
-  private static final String DEFAULT_EXCLUDES[] =
-      new String[] {
-        "**/*.md5", "**/*.sha1", "**/*.sha256", "**/*.sha512", "**/*.asc", "**/*.sigstore.json"
-      };
-
   /** Skip doing the sigstore signing. */
   @Parameter(property = "sigstore.skip", defaultValue = "false")
   private boolean skip;
 
   /**
    * A list of files to exclude from being signed. Can contain Ant-style wildcards and double
-   * wildcards. The default excludes are <code>
-   * **&#47;*.md5 **&#47;*.sha1 **&#47;*.sha256 **&#47;*.sha512 **&#47;*.asc **&#47;*.sigstore.json
-   * </code>.
+   * wildcards. The defaults are defined in DEFAULT_EXCLUDES in {@link FilesCollector}.
    */
   @Parameter private String[] excludes;
 
@@ -81,8 +72,7 @@ public class SigstoreSignAttachedMojo extends AbstractMojo {
     // Collect files to sign
     // ----------------------------------------------------------------------------
 
-    FilesCollector collector =
-        new FilesCollector(project, (excludes == null) ? DEFAULT_EXCLUDES : excludes, getLog());
+    FilesCollector collector = new FilesCollector(project, excludes, getLog());
     List<FilesCollector.Item> items = collector.collect();
 
     // ----------------------------------------------------------------------------
