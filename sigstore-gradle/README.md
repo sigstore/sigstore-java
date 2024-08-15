@@ -6,11 +6,10 @@ A Gradle plugin for signing artifacts with Sigstore.
 
 Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto) JSON as the output format.
 
-## Requirements
+## Minimum Requirements
 
-* Java 11 (https://github.com/sigstore/sigstore-java requires Java 11)
-* Gradle 7.5 (Gradle 6 could be supported once https://github.com/jsonschema2dataclass/js2d-gradle/issues/401 is released)
-* Gradle configuration cache is supported.
+* Java 11
+* Gradle 7.5
 
 ## Minimal usage
 
