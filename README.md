@@ -69,7 +69,7 @@ try {
 
 ### Exploring the API
 
-The public stable API is limited to `dev.sigstore.KeylessSigner`(https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessSigner.html) and `dev.sigstore.KeylessVerifier`(https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessVerifier.html) and the classes exposed by those APIs. Other classes in the library are subject to change without notice.
+The public stable API is limited to [`dev.sigstore.KeylessSigner`](https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessSigner.html) and [`dev.sigstore.KeylessVerifier`](https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessVerifier.html) and the classes exposed by those APIs. Other classes in the library are subject to change without notice.
 
 You can browse Javadoc at https://javadoc.io/doc/dev.sigstore/sigstore-java.
 
