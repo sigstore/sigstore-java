@@ -3,6 +3,7 @@ plugins {
   `maven-publish`
   val sigstoreVersion = System.getProperty("sigstore.version") ?: "0.11.0"
   id("dev.sigstore.sign") version "$sigstoreVersion"
+  signing
 }
 
 version = "1.0.0"
@@ -26,4 +27,14 @@ publishing {
             url = uri(layout.buildDirectory.dir("example-repo"))
         }
     }
+}
+
+// sigstore signing doesn't require additional setup in build.gradle.kts
+
+// PGP signing setup for the purposes of this example.
+signing {
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign(publishing.publications["maven"])
 }
