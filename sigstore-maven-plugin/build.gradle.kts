@@ -9,7 +9,7 @@ plugins {
 description = "A Maven plugin for signing with Sigstore"
 
 dependencies {
-    compileOnly("org.apache.maven:maven-plugin-api:3.9.8")
+    compileOnly("org.apache.maven:maven-plugin-api:3.9.9")
     compileOnly("org.apache.maven:maven-core:3.9.8")
     compileOnly("org.apache.maven:maven-core:3.9.8")
     compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations:3.13.1")
