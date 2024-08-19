@@ -5,13 +5,12 @@
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
-## Requirements
-* Java 11 (https://github.com/sigstore/sigstore-java requires Java 11)
-This project requires a minimum of Java 11
-
 You can file [issues directly](https://github.com/sigstore/sigstore-java/issues) on this project or
 if you have any questions message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL92)
 slack channel
+
+## Minimum Requirements
+* Java 11
 
 ## Usage
 

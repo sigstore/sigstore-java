@@ -6,9 +6,10 @@ A Maven plugin for signing artifacts with Sigstore
 
 Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto) JSON as the output format.
 
-## Requirements
+## Minimum Requirements
 
-* Java 11 (https://github.com/sigstore/sigstore-java requires Java 11)
+* Java 11
+* (optional) maven-gpg-plugin 3.2.5
 
 ## Minimal usage
 
