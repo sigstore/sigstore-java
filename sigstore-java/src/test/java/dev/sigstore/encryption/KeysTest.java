@@ -107,8 +107,7 @@ class KeysTest {
   }
 
   @Test
-  void parseTufPublicKey_ecdsa()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+  void parseTufPublicKey_ecdsa() throws NoSuchAlgorithmException, InvalidKeySpecException {
     PublicKey key =
         Keys.constructTufPublicKey(
             Hex.decode(
@@ -119,10 +118,9 @@ class KeysTest {
   }
 
   @Test
-  void parseTufPublicKey_ecdsaBad()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+  void parseTufPublicKey_ecdsaBad() {
     Assertions.assertThrows(
-        RuntimeException.class,
+        InvalidKeySpecException.class,
         () -> {
           Keys.constructTufPublicKey(
               Hex.decode(
