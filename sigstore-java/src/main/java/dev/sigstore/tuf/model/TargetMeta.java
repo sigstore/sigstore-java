@@ -41,11 +41,22 @@ public interface TargetMeta extends TufMeta {
     /** Custom application specific metadata about the target. */
     Optional<Custom> getCustom();
 
-    /** Hash values of the target metadata. */
+    /**
+     * Hash values of the target metadata. One or both of sha256 or sha512 is required to be
+     * present.
+     */
     Hashes getHashes();
 
     /** Length in bytes of the metadata. */
     int getLength();
+
+    @Value.Check
+    default void check() {
+      if (getHashes().getSha256() == null && getHashes().getSha512() == null) {
+        throw new IllegalStateException(
+            "No hashes (sha256 or sha512) found for target data: " + this);
+      }
+    }
   }
 
   /** Field to store use-case specific labels/data. */
