@@ -20,12 +20,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.common.io.Resources;
+import com.google.gson.JsonSyntaxException;
+import dev.sigstore.tuf.model.TargetMeta.TargetData;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class TestTufJsonLoading {
@@ -163,12 +166,37 @@ public class TestTufJsonLoading {
     assertEquals("Expired", custom.getSigstoreMeta().getStatus());
     assertEquals("https://fulcio.dev", custom.getSigstoreMeta().getUri().get());
     assertEquals("Fulcio", custom.getSigstoreMeta().getUsage());
-    assertEquals(
-        "f360c53b2e13495a628b9b8096455badcb6d375b185c4816d95a5d746ff29908",
-        targetData.getHashes().getSha256());
-    assertEquals(
-        "0713252a7fd17f7f3ab12f88a64accf2eb14b8ad40ca711d7fe8b4ecba3b24db9e9dffadb997b196d3867b8f9ff217faf930d80e4dab4e235c7fc3f07be69224",
-        targetData.getHashes().getSha512());
     assertEquals(744, targetData.getLength());
+  }
+
+  @Test
+  public void loadTargetData_oneHash() {
+    Assertions.assertDoesNotThrow(
+        () ->
+            GSON.get()
+                .fromJson(
+                    "{\"custom\":{\"sigstore\":{\"status\":\"Active\",\"usage\":\"CTFE\"}},\"hashes\":{\"sha256\": \"7fcb94a5d0ed541260473b990b99a6c39864c1fb16f3f3e594a5a3cebbfe138a\"},\"length\":177}",
+                    TargetData.class));
+    Assertions.assertDoesNotThrow(
+        () ->
+            GSON.get()
+                .fromJson(
+                    "{\"custom\":{\"sigstore\":{\"status\":\"Active\",\"usage\":\"CTFE\"}},\"hashes\":{\"sha512\": \"4b20747d1afe2544238ad38cc0cc3010921b177d60ac743767e0ef675b915489bd01a36606c0ff83c06448622d7160f0d866c83d20f0c0f44653dcc3f9aa0bd4\"},\"length\":177}",
+                    TargetData.class));
+  }
+
+  @Test
+  public void loadTargetData_failNoHashes() {
+    var error =
+        Assertions.assertThrows(
+            JsonSyntaxException.class,
+            () ->
+                GSON.get()
+                    .fromJson(
+                        "{\"custom\":{\"sigstore\":{\"status\":\"Active\",\"usage\":\"CTFE\"}},\"hashes\":{},\"length\":177}",
+                        TargetData.class));
+    Assertions.assertEquals(
+        "No hashes (sha256 or sha512) found for target data: TargetData{custom=Custom{sigstoreMeta=SigstoreMeta{status=Active, usage=CTFE}}, hashes=Hashes{}, length=177}",
+        error.getCause().getMessage());
   }
 }

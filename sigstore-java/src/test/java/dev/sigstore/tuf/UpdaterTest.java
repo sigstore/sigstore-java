@@ -17,6 +17,7 @@ package dev.sigstore.tuf;
 
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_REAL_TRUSTED_ROOT;
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -656,6 +657,31 @@ class UpdaterTest {
     assertTrue(updater.getLocalStore().getTargetFile("test.txt") != null);
     assertTrue(updater.getLocalStore().getTargetFile("test.txt.v2") != null);
     assertTrue(updater.getLocalStore().getTargetFile("test2.txt") != null);
+  }
+
+  // Ensure we accept sha256 or sha512 on hashes for targets
+  @Test
+  public void testTargetsDownload_sha256Only()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    setupMirror(
+        "synthetic/targets-sha256-or-sha512",
+        "1.root.json",
+        "2.root.json",
+        "2.snapshot.json",
+        "1.targets.json",
+        "timestamp.json",
+        "targets/2dff935df7d1e1221ef52c753091c487c6fdaabbb0b0e2b193764de8cd7c1222776c61d7ef21f20a4d031a6a6bfa631713df7c4f71b4ee21d362152d4618d514.test2.txt",
+        "targets/55f8718109829bf506b09d8af615b9f107a266e19f7a311039d1035f180b22d4.test.txt");
+    var UPDATER_ROOT =
+        Path.of(
+            Resources.getResource("dev/sigstore/tuf/synthetic/targets-sha256-or-sha512/root.json")
+                .getPath());
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_ROOT);
+    var root = updater.updateRoot();
+    var timestamp = updater.updateTimestamp(root);
+    var snapshot = updater.updateSnapshot(root, timestamp.get());
+    var targets = updater.updateTargets(root, snapshot);
+    assertDoesNotThrow(() -> updater.downloadTargets(targets));
   }
 
   // End to end sanity test on the actual prod sigstore repo.

@@ -438,14 +438,18 @@ public class Updater {
       String targetName = entry.getKey();
       // 8) If target is missing metadata fail.
       // Note: This can't actually happen due to the way GSON is setup the targets.json would fail
-      // to parse. Leaving
-      // this code in in-case we eventually allow it in de-serialization.
+      // to parse. Leaving this code in in-case we eventually allow it in de-serialization.
       if (entry.getValue() == null) {
         throw new TargetMetadataMissingException(targetName);
       }
       TargetMeta.TargetData targetData = entry.getValue();
       // 9) Download target up to length specified in bytes. verify against hash.
-      var versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
+      String versionedTargetName;
+      if (targetData.getHashes().getSha512() != null) {
+        versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
+      } else {
+        versionedTargetName = targetData.getHashes().getSha256() + "." + targetName;
+      }
 
       var targetBytes =
           fetcher.fetchResource("targets/" + versionedTargetName, targetData.getLength());
