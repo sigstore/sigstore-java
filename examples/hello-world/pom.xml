@@ -16,7 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.release>11</maven.compiler.release>
-    <sigstore.version>0.11.0</sigstore.version>
+    <sigstore.version>0.12.0</sigstore.version>
   </properties>
 
   <build>
