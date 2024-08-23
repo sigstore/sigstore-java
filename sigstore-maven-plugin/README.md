@@ -17,7 +17,7 @@ Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-spe
       <plugin>
         <groupId>dev.sigstore</groupId>
         <artifactId>sigstore-maven-plugin</artifactId>
-        <version>0.11.0</version>
+        <version>0.12.0</version>
         <executions>
           <execution>
             <id>sign</id>
