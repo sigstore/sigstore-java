@@ -1,0 +1,9 @@
+build-sigstore-java:
+  stage: build
+  script:
+    - echo 'build sigstore-java'
+
+test-sigstore-java:
+  stage: test
+  script:
+    - echo 'test sigstore-java with gitlab oidc'
