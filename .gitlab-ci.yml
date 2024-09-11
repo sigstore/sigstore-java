@@ -1,0 +1,9 @@
+build-sigstore-java:
+  stage: build
+  script:
+    - echo 'this should always run'
+
+test-sigstore-java:
+  stage: test
+  script:
+    - echo 'run after build'
