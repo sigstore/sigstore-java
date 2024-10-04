@@ -57,12 +57,13 @@ public class Updater {
 
   private static final Logger log = Logger.getLogger(Updater.class.getName());
 
-  private Clock clock;
-  private Verifiers.Supplier verifiers;
-  private MetaFetcher fetcher;
+  private final Clock clock;
+  private final Verifiers.Supplier verifiers;
+  private final MetaFetcher fetcher;
+  private final RootProvider trustedRootPath;
+  private final MutableTufStore localStore;
+
   private ZonedDateTime updateStartTime;
-  private RootProvider trustedRootPath;
-  private MutableTufStore localStore;
 
   Updater(
       Clock clock,
@@ -81,23 +82,38 @@ public class Updater {
     return new Builder();
   }
 
+  /** Update top level metadata, does not dive into delegations or download targets. */
   public void update()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow}
     var root = updateRoot();
     // only returns a timestamp value if a more recent timestamp file has been found.
     var timestampMaybe = updateTimestamp(root);
     if (timestampMaybe.isPresent()) {
       var snapshot = updateSnapshot(root, timestampMaybe.get());
-      var targets = updateTargets(root, snapshot);
-      downloadTargets(targets);
+      updateTargets(root, snapshot);
     }
   }
 
-  // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
+  /** Update metadata and download targets, if targets is emtpy, this is a no-op */
+  public void downloadTargets(String... targetNames)
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    if (targetNames.length == 0) {
+      return;
+    }
+    update();
+    Optional<Targets> targets = localStore.loadTargets();
+    if (targets.isEmpty()) {
+      throw new TargetMetadataMissingException();
+    }
+    for (var targetName : targetNames) {
+      downloadTarget(targets.get(), targetName);
+    }
+  }
+
   Root updateRoot()
       throws IOException, RoleExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
-          InvalidKeyException, FileExceedsMaxLengthException, RollbackVersionException,
-          SignatureVerificationException {
+          FileExceedsMaxLengthException, RollbackVersionException, SignatureVerificationException {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);
@@ -174,9 +190,9 @@ public class Updater {
     return !newRole.getKeyids().stream().allMatch(key -> oldRole.getKeyids().contains(key));
   }
 
-  void verifyDelegate(Root trustedRoot, SignedTufMeta delegate)
+  void verifyDelegate(Root trustedRoot, SignedTufMeta<? extends TufMeta> delegate)
       throws SignatureVerificationException, IOException, NoSuchAlgorithmException,
-          InvalidKeySpecException, InvalidKeyException {
+          InvalidKeySpecException {
     verifyDelegate(
         delegate.getSignatures(),
         trustedRoot.getSignedMeta().getKeys(),
@@ -428,40 +444,33 @@ public class Updater {
     return targetsResult.getMetaResource();
   }
 
-  void downloadTargets(Targets targets)
+  void downloadTarget(Targets targets, String targetName)
       throws IOException, TargetMetadataMissingException, FileNotFoundException {
-    // Skip #7 and go straight to downloading targets. It looks like delegations were removed from
-    // sigstore TUF data.
-    // {@see https://github.com/sigstore/sigstore/issues/562}
-    for (Map.Entry<String, TargetMeta.TargetData> entry :
-        targets.getSignedMeta().getTargets().entrySet()) {
-      String targetName = entry.getKey();
-      // 8) If target is missing metadata fail.
-      // Note: This can't actually happen due to the way GSON is setup the targets.json would fail
-      // to parse. Leaving this code in in-case we eventually allow it in de-serialization.
-      if (entry.getValue() == null) {
-        throw new TargetMetadataMissingException(targetName);
-      }
-      TargetMeta.TargetData targetData = entry.getValue();
-      // 9) Download target up to length specified in bytes. verify against hash.
-      String versionedTargetName;
-      if (targetData.getHashes().getSha512() != null) {
-        versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
-      } else {
-        versionedTargetName = targetData.getHashes().getSha256() + "." + targetName;
-      }
-
-      var targetBytes =
-          fetcher.fetchResource("targets/" + versionedTargetName, targetData.getLength());
-      if (targetBytes == null) {
-        throw new FileNotFoundException(targetName, fetcher.getSource());
-      }
-      verifyHashes(entry.getKey(), targetBytes, targetData.getHashes());
-
-      // when persisting targets use the targetname without sha512 prefix
-      // https://theupdateframework.github.io/specification/latest/index.html#fetch-target
-      localStore.storeTargetFile(targetName, targetBytes);
+    // TODO: 7) delegations are not supported by this client yet
+    TargetMeta.TargetData targetData = targets.getSignedMeta().getTargets().get(targetName);
+    // 8) If target is missing metadata fail.
+    if (targetData == null) {
+      throw new TargetMetadataMissingException(targetName);
     }
+    // 9) Download target up to length specified in bytes. verify against hash.
+    String versionedTargetName;
+    if (targetData.getHashes().getSha512() != null) {
+      versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
+    } else {
+      versionedTargetName = targetData.getHashes().getSha256() + "." + targetName;
+    }
+
+    // TODO: use local cache if available
+    var targetBytes =
+        fetcher.fetchResource("targets/" + versionedTargetName, targetData.getLength());
+    if (targetBytes == null) {
+      throw new FileNotFoundException(targetName, fetcher.getSource());
+    }
+    verifyHashes(targetName, targetBytes, targetData.getHashes());
+
+    // when persisting targets use the targetname without sha512 prefix
+    // https://theupdateframework.github.io/specification/latest/index.html#fetch-target
+    localStore.storeTargetFile(targetName, targetBytes);
   }
 
   @VisibleForTesting

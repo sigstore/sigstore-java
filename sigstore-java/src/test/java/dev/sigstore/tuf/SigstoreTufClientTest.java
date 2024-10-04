@@ -72,7 +72,8 @@ class SigstoreTufClientTest {
     client.update();
     Thread.sleep(3000);
     client.update();
-    Mockito.verify(mockUpdater, Mockito.times(2)).update();
+    Mockito.verify(mockUpdater, Mockito.times(2))
+        .downloadTargets(SigstoreTufClient.TRUST_ROOT_FILENAME);
   }
 
   @Test
@@ -82,7 +83,8 @@ class SigstoreTufClientTest {
 
     client.update();
     client.update();
-    Mockito.verify(mockUpdater, Mockito.times(1)).update();
+    Mockito.verify(mockUpdater, Mockito.times(1))
+        .downloadTargets(SigstoreTufClient.TRUST_ROOT_FILENAME);
   }
 
   private static Updater mockUpdater() throws IOException {
