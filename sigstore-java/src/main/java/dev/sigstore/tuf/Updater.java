@@ -156,9 +156,11 @@ public class Updater {
     throwIfExpired(expires);
     // 5.3.11) If the timestamp and / or snapshot keys have been rotated, then delete the trusted
     // timestamp and snapshot metadata files.
-    if (hasNewKeys(preUpdateSnapshotRole, trustedRoot.getSignedMeta().getRole(Role.Name.SNAPSHOT))
+    if (hasNewKeys(
+            preUpdateSnapshotRole, trustedRoot.getSignedMeta().getRoles().get(RootRole.SNAPSHOT))
         || hasNewKeys(
-            preUpdateTimestampRole, trustedRoot.getSignedMeta().getRole(Role.Name.TIMESTAMP))) {
+            preUpdateTimestampRole,
+            trustedRoot.getSignedMeta().getRoles().get(RootRole.TIMESTAMP))) {
       localStore.clearMetaDueToKeyRotation();
     }
     return trustedRoot;
@@ -174,16 +176,13 @@ public class Updater {
     return !newRole.getKeyids().stream().allMatch(key -> oldRole.getKeyids().contains(key));
   }
 
-  void verifyDelegate(Root trustedRoot, SignedTufMeta delegate)
+  void verifyDelegate(Root trustedRoot, SignedTufMeta<? extends TufMeta> delegate)
       throws SignatureVerificationException, IOException, NoSuchAlgorithmException,
-          InvalidKeySpecException, InvalidKeyException {
+          InvalidKeySpecException {
     verifyDelegate(
         delegate.getSignatures(),
         trustedRoot.getSignedMeta().getKeys(),
-        trustedRoot
-            .getSignedMeta()
-            .getRole(
-                Role.Name.valueOf(delegate.getSignedMeta().getType().toUpperCase(Locale.ROOT))),
+        trustedRoot.getSignedMeta().getRoles().get(delegate.getSignedMeta().getType()),
         delegate.getCanonicalSignedBytes());
   }
 
@@ -269,7 +268,7 @@ public class Updater {
     // 1) download the timestamp.json bytes.
     var timestamp =
         fetcher
-            .getMeta(Role.Name.TIMESTAMP, Timestamp.class)
+            .getMeta(RootRole.TIMESTAMP, Timestamp.class)
             .orElseThrow(() -> new FileNotFoundException("timestamp.json", fetcher.getSource()))
             .getMetaResource();
 
@@ -305,7 +304,7 @@ public class Updater {
     int timestampSnapshotVersion = timestamp.getSignedMeta().getSnapshotMeta().getVersion();
     var snapshotResult =
         fetcher.getMeta(
-            Role.Name.SNAPSHOT,
+            RootRole.SNAPSHOT,
             timestampSnapshotVersion,
             Snapshot.class,
             timestamp.getSignedMeta().getSnapshotMeta().getLengthOrDefault());
@@ -395,7 +394,7 @@ public class Updater {
     SnapshotMeta.SnapshotTarget targetMeta = snapshot.getSignedMeta().getTargetMeta("targets.json");
     var targetsResultMaybe =
         fetcher.getMeta(
-            Role.Name.TARGETS,
+            RootRole.TARGETS,
             targetMeta.getVersion(),
             Targets.class,
             targetMeta.getLengthOrDefault());

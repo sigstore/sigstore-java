@@ -33,6 +33,6 @@ public interface TimestampMeta extends TufMeta {
   Map<String, SnapshotMeta.SnapshotTarget> getMeta();
 
   default SnapshotMeta.SnapshotTarget getSnapshotMeta() {
-    return getMeta().get(Role.Name.SNAPSHOT.toString() + ".json");
+    return getMeta().get(RootRole.SNAPSHOT + ".json");
   }
 }

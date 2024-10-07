@@ -27,4 +27,9 @@ import org.immutables.value.Value;
  */
 @Gson.TypeAdapters
 @Value.Immutable
-public interface RootRole extends Role {}
+public interface RootRole extends Role {
+  String ROOT = "root";
+  String SNAPSHOT = "snapshot";
+  String TIMESTAMP = "timestamp";
+  String TARGETS = "targets";
+}

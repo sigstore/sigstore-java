@@ -70,22 +70,22 @@ public class FileSystemTufStore implements MutableTufStore {
 
   @Override
   public Optional<Root> loadTrustedRoot() throws IOException {
-    return loadRole(Role.Name.ROOT, Root.class);
+    return loadRole(RootRole.ROOT, Root.class);
   }
 
   @Override
   public Optional<Timestamp> loadTimestamp() throws IOException {
-    return loadRole(Role.Name.TIMESTAMP, Timestamp.class);
+    return loadRole(RootRole.TIMESTAMP, Timestamp.class);
   }
 
   @Override
   public Optional<Snapshot> loadSnapshot() throws IOException {
-    return loadRole(Role.Name.SNAPSHOT, Snapshot.class);
+    return loadRole(RootRole.SNAPSHOT, Snapshot.class);
   }
 
   @Override
   public Optional<Targets> loadTargets() throws IOException {
-    return loadRole(Role.Name.TARGETS, Targets.class);
+    return loadRole(RootRole.TARGETS, Targets.class);
   }
 
   @Override
@@ -103,7 +103,7 @@ public class FileSystemTufStore implements MutableTufStore {
     storeRole(timestamp);
   }
 
-  <T extends SignedTufMeta<?>> Optional<T> loadRole(Role.Name roleName, Class<T> tClass)
+  <T extends SignedTufMeta<?>> Optional<T> loadRole(String roleName, Class<T> tClass)
       throws IOException {
     Path roleFile = repoBaseDir.resolve(roleName + ".json");
     if (!roleFile.toFile().exists()) {
