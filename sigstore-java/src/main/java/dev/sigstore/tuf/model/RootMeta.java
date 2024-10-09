@@ -54,8 +54,4 @@ public interface RootMeta extends TufMeta {
    * href="https://theupdateframework.io/metadata/#root-metadata-rootjson">role</a>.
    */
   Map<String, RootRole> getRoles();
-
-  default RootRole getRole(Role.Name name) {
-    return getRoles().get(name.toString());
-  }
 }

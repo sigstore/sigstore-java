@@ -16,7 +16,6 @@
 package dev.sigstore.tuf.model;
 
 import java.util.List;
-import java.util.Locale;
 
 /**
  * TUF uses roles to define the set of actions a party can perform. The concept of roles allows TUF
@@ -26,18 +25,6 @@ import java.util.Locale;
  * @see <a href="https://theupdateframework.io/metadata/">TUF Role docs</a>
  */
 public interface Role {
-
-  enum Name {
-    ROOT,
-    SNAPSHOT,
-    TIMESTAMP,
-    TARGETS;
-
-    @Override
-    public String toString() {
-      return super.toString().toLowerCase(Locale.ROOT);
-    }
-  }
 
   /** A list of trusted keys for this role. */
   List<String> getKeyids();
