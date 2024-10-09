@@ -18,6 +18,10 @@ package dev.sigstore.tuf;
 import java.util.Locale;
 
 public class TargetMetadataMissingException extends TufException {
+  public TargetMetadataMissingException() {
+    super("No target metadata were found");
+  }
+
   public TargetMetadataMissingException(String targetName) {
     super(String.format(Locale.ROOT, "The target (%s) has no metadata", targetName));
   }

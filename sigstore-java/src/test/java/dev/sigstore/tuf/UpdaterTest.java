@@ -590,7 +590,9 @@ class UpdaterTest {
     var targets = updater.updateTargets(root, snapshot);
     assertThrows(
         FileNotFoundException.class,
-        () -> updater.downloadTargets(targets),
+        () ->
+            updater.downloadTargets(
+                targets.getSignedMeta().getTargets().keySet().toArray(new String[0])),
         "the target file for download should be missing from the repo and cause an exception.");
   }
 
@@ -611,7 +613,9 @@ class UpdaterTest {
     var targets = updater.updateTargets(root, snapshot);
     assertThrows(
         FileExceedsMaxLengthException.class,
-        () -> updater.downloadTargets(targets),
+        () ->
+            updater.downloadTargets(
+                targets.getSignedMeta().getTargets().keySet().toArray(new String[0])),
         "The target file is expected to not match the length specified in targets.json target data.");
   }
 
@@ -632,7 +636,9 @@ class UpdaterTest {
     var targets = updater.updateTargets(root, snapshot);
     assertThrows(
         InvalidHashesException.class,
-        () -> updater.downloadTargets(targets),
+        () ->
+            updater.downloadTargets(
+                targets.getSignedMeta().getTargets().keySet().toArray(new String[0])),
         "The target file has been modified and should not match the expected hash");
   }
 
@@ -653,7 +659,7 @@ class UpdaterTest {
     var timestamp = updater.updateTimestamp(root);
     var snapshot = updater.updateSnapshot(root, timestamp.get());
     var targets = updater.updateTargets(root, snapshot);
-    updater.downloadTargets(targets);
+    updater.downloadTargets(targets.getSignedMeta().getTargets().keySet().toArray(new String[0]));
     assertTrue(updater.getLocalStore().getTargetFile("test.txt") != null);
     assertTrue(updater.getLocalStore().getTargetFile("test.txt.v2") != null);
     assertTrue(updater.getLocalStore().getTargetFile("test2.txt") != null);
@@ -681,7 +687,10 @@ class UpdaterTest {
     var timestamp = updater.updateTimestamp(root);
     var snapshot = updater.updateSnapshot(root, timestamp.get());
     var targets = updater.updateTargets(root, snapshot);
-    assertDoesNotThrow(() -> updater.downloadTargets(targets));
+    assertDoesNotThrow(
+        () ->
+            updater.downloadTargets(
+                targets.getSignedMeta().getTargets().keySet().toArray(new String[0])));
   }
 
   // End to end sanity test on the actual prod sigstore repo.
@@ -719,6 +728,9 @@ class UpdaterTest {
     Optional<Targets> targets = localStore.loadTargets();
     assertTrue(targets.isPresent(), "a list of targets should be available in the store");
     Map<String, TargetMeta.TargetData> targetsData = targets.get().getSignedMeta().getTargets();
+    assertDoesNotThrow(
+        () -> updater.downloadTargets(targetsData.keySet().toArray(new String[0])),
+        "all targets should be downloadable");
     for (String file : targetsData.keySet()) {
       TargetMeta.TargetData fileData = targetsData.get(file);
       byte[] fileBytes = localStore.getTargetFile(file);

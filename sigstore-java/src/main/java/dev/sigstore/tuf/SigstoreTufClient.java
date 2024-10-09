@@ -153,7 +153,7 @@ public class SigstoreTufClient {
   public void forceUpdate()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
           CertificateException {
-    updater.update();
+    updater.downloadTargets(TRUST_ROOT_FILENAME);
     lastUpdate = Instant.now();
     var trustedRootBuilder = TrustedRoot.newBuilder();
     JsonFormat.parser()
