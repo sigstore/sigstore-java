@@ -53,7 +53,7 @@ public class FileSystemTufStore implements MutableTufStore {
     return newFileSystemStore(repoBaseDir, defaultTargetsCache);
   }
 
-  static MutableTufStore newFileSystemStore(Path repoBaseDir, Path targetsCache) {
+  public static MutableTufStore newFileSystemStore(Path repoBaseDir, Path targetsCache) {
     if (!Files.isDirectory(repoBaseDir)) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
