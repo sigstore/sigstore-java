@@ -75,7 +75,7 @@ public class SigstoreTufClient {
       }
       try {
         tufMirror(
-            new URL("https://tuf-repo-cdn.sigstore.dev"),
+            new URL("https://tuf-repo-cdn.sigstore.dev/"),
             RootProvider.fromResource(PUBLIC_GOOD_ROOT_RESOURCE));
       } catch (MalformedURLException e) {
         throw new AssertionError(e);
@@ -126,11 +126,18 @@ public class SigstoreTufClient {
       if (!Files.isDirectory(tufCacheLocation)) {
         Files.createDirectories(tufCacheLocation);
       }
+      var normalizedRemoteMirror =
+          remoteMirror.toString().endsWith("/")
+              ? remoteMirror
+              : new URL(remoteMirror.toExternalForm() + "/");
+      var targetsLocation = new URL(normalizedRemoteMirror.toExternalForm() + "targets");
       var tufUpdater =
           Updater.builder()
               .setTrustedRootPath(trustedRoot)
               .setLocalStore(FileSystemTufStore.newFileSystemStore(tufCacheLocation))
-              .setFetcher(HttpMetaFetcher.newFetcher(remoteMirror))
+              .setMetaFetcher(
+                  MetaFetcher.newFetcher(HttpFetcher.newFetcher(normalizedRemoteMirror)))
+              .setTargetFetcher(HttpFetcher.newFetcher(targetsLocation))
               .build();
       return new SigstoreTufClient(tufUpdater, cacheValidity);
     }

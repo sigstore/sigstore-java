@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Sigstore Authors.
+ * Copyright 2024 The Sigstore Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,12 @@
  */
 package dev.sigstore.tuf;
 
-import java.net.URL;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import java.io.IOException;
 
-class HttpMetaFetcherTest {
+public interface Fetcher {
 
-  @ParameterizedTest
-  @CsvSource({"http://example.com", "http://example.com/"})
-  public void newFetcher_urlNoTrailingSlash(String url) throws Exception {
-    var fetcher = HttpMetaFetcher.newFetcher(new URL(url));
-    Assertions.assertEquals("http://example.com/", fetcher.getSource());
-  }
+  String getSource();
+
+  byte[] fetchResource(String filename, int maxLength)
+      throws IOException, FileExceedsMaxLengthException;
 }
