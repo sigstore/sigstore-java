@@ -89,6 +89,11 @@ public class FileSystemTufStore implements MutableTufStore {
   }
 
   @Override
+  public Optional<Targets> loadDelegatedTargets(String roleName) throws IOException {
+    return loadRole(roleName, Targets.class);
+  }
+
+  @Override
   public void storeTargetFile(String targetName, byte[] targetContents) throws IOException {
     Files.write(targetsCache.resolve(targetName), targetContents);
   }
@@ -99,8 +104,8 @@ public class FileSystemTufStore implements MutableTufStore {
   }
 
   @Override
-  public void storeMeta(SignedTufMeta<?> timestamp) throws IOException {
-    storeRole(timestamp);
+  public void storeMeta(String roleName, SignedTufMeta<?> meta) throws IOException {
+    storeRole(roleName, meta);
   }
 
   <T extends SignedTufMeta<?>> Optional<T> loadRole(String roleName, Class<T> tClass)
@@ -112,9 +117,9 @@ public class FileSystemTufStore implements MutableTufStore {
     return Optional.of(GSON.get().fromJson(Files.readString(roleFile), tClass));
   }
 
-  <T extends SignedTufMeta<?>> void storeRole(T role) throws IOException {
+  <T extends SignedTufMeta<?>> void storeRole(String roleName, T role) throws IOException {
     try (BufferedWriter fileWriter =
-        Files.newBufferedWriter(repoBaseDir.resolve(role.getSignedMeta().getType() + ".json"))) {
+        Files.newBufferedWriter(repoBaseDir.resolve(roleName + ".json"))) {
       GSON.get().toJson(role, fileWriter);
     }
   }
@@ -132,7 +137,7 @@ public class FileSystemTufStore implements MutableTufStore {
         // The file is already backed-up. continue.
       }
     }
-    storeRole(root);
+    storeRole(RootRole.ROOT, root);
   }
 
   @Override
