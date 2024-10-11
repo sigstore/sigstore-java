@@ -295,7 +295,7 @@ public class Updater {
     // 4) check expiration timestamp is after tuf update start time, else fail.
     throwIfExpired(timestamp.getSignedMeta().getExpiresAsDate());
     // 5) persist timestamp.json
-    localStore.storeMeta(timestamp);
+    localStore.storeMeta(RootRole.TIMESTAMP, timestamp);
     return Optional.of(timestamp);
   }
 
@@ -356,7 +356,7 @@ public class Updater {
     // 6) Ensure expiration timestamp of snapshot is later than tuf update start time.
     throwIfExpired(snapshot.getMetaResource().getSignedMeta().getExpiresAsDate());
     // 7) persist snapshot.
-    localStore.storeMeta(snapshot.getMetaResource());
+    localStore.storeMeta(RootRole.SNAPSHOT, snapshot.getMetaResource());
     return snapshot.getMetaResource();
   }
 
@@ -426,7 +426,7 @@ public class Updater {
     throwIfExpired(targetsResult.getMetaResource().getSignedMeta().getExpiresAsDate());
     // 6) persist targets metadata
     // why do we persist the
-    localStore.storeMeta(targetsResult.getMetaResource());
+    localStore.storeMeta(RootRole.TARGETS, targetsResult.getMetaResource());
     return targetsResult.getMetaResource();
   }
 
