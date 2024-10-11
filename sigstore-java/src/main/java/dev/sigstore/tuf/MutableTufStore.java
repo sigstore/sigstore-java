@@ -32,10 +32,11 @@ public interface MutableTufStore extends TufStore {
   /**
    * Generic method to store one of the {@link SignedTufMeta} resources in the local tuf store.
    *
+   * @param roleName the name of the role
    * @param meta the metadata to store
    * @throws IOException if writing the resource causes an IO error
    */
-  void storeMeta(SignedTufMeta<?> meta) throws IOException;
+  void storeMeta(String roleName, SignedTufMeta<?> meta) throws IOException;
 
   /**
    * Once you have ascertained that your root is trustworthy use this method to persist it to your

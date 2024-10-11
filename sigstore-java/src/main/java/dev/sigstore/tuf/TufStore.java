@@ -42,6 +42,9 @@ public interface TufStore {
   /** Return the local trusted targets metadata if there is any. */
   Optional<Targets> loadTargets() throws IOException;
 
+  /** Return a named local delegated targets metadata if there is any. */
+  Optional<Targets> loadDelegatedTargets(String roleName) throws IOException;
+
   /**
    * Reads a TUF target file from the local TUF store
    *

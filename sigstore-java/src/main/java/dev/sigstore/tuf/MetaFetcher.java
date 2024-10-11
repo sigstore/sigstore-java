@@ -15,59 +15,69 @@
  */
 package dev.sigstore.tuf;
 
+import static dev.sigstore.json.GsonSupplier.GSON;
+
+import com.google.common.base.Preconditions;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
-/** Retrieves TUF metadata. */
-public interface MetaFetcher {
+public class MetaFetcher {
 
-  /**
-   * Describes the source of the metadata being fetched from. e.g "http://mirror.bla/mirror",
-   * "mock", "c:/tmp".
-   */
-  String getSource();
+  private static final int MAX_META_BYTES = 99 * 1024; // 99 KB
+  private final Fetcher fetcher;
 
-  /**
-   * Fetch the {@link Root} at the specified {@code version}.
-   *
-   * @throws FileExceedsMaxLengthException when the retrieved file is larger than the maximum
-   *     allowed by the client
-   */
-  Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
-      throws IOException, FileExceedsMaxLengthException;
+  private MetaFetcher(Fetcher fetcher) {
+    this.fetcher = fetcher;
+  }
 
-  /**
-   * Fetches the unversioned specified role meta from the source
-   *
-   * @param name TUF role name
-   * @param roleType this should be the type you expect in return
-   * @return the latest fully de-serialized role if it was present at the source
-   * @throws IOException in case of IO errors
-   * @throws FileExceedsMaxLengthException if the role meta at source exceeds client specified max
-   *     size
-   */
+  public static MetaFetcher newFetcher(Fetcher fetcher) {
+    return new MetaFetcher(fetcher);
+  }
+
+  public String getSource() {
+    return fetcher.getSource();
+  }
+
+  public Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
+      throws IOException, FileExceedsMaxLengthException {
+    String versionFileName = version + ".root.json";
+    return getMeta(versionFileName, Root.class, null);
+  }
+
+  public <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
+      String role, Class<T> t) throws IOException, FileExceedsMaxLengthException {
+    return getMeta(getFileName(role, null), t, null);
+  }
+
+  public <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
+      String role, int version, Class<T> t, Integer maxSize)
+      throws IOException, FileExceedsMaxLengthException {
+    Preconditions.checkArgument(version > 0, "version should be positive, got: %s", version);
+    return getMeta(getFileName(role, version), t, maxSize);
+  }
+
+  private static String getFileName(String role, @Nullable Integer version) {
+    return version == null
+        ? role + ".json"
+        : String.format(Locale.ROOT, "%d.%s.json", version, role);
+  }
+
   <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
-      String name, Class<T> roleType) throws IOException, FileExceedsMaxLengthException;
-
-  /**
-   * Fetches the specified role meta from the source
-   *
-   * @param name TUF role name
-   * @param version the version of the file to download
-   * @param roleType this should be the type you expect in return
-   * @param maxSize max file size in bytes
-   * @return the fully de-serialized role if it was present at the source
-   * @throws IOException in case of IO errors
-   * @throws FileExceedsMaxLengthException if the role meta at source exceeds client specified max
-   *     size
-   */
-  <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
-      String name, int version, Class<T> roleType, Integer maxSize)
-      throws IOException, FileExceedsMaxLengthException;
-
-  byte[] fetchResource(String filename, int maxLength)
-      throws IOException, FileExceedsMaxLengthException;
+      String filename, Class<T> t, Integer maxSize)
+      throws IOException, FileExceedsMaxLengthException {
+    byte[] roleBytes = fetcher.fetchResource(filename, maxSize == null ? MAX_META_BYTES : maxSize);
+    if (roleBytes == null) {
+      return Optional.empty();
+    }
+    var result =
+        new MetaFetchResult<T>(
+            roleBytes, GSON.get().fromJson(new String(roleBytes, StandardCharsets.UTF_8), t));
+    return Optional.of(result);
+  }
 }
