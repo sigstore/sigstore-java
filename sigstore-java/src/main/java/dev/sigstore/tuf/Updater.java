@@ -59,7 +59,8 @@ public class Updater {
 
   private Clock clock;
   private Verifiers.Supplier verifiers;
-  private MetaFetcher fetcher;
+  private MetaFetcher metaFetcher;
+  private Fetcher targetFetcher;
   private ZonedDateTime updateStartTime;
   private RootProvider trustedRootPath;
   private MutableTufStore localStore;
@@ -67,14 +68,16 @@ public class Updater {
   Updater(
       Clock clock,
       Verifiers.Supplier verifiers,
-      MetaFetcher fetcher,
+      MetaFetcher metaFetcher,
+      Fetcher targetFetcher,
       RootProvider trustedRootPath,
       MutableTufStore localStore) {
     this.clock = clock;
     this.verifiers = verifiers;
     this.trustedRootPath = trustedRootPath;
     this.localStore = localStore;
-    this.fetcher = fetcher;
+    this.metaFetcher = metaFetcher;
+    this.targetFetcher = targetFetcher;
   }
 
   public static Builder builder() {
@@ -121,7 +124,7 @@ public class Updater {
       // 5.3.3) download $version+1.root.json from mirror url (eventually obtained from remote.json
       // or map.json) up MAX_META_BYTES. If the file is not available, or we have reached
       // MAX_UPDATES number of root metadata files go to step 5.3.10
-      var newRootMaybe = fetcher.getRootAtVersion(nextVersion);
+      var newRootMaybe = metaFetcher.getRootAtVersion(nextVersion);
       if (newRootMaybe.isEmpty()) {
         // No newer versions, go to 5.3.10.
         break;
@@ -168,7 +171,7 @@ public class Updater {
 
   private void throwIfExpired(ZonedDateTime expires) {
     if (expires.isBefore(updateStartTime)) {
-      throw new RoleExpiredException(fetcher.getSource(), updateStartTime, expires);
+      throw new RoleExpiredException(metaFetcher.getSource(), updateStartTime, expires);
     }
   }
 
@@ -267,9 +270,9 @@ public class Updater {
           FileNotFoundException, SignatureVerificationException {
     // 1) download the timestamp.json bytes.
     var timestamp =
-        fetcher
+        metaFetcher
             .getMeta(RootRole.TIMESTAMP, Timestamp.class)
-            .orElseThrow(() -> new FileNotFoundException("timestamp.json", fetcher.getSource()))
+            .orElseThrow(() -> new FileNotFoundException("timestamp.json", metaFetcher.getSource()))
             .getMetaResource();
 
     // 2) verify against threshold of keys as specified in trusted root.json
@@ -303,14 +306,14 @@ public class Updater {
     // 1) download the snapshot.json bytes up to timestamp's snapshot length.
     int timestampSnapshotVersion = timestamp.getSignedMeta().getSnapshotMeta().getVersion();
     var snapshotResult =
-        fetcher.getMeta(
+        metaFetcher.getMeta(
             RootRole.SNAPSHOT,
             timestampSnapshotVersion,
             Snapshot.class,
             timestamp.getSignedMeta().getSnapshotMeta().getLengthOrDefault());
     if (snapshotResult.isEmpty()) {
       throw new FileNotFoundException(
-          timestampSnapshotVersion + ".snapshot.json", fetcher.getSource());
+          timestampSnapshotVersion + ".snapshot.json", metaFetcher.getSource());
     }
     // 2) check against timestamp.snapshot.hash, this is optional, the fallback is
     // that the version must match, which is handled in (4).
@@ -393,14 +396,14 @@ public class Updater {
     // 1) download the targets.json up to targets.json length in bytes.
     SnapshotMeta.SnapshotTarget targetMeta = snapshot.getSignedMeta().getTargetMeta("targets.json");
     var targetsResultMaybe =
-        fetcher.getMeta(
+        metaFetcher.getMeta(
             RootRole.TARGETS,
             targetMeta.getVersion(),
             Targets.class,
             targetMeta.getLengthOrDefault());
     if (targetsResultMaybe.isEmpty()) {
       throw new FileNotFoundException(
-          targetMeta.getVersion() + ".targets.json", fetcher.getSource());
+          targetMeta.getVersion() + ".targets.json", metaFetcher.getSource());
     }
     var targetsResult = targetsResultMaybe.get();
     // 2) check hash against snapshot.targets.hash, else just make sure versions match, handled
@@ -450,10 +453,9 @@ public class Updater {
         versionedTargetName = targetData.getHashes().getSha256() + "." + targetName;
       }
 
-      var targetBytes =
-          fetcher.fetchResource("targets/" + versionedTargetName, targetData.getLength());
+      var targetBytes = targetFetcher.fetchResource(versionedTargetName, targetData.getLength());
       if (targetBytes == null) {
-        throw new FileNotFoundException(targetName, fetcher.getSource());
+        throw new FileNotFoundException(targetName, targetFetcher.getSource());
       }
       verifyHashes(entry.getKey(), targetBytes, targetData.getHashes());
 
@@ -472,7 +474,8 @@ public class Updater {
     private Clock clock = Clock.systemUTC();
     private Verifiers.Supplier verifiers = Verifiers::newVerifier;
 
-    private MetaFetcher fetcher;
+    private MetaFetcher metaFetcher;
+    private Fetcher targetFetcher;
     private RootProvider trustedRootPath;
     private MutableTufStore localStore;
 
@@ -496,13 +499,18 @@ public class Updater {
       return this;
     }
 
-    public Builder setFetcher(MetaFetcher fetcher) {
-      this.fetcher = fetcher;
+    public Builder setMetaFetcher(MetaFetcher metaFetcher) {
+      this.metaFetcher = metaFetcher;
+      return this;
+    }
+
+    public Builder setTargetFetcher(Fetcher fetcher) {
+      this.targetFetcher = fetcher;
       return this;
     }
 
     public Updater build() {
-      return new Updater(clock, verifiers, fetcher, trustedRootPath, localStore);
+      return new Updater(clock, verifiers, metaFetcher, targetFetcher, trustedRootPath, localStore);
     }
   }
 }

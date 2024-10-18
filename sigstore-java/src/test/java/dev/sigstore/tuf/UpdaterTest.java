@@ -1048,7 +1048,8 @@ class UpdaterTest {
     return Updater.builder()
         .setClock(Clock.fixed(Instant.parse(time), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
-        .setFetcher(HttpMetaFetcher.newFetcher(new URL(remoteUrl)))
+        .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(new URL(remoteUrl))))
+        .setTargetFetcher(HttpFetcher.newFetcher(new URL(remoteUrl + "targets/")))
         .setTrustedRootPath(RootProvider.fromFile(trustedRootFile))
         .setLocalStore(FileSystemTufStore.newFileSystemStore(localStore))
         .build();
