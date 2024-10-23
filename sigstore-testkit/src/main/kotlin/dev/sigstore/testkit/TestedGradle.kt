@@ -23,5 +23,6 @@ import org.gradle.util.GradleVersion
  */
 data class TestedGradle(
     val version: GradleVersion,
-    val configurationCache: BaseGradleTest.ConfigurationCache
+    val configurationCache: BaseGradleTest.ConfigurationCache,
+    val projectIsolation: BaseGradleTest.ProjectIsolation,
 )
