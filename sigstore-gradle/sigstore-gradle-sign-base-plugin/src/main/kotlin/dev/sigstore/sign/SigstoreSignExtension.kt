@@ -84,7 +84,7 @@ abstract class SigstoreSignExtension(private val project: Project) {
         }
 
         val removeSigstoreAsc =
-            project.providers.gradleProperty("dev.sigstore.sign.remove.sigstore.json.asc").map { it.toBoolean() }.orNull != false
+            project.providers.gradleProperty("dev.sigstore.sign.remove.sigstore.json.asc").orNull?.toBoolean() != false
 
         val publicationName = publication.name
 
