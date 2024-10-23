@@ -46,6 +46,7 @@ class OidcDslTest: BaseGradleTest() {
             """.trimIndent()
         )
         enableConfigurationCache(gradle)
+        enableProjectIsolation(gradle)
         prepare(gradle.version, "printConfig", "-s")
             .build()
     }

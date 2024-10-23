@@ -55,6 +55,7 @@ class SigstoreSignTest: BaseGradleTest() {
             """.trimIndent()
         )
         enableConfigurationCache(case.gradle)
+        enableProjectIsolation(case.gradle)
         prepare(case.gradle.version, "signFile", "-s")
             .build()
         assertThat(projectDir.resolve("build/helloProps.txt.sigstore.json"))
