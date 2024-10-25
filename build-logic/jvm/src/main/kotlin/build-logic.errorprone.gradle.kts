@@ -4,11 +4,11 @@ plugins {
     java
 }
 
-if (!project.hasProperty("skipErrorprone")) {
+if (!project.hasProperty("skipErrorprone") && JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
     apply(plugin = "net.ltgt.errorprone")
 
     dependencies {
-        "errorprone"("com.google.errorprone:error_prone_core:2.31.0")
+        "errorprone"("com.google.errorprone:error_prone_core:2.35.1")
         "annotationProcessor"("com.google.guava:guava-beta-checker:1.0")
     }
 
