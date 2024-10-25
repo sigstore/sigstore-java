@@ -36,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,13 +58,17 @@ public class Updater {
 
   private static final Logger log = Logger.getLogger(Updater.class.getName());
 
-  private Clock clock;
-  private Verifiers.Supplier verifiers;
-  private MetaFetcher metaFetcher;
-  private Fetcher targetFetcher;
+  private final Clock clock;
+  private final Verifiers.Supplier verifiers;
+  private final MetaFetcher metaFetcher;
+  private final Fetcher targetFetcher;
+  private final RootProvider trustedRootPath;
+  // TODO: this should be replaced by a dedicated target store
+  private final MutableTufStore localStore;
+
+  // Mutable State
   private ZonedDateTime updateStartTime;
-  private RootProvider trustedRootPath;
-  private MutableTufStore localStore;
+  private TrustedMeta trustedMeta;
 
   Updater(
       Clock clock,
@@ -78,6 +83,7 @@ public class Updater {
     this.localStore = localStore;
     this.metaFetcher = metaFetcher;
     this.targetFetcher = targetFetcher;
+    this.trustedMeta = TrustedMeta.newTrustedMeta(localStore);
   }
 
   public static Builder builder() {
@@ -86,28 +92,36 @@ public class Updater {
 
   public void update()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    var root = updateRoot();
-    // only returns a timestamp value if a more recent timestamp file has been found.
-    var timestampMaybe = updateTimestamp(root);
-    if (timestampMaybe.isPresent()) {
-      var snapshot = updateSnapshot(root, timestampMaybe.get());
-      var targets = updateTargets(root, snapshot);
-      downloadTargets(targets);
+    updateMeta();
+    downloadTargets(trustedMeta.getTargets());
+  }
+
+  void updateMeta() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    updateRoot();
+    var oldTimestamp = trustedMeta.findTimestamp();
+    updateTimestamp();
+    if (Objects.equals(oldTimestamp.orElse(null), trustedMeta.getTimestamp())
+        && trustedMeta.findSnapshot().isPresent()
+        && trustedMeta.findTargets().isPresent()) {
+      return;
     }
+    // if we need to update or we can't find targets/timestamps locally then grab new snapshot and
+    // targets from remote
+    updateSnapshot();
+    updateTargets();
   }
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
-  Root updateRoot()
+  void updateRoot()
       throws IOException, RoleExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
-          InvalidKeyException, FileExceedsMaxLengthException, RollbackVersionException,
-          SignatureVerificationException {
+          FileExceedsMaxLengthException, RollbackVersionException, SignatureVerificationException {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);
 
     // 5.3.2) load the trust metadata file (root.json), get version of root.json and the role
     // signature threshold value
-    Optional<Root> localRoot = localStore.loadTrustedRoot();
+    Optional<Root> localRoot = trustedMeta.findRoot();
     Root trustedRoot;
     if (localRoot.isPresent()) {
       trustedRoot = localRoot.get();
@@ -148,7 +162,7 @@ public class Updater {
       // 5.3.7) set the trusted root metadata to the new root
       trustedRoot = newRoot;
       // 5.3.8) persist to repo
-      localStore.storeTrustedRoot(trustedRoot);
+      trustedMeta.setRoot(trustedRoot);
       // 5.3.9) see if there are more versions go back 5.3.3
       nextVersion++;
     }
@@ -164,9 +178,9 @@ public class Updater {
         || hasNewKeys(
             preUpdateTimestampRole,
             trustedRoot.getSignedMeta().getRoles().get(RootRole.TIMESTAMP))) {
-      localStore.clearMetaDueToKeyRotation();
+      trustedMeta.clearMetaDueToKeyRotation();
     }
-    return trustedRoot;
+    trustedMeta.setRoot(trustedRoot);
   }
 
   private void throwIfExpired(ZonedDateTime expires) {
@@ -265,9 +279,9 @@ public class Updater {
     }
   }
 
-  Optional<Timestamp> updateTimestamp(Root root)
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
-          FileNotFoundException, SignatureVerificationException {
+  void updateTimestamp()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, FileNotFoundException,
+          SignatureVerificationException {
     // 1) download the timestamp.json bytes.
     var timestamp =
         metaFetcher
@@ -276,12 +290,12 @@ public class Updater {
             .getMetaResource();
 
     // 2) verify against threshold of keys as specified in trusted root.json
-    verifyDelegate(root, timestamp);
+    verifyDelegate(trustedMeta.getRoot(), timestamp);
 
     // 3) If the new timestamp file has a lesser version than our current trusted timestamp file
-    // report a rollback attack.  If it is equal abort the update as there should be no changes. If
-    // it is higher than continue update.
-    Optional<Timestamp> localTimestampMaybe = localStore.loadTimestamp();
+    // report a rollback attack.  If it is equal, just return the original timestamp there should
+    // be no changes. If it is higher than continue update.
+    Optional<Timestamp> localTimestampMaybe = trustedMeta.findTimestamp();
     if (localTimestampMaybe.isPresent()) {
       Timestamp localTimestamp = localTimestampMaybe.get();
       if (localTimestamp.getSignedMeta().getVersion() > timestamp.getSignedMeta().getVersion()) {
@@ -289,28 +303,28 @@ public class Updater {
             localTimestamp.getSignedMeta().getVersion(), timestamp.getSignedMeta().getVersion());
       }
       if (localTimestamp.getSignedMeta().getVersion() == timestamp.getSignedMeta().getVersion()) {
-        return Optional.empty();
+        trustedMeta.setTimestamp(localTimestamp);
+        return;
       }
     }
     // 4) check expiration timestamp is after tuf update start time, else fail.
     throwIfExpired(timestamp.getSignedMeta().getExpiresAsDate());
     // 5) persist timestamp.json
-    localStore.storeMeta(RootRole.TIMESTAMP, timestamp);
-    return Optional.of(timestamp);
+    trustedMeta.setTimestamp(timestamp);
   }
 
-  Snapshot updateSnapshot(Root root, Timestamp timestamp)
+  void updateSnapshot()
       throws IOException, FileNotFoundException, InvalidHashesException,
-          SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException,
-          InvalidKeyException {
+          SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException {
     // 1) download the snapshot.json bytes up to timestamp's snapshot length.
-    int timestampSnapshotVersion = timestamp.getSignedMeta().getSnapshotMeta().getVersion();
+    int timestampSnapshotVersion =
+        trustedMeta.getTimestamp().getSignedMeta().getSnapshotMeta().getVersion();
     var snapshotResult =
         metaFetcher.getMeta(
             RootRole.SNAPSHOT,
             timestampSnapshotVersion,
             Snapshot.class,
-            timestamp.getSignedMeta().getSnapshotMeta().getLengthOrDefault());
+            trustedMeta.getTimestamp().getSignedMeta().getSnapshotMeta().getLengthOrDefault());
     if (snapshotResult.isEmpty()) {
       throw new FileNotFoundException(
           timestampSnapshotVersion + ".snapshot.json", metaFetcher.getSource());
@@ -318,14 +332,14 @@ public class Updater {
     // 2) check against timestamp.snapshot.hash, this is optional, the fallback is
     // that the version must match, which is handled in (4).
     var snapshot = snapshotResult.get();
-    if (timestamp.getSignedMeta().getSnapshotMeta().getHashes().isPresent()) {
+    if (trustedMeta.getTimestamp().getSignedMeta().getSnapshotMeta().getHashes().isPresent()) {
       verifyHashes(
           "snapshot",
           snapshot.getRawBytes(),
-          timestamp.getSignedMeta().getSnapshotMeta().getHashes().get());
+          trustedMeta.getTimestamp().getSignedMeta().getSnapshotMeta().getHashes().get());
     }
     // 3) Check against threshold of root signing keys, else fail
-    verifyDelegate(root, snapshot.getMetaResource());
+    verifyDelegate(trustedMeta.getRoot(), snapshot.getMetaResource());
     // 4) Check snapshot.version matches timestamp.snapshot.version, else fail.
     int snapshotVersion = snapshot.getMetaResource().getSignedMeta().getVersion();
     if (snapshotVersion != timestampSnapshotVersion) {
@@ -334,7 +348,7 @@ public class Updater {
     // 5) Ensure all targets and delegated targets in the trusted (old) snapshots file have versions
     // which are less than or equal to the equivalent target in the new file.  Check that no targets
     // are missing in new file. Else fail.
-    var trustedSnapshotMaybe = localStore.loadSnapshot();
+    var trustedSnapshotMaybe = trustedMeta.findSnapshot();
     if (trustedSnapshotMaybe.isPresent()) {
       var trustedSnapshot = trustedSnapshotMaybe.get();
       for (Map.Entry<String, SnapshotMeta.SnapshotTarget> trustedTargetEntry :
@@ -356,8 +370,7 @@ public class Updater {
     // 6) Ensure expiration timestamp of snapshot is later than tuf update start time.
     throwIfExpired(snapshot.getMetaResource().getSignedMeta().getExpiresAsDate());
     // 7) persist snapshot.
-    localStore.storeMeta(RootRole.SNAPSHOT, snapshot.getMetaResource());
-    return snapshot.getMetaResource();
+    trustedMeta.setSnapshot(snapshot.getMetaResource());
   }
 
   // this method feels very wrong. I would not show it to a friend.
@@ -389,12 +402,13 @@ public class Updater {
     }
   }
 
-  Targets updateTargets(Root root, Snapshot snapshot)
+  void updateTargets()
       throws IOException, FileNotFoundException, InvalidHashesException,
           SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException,
-          InvalidKeyException, FileExceedsMaxLengthException {
+          FileExceedsMaxLengthException {
     // 1) download the targets.json up to targets.json length in bytes.
-    SnapshotMeta.SnapshotTarget targetMeta = snapshot.getSignedMeta().getTargetMeta("targets.json");
+    SnapshotMeta.SnapshotTarget targetMeta =
+        trustedMeta.getSnapshot().getSignedMeta().getTargetMeta("targets.json");
     var targetsResultMaybe =
         metaFetcher.getMeta(
             RootRole.TARGETS,
@@ -415,7 +429,7 @@ public class Updater {
           targetMeta.getHashes().get());
     }
     // 3) check against threshold of keys as specified by trusted root.json
-    verifyDelegate(root, targetsResult.getMetaResource());
+    verifyDelegate(trustedMeta.getRoot(), targetsResult.getMetaResource());
     // 4) check targets.version == snapshot.targets.version, else fail.
     int targetsVersion = targetsResult.getMetaResource().getSignedMeta().getVersion();
     int snapshotTargetsVersion = targetMeta.getVersion();
@@ -426,8 +440,7 @@ public class Updater {
     throwIfExpired(targetsResult.getMetaResource().getSignedMeta().getExpiresAsDate());
     // 6) persist targets metadata
     // why do we persist the
-    localStore.storeMeta(RootRole.TARGETS, targetsResult.getMetaResource());
-    return targetsResult.getMetaResource();
+    trustedMeta.setTargets(targetsResult.getMetaResource());
   }
 
   void downloadTargets(Targets targets)
@@ -468,6 +481,11 @@ public class Updater {
   @VisibleForTesting
   MutableTufStore getLocalStore() {
     return localStore;
+  }
+
+  @VisibleForTesting
+  TrustedMeta getTrustedMeta() {
+    return trustedMeta;
   }
 
   public static class Builder {
