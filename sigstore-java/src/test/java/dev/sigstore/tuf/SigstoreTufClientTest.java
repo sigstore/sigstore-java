@@ -89,10 +89,10 @@ class SigstoreTufClientTest {
     var trustRootBytes =
         JsonFormat.printer().print(TrustedRoot.newBuilder()).getBytes(StandardCharsets.UTF_8);
     var mockUpdater = Mockito.mock(Updater.class);
-    var mockTufStore = Mockito.mock(MutableTufStore.class);
-    Mockito.when(mockTufStore.getTargetFile(SigstoreTufClient.TRUST_ROOT_FILENAME))
+    var mockTargetStore = Mockito.mock(TargetStore.class);
+    Mockito.when(mockTargetStore.readTarget(SigstoreTufClient.TRUST_ROOT_FILENAME))
         .thenReturn(trustRootBytes);
-    Mockito.when(mockUpdater.getLocalStore()).thenReturn(mockTufStore);
+    Mockito.when(mockUpdater.getTargetStore()).thenReturn(mockTargetStore);
 
     return mockUpdater;
   }

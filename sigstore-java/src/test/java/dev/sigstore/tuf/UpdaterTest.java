@@ -61,7 +61,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jetty.server.Server;
@@ -293,7 +292,7 @@ class UpdaterTest {
     assertStoreContains("timestamp.json");
     assertEquals(
         3,
-        updater.getTrustedMeta().getTimestamp().getSignedMeta().getVersion(),
+        updater.getMetaStore().getTimestamp().getSignedMeta().getVersion(),
         "timestamp version did not match expectations");
   }
 
@@ -305,14 +304,14 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertEquals(
         1,
-        updater.getLocalStore().loadTimestamp().get().getSignedMeta().getVersion(),
+        updater.getMetaStore().getTimestamp().getSignedMeta().getVersion(),
         "timestamp version should start at 1 before the update.");
     updater.updateRoot();
     updater.updateTimestamp();
     assertStoreContains("timestamp.json");
     assertEquals(
         3,
-        updater.getTrustedMeta().getTimestamp().getSignedMeta().getVersion(),
+        updater.getMetaStore().getTimestamp().getSignedMeta().getVersion(),
         "timestamp version did not match expectations.");
   }
 
@@ -484,7 +483,7 @@ class UpdaterTest {
         createTimeStaticUpdater(
             localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-20T18:07:27Z");
     updater.updateMeta();
-    var localTargets = updater.getTrustedMeta().getTargets();
+    var localTargets = updater.getMetaStore().getTargets();
     assertNotNull(localTargets);
     var remoteTargets =
         GSON.get()
@@ -526,7 +525,7 @@ class UpdaterTest {
     updater.updateMeta();
     assertThrows(
         FileNotFoundException.class,
-        () -> updater.downloadTargets(updater.getTrustedMeta().getTargets()),
+        () -> updater.downloadTargets(updater.getMetaStore().getTargets()),
         "the target file for download should be missing from the repo and cause an exception.");
   }
 
@@ -544,7 +543,7 @@ class UpdaterTest {
     updater.updateMeta();
     assertThrows(
         FileExceedsMaxLengthException.class,
-        () -> updater.downloadTargets(updater.getTrustedMeta().getTargets()),
+        () -> updater.downloadTargets(updater.getMetaStore().getTargets()),
         "The target file is expected to not match the length specified in targets.json target data.");
   }
 
@@ -562,7 +561,7 @@ class UpdaterTest {
     updater.updateMeta();
     assertThrows(
         InvalidHashesException.class,
-        () -> updater.downloadTargets(updater.getTrustedMeta().getTargets()),
+        () -> updater.downloadTargets(updater.getMetaStore().getTargets()),
         "The target file has been modified and should not match the expected hash");
   }
 
@@ -579,9 +578,9 @@ class UpdaterTest {
         "targets/53904bc6216230bf8da0ec42d34004a3f36764de698638641870e37d270e4fd13e1079285f8bca73c2857a279f6f7fbc82038274c3eb48ec5bb2da9b2e30491a.test2.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     updater.update();
-    assertNotNull(updater.getLocalStore().getTargetFile("test.txt"));
-    assertNotNull(updater.getLocalStore().getTargetFile("test.txt.v2"));
-    assertNotNull(updater.getLocalStore().getTargetFile("test2.txt"));
+    assertNotNull(updater.getTargetStore().readTarget("test.txt"));
+    assertNotNull(updater.getTargetStore().readTarget("test.txt.v2"));
+    assertNotNull(updater.getTargetStore().readTarget("test2.txt"));
   }
 
   // Ensure we accept sha256 or sha512 on hashes for targets
@@ -632,16 +631,15 @@ class UpdaterTest {
     updater.update();
 
     Root oldRoot = TestResources.loadRoot(UPDATER_REAL_TRUSTED_ROOT);
-    MutableTufStore localStore = updater.getLocalStore();
-    Optional<Root> newRoot = localStore.loadTrustedRoot();
-    assertTrue(newRoot.isPresent(), "trusted root should be present in the store");
-    assertRootVersionIncreased(oldRoot, newRoot.get());
-    Optional<Targets> targets = localStore.loadTargets();
-    assertTrue(targets.isPresent(), "a list of targets should be available in the store");
-    Map<String, TargetMeta.TargetData> targetsData = targets.get().getSignedMeta().getTargets();
+    TrustedMetaStore metaStore = updater.getMetaStore();
+    TargetStore targetStore = updater.getTargetStore();
+    Root newRoot = metaStore.getRoot(); // should be present
+    assertRootVersionIncreased(oldRoot, newRoot);
+    Targets targets = metaStore.getTargets(); // should be present
+    Map<String, TargetMeta.TargetData> targetsData = targets.getSignedMeta().getTargets();
     for (String file : targetsData.keySet()) {
       TargetMeta.TargetData fileData = targetsData.get(file);
-      byte[] fileBytes = localStore.getTargetFile(file);
+      byte[] fileBytes = targetStore.readTarget(file);
       assertNotNull(fileBytes, "each file from targets data should be present");
       assertEquals(fileData.getLength(), fileBytes.length, "file length should match metadata");
       assertEquals(
@@ -930,8 +928,8 @@ class UpdaterTest {
     updater.updateTimestamp();
     updater.updateSnapshot();
 
-    var timestamp = updater.getTrustedMeta().getTimestamp();
-    var snapshot = updater.getTrustedMeta().getSnapshot();
+    var timestamp = updater.getMetaStore().getTimestamp();
+    var snapshot = updater.getMetaStore().getSnapshot();
 
     Assertions.assertTrue(timestamp.getSignedMeta().getSnapshotMeta().getHashes().isEmpty());
     Assertions.assertTrue(timestamp.getSignedMeta().getSnapshotMeta().getLength().isEmpty());
@@ -965,13 +963,17 @@ class UpdaterTest {
   @NotNull
   private static Updater createTimeStaticUpdater(Path localStore, Path trustedRootFile, String time)
       throws IOException {
+    var fsTufStore = FileSystemTufStore.newFileSystemStore(localStore);
     return Updater.builder()
         .setClock(Clock.fixed(Instant.parse(time), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
         .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(new URL(remoteUrl))))
         .setTargetFetcher(HttpFetcher.newFetcher(new URL(remoteUrl + "targets/")))
         .setTrustedRootPath(RootProvider.fromFile(trustedRootFile))
-        .setLocalStore(FileSystemTufStore.newFileSystemStore(localStore))
+        .setTrustedMetaStore(
+            TrustedMetaStore.newTrustedMetaStore(
+                PassthroughCacheMetaStore.newPassthroughMetaCache(fsTufStore)))
+        .setTargetStore(fsTufStore)
         .build();
   }
 

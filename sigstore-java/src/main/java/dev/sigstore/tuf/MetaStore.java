@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Sigstore Authors.
+ * Copyright 2024 The Sigstore Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,25 @@
  */
 package dev.sigstore.tuf;
 
-import dev.sigstore.tuf.model.*;
+import dev.sigstore.tuf.model.Root;
+import dev.sigstore.tuf.model.SignedTufMeta;
+import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
 
-/** Defines the set of actions needed to support a local repository of TUF metadata. */
-public interface MutableTufStore extends TufStore {
-  /**
-   * Writes a TUF target to the local target store.
-   *
-   * @param targetName the name of the target file to write (e.g. ctfe.pub)
-   * @param targetContents the content of the target file as bytes
-   * @throws IOException if an error occurs
-   */
-  void storeTargetFile(String targetName, byte[] targetContents) throws IOException;
+/** Interface that defined a mutable meta store functionality. */
+public interface MetaStore extends MetaReader {
+
+  String getIdentifier();
 
   /**
-   * Generic method to store one of the {@link SignedTufMeta} resources in the local tuf store.
+   * Generic method to store one of the {@link SignedTufMeta} resources in the local tuf store. Do
+   * not use for Root role, use {@link #setRoot(Root)} instead.
    *
    * @param roleName the name of the role
    * @param meta the metadata to store
    * @throws IOException if writing the resource causes an IO error
    */
-  void storeMeta(String roleName, SignedTufMeta<?> meta) throws IOException;
+  void setMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException;
 
   /**
    * Once you have ascertained that your root is trustworthy use this method to persist it to your
@@ -49,7 +46,7 @@ public interface MutableTufStore extends TufStore {
    * @see <a
    *     href="https://theupdateframework.github.io/specification/latest/#detailed-client-workflow">5.3.8</a>
    */
-  void storeTrustedRoot(Root root) throws IOException;
+  void setRoot(Root root) throws IOException;
 
   /**
    * This clears out the snapshot and timestamp metadata from the store, as required when snapshot

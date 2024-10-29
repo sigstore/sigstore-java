@@ -130,14 +130,18 @@ public class SigstoreTufClient {
           remoteMirror.toString().endsWith("/")
               ? remoteMirror
               : new URL(remoteMirror.toExternalForm() + "/");
-      var targetsLocation = new URL(normalizedRemoteMirror.toExternalForm() + "targets");
+      var remoteTargetsLocation = new URL(normalizedRemoteMirror.toExternalForm() + "targets");
+      var filesystemTufStore = FileSystemTufStore.newFileSystemStore(tufCacheLocation);
       var tufUpdater =
           Updater.builder()
               .setTrustedRootPath(trustedRoot)
-              .setLocalStore(FileSystemTufStore.newFileSystemStore(tufCacheLocation))
+              .setTrustedMetaStore(
+                  TrustedMetaStore.newTrustedMetaStore(
+                      PassthroughCacheMetaStore.newPassthroughMetaCache(filesystemTufStore)))
+              .setTargetStore(filesystemTufStore)
               .setMetaFetcher(
                   MetaFetcher.newFetcher(HttpFetcher.newFetcher(normalizedRemoteMirror)))
-              .setTargetFetcher(HttpFetcher.newFetcher(targetsLocation))
+              .setTargetFetcher(HttpFetcher.newFetcher(remoteTargetsLocation))
               .build();
       return new SigstoreTufClient(tufUpdater, cacheValidity);
     }
@@ -166,7 +170,7 @@ public class SigstoreTufClient {
     JsonFormat.parser()
         .merge(
             new String(
-                updater.getLocalStore().getTargetFile(TRUST_ROOT_FILENAME), StandardCharsets.UTF_8),
+                updater.getTargetStore().readTarget(TRUST_ROOT_FILENAME), StandardCharsets.UTF_8),
             trustedRootBuilder);
     sigstoreTrustedRoot = SigstoreTrustedRoot.from(trustedRootBuilder.build());
   }
