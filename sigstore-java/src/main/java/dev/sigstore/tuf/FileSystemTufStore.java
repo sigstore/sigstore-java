@@ -28,13 +28,13 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 /** Uses a local file system directory to store the trusted TUF metadata. */
-public class FileSystemTufStore implements MutableTufStore {
+public class FileSystemTufStore implements MetaStore, TargetStore {
 
   private static final String ROOT_FILE_NAME = "root.json";
   private static final String SNAPSHOT_FILE_NAME = "snapshot.json";
   private static final String TIMESTAMP_FILE_NAME = "timestamp.json";
-  private Path repoBaseDir;
-  private Path targetsCache;
+  private final Path repoBaseDir;
+  private final Path targetsCache;
 
   @VisibleForTesting
   FileSystemTufStore(Path repoBaseDir, Path targetsCache) {
@@ -42,7 +42,7 @@ public class FileSystemTufStore implements MutableTufStore {
     this.targetsCache = targetsCache;
   }
 
-  public static MutableTufStore newFileSystemStore(Path repoBaseDir) throws IOException {
+  public static FileSystemTufStore newFileSystemStore(Path repoBaseDir) throws IOException {
     if (!Files.isDirectory(repoBaseDir)) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
@@ -53,7 +53,7 @@ public class FileSystemTufStore implements MutableTufStore {
     return newFileSystemStore(repoBaseDir, defaultTargetsCache);
   }
 
-  public static MutableTufStore newFileSystemStore(Path repoBaseDir, Path targetsCache) {
+  public static FileSystemTufStore newFileSystemStore(Path repoBaseDir, Path targetsCache) {
     if (!Files.isDirectory(repoBaseDir)) {
       throw new IllegalArgumentException(repoBaseDir + " must be a file system directory.");
     }
@@ -65,50 +65,26 @@ public class FileSystemTufStore implements MutableTufStore {
 
   @Override
   public String getIdentifier() {
-    return repoBaseDir.toAbsolutePath().toString();
+    return "Meta: " + repoBaseDir.toAbsolutePath() + ", Targets:" + targetsCache.toAbsolutePath();
   }
 
   @Override
-  public Optional<Root> loadTrustedRoot() throws IOException {
-    return loadRole(RootRole.ROOT, Root.class);
-  }
-
-  @Override
-  public Optional<Timestamp> loadTimestamp() throws IOException {
-    return loadRole(RootRole.TIMESTAMP, Timestamp.class);
-  }
-
-  @Override
-  public Optional<Snapshot> loadSnapshot() throws IOException {
-    return loadRole(RootRole.SNAPSHOT, Snapshot.class);
-  }
-
-  @Override
-  public Optional<Targets> loadTargets() throws IOException {
-    return loadRole(RootRole.TARGETS, Targets.class);
-  }
-
-  @Override
-  public Optional<Targets> loadDelegatedTargets(String roleName) throws IOException {
-    return loadRole(roleName, Targets.class);
-  }
-
-  @Override
-  public void storeTargetFile(String targetName, byte[] targetContents) throws IOException {
+  public void writeTarget(String targetName, byte[] targetContents) throws IOException {
     Files.write(targetsCache.resolve(targetName), targetContents);
   }
 
   @Override
-  public byte[] getTargetFile(String targetName) throws IOException {
+  public byte[] readTarget(String targetName) throws IOException {
     return Files.readAllBytes(targetsCache.resolve(targetName));
   }
 
   @Override
-  public void storeMeta(String roleName, SignedTufMeta<?> meta) throws IOException {
+  public void writeMeta(String roleName, SignedTufMeta<?> meta) throws IOException {
     storeRole(roleName, meta);
   }
 
-  <T extends SignedTufMeta<?>> Optional<T> loadRole(String roleName, Class<T> tClass)
+  @Override
+  public <T extends SignedTufMeta<?>> Optional<T> readMeta(String roleName, Class<T> tClass)
       throws IOException {
     Path roleFile = repoBaseDir.resolve(roleName + ".json");
     if (!roleFile.toFile().exists()) {
@@ -125,8 +101,8 @@ public class FileSystemTufStore implements MutableTufStore {
   }
 
   @Override
-  public void storeTrustedRoot(Root root) throws IOException {
-    Optional<Root> trustedRoot = loadTrustedRoot();
+  public void writeRoot(Root root) throws IOException {
+    Optional<Root> trustedRoot = readMeta(RootRole.ROOT, Root.class);
     if (trustedRoot.isPresent()) {
       try {
         Files.move(
