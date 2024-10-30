@@ -60,7 +60,7 @@ public class TrustedMetaStore {
   <T extends SignedTufMeta<? extends TufMeta>> T getMeta(String roleName, Class<T> tClass)
       throws IOException {
     return metaStore
-        .findMeta(roleName, tClass)
+        .readMeta(roleName, tClass)
         .orElseThrow(
             () ->
                 new IllegalStateException(
@@ -70,7 +70,7 @@ public class TrustedMetaStore {
   }
 
   public void setRoot(Root root) throws IOException {
-    metaStore.setRoot(root);
+    metaStore.writeRoot(root);
   }
 
   public Root getRoot() throws IOException {
@@ -78,11 +78,11 @@ public class TrustedMetaStore {
   }
 
   public Optional<Root> findRoot() throws IOException {
-    return metaStore.findMeta(RootRole.ROOT, Root.class);
+    return metaStore.readMeta(RootRole.ROOT, Root.class);
   }
 
   public void setTimestamp(Timestamp timestamp) throws IOException {
-    metaStore.setMeta(RootRole.TIMESTAMP, timestamp);
+    metaStore.writeMeta(RootRole.TIMESTAMP, timestamp);
   }
 
   public Timestamp getTimestamp() throws IOException {
@@ -90,11 +90,11 @@ public class TrustedMetaStore {
   }
 
   public Optional<Timestamp> findTimestamp() throws IOException {
-    return metaStore.findMeta(RootRole.TIMESTAMP, Timestamp.class);
+    return metaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class);
   }
 
   public void setSnapshot(Snapshot snapshot) throws IOException {
-    metaStore.setMeta(RootRole.SNAPSHOT, snapshot);
+    metaStore.writeMeta(RootRole.SNAPSHOT, snapshot);
   }
 
   public Snapshot getSnapshot() throws IOException {
@@ -102,11 +102,11 @@ public class TrustedMetaStore {
   }
 
   public Optional<Snapshot> findSnapshot() throws IOException {
-    return metaStore.findMeta(RootRole.SNAPSHOT, Snapshot.class);
+    return metaStore.readMeta(RootRole.SNAPSHOT, Snapshot.class);
   }
 
   public void setTargets(Targets targets) throws IOException {
-    metaStore.setMeta(RootRole.TARGETS, targets);
+    metaStore.writeMeta(RootRole.TARGETS, targets);
   }
 
   public Targets getTargets() throws IOException {
@@ -114,7 +114,7 @@ public class TrustedMetaStore {
   }
 
   public Optional<Targets> findTargets() throws IOException {
-    return metaStore.findMeta(RootRole.TARGETS, Targets.class);
+    return metaStore.readMeta(RootRole.TARGETS, Targets.class);
   }
 
   public void clearMetaDueToKeyRotation() throws IOException {

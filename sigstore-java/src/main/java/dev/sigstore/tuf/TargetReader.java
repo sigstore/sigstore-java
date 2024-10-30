@@ -17,6 +17,7 @@ package dev.sigstore.tuf;
 
 import java.io.IOException;
 
+/** Interface that defines reading targets from local storage. */
 public interface TargetReader {
 
   /**

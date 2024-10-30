@@ -79,12 +79,12 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   }
 
   @Override
-  public void setMeta(String roleName, SignedTufMeta<?> meta) throws IOException {
+  public void writeMeta(String roleName, SignedTufMeta<?> meta) throws IOException {
     storeRole(roleName, meta);
   }
 
   @Override
-  public <T extends SignedTufMeta<?>> Optional<T> findMeta(String roleName, Class<T> tClass)
+  public <T extends SignedTufMeta<?>> Optional<T> readMeta(String roleName, Class<T> tClass)
       throws IOException {
     Path roleFile = repoBaseDir.resolve(roleName + ".json");
     if (!roleFile.toFile().exists()) {
@@ -101,8 +101,8 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   }
 
   @Override
-  public void setRoot(Root root) throws IOException {
-    Optional<Root> trustedRoot = findMeta(RootRole.ROOT, Root.class);
+  public void writeRoot(Root root) throws IOException {
+    Optional<Root> trustedRoot = readMeta(RootRole.ROOT, Root.class);
     if (trustedRoot.isPresent()) {
       try {
         Files.move(

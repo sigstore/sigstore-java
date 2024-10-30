@@ -20,20 +20,25 @@ import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
 
-/** Interface that defined a mutable meta store functionality. */
+/** Interface that defines a mutable meta store functionality. */
 public interface MetaStore extends MetaReader {
 
+  /**
+   * A generic string for identifying the local store in debug messages. A file system based
+   * implementation might return the path being used for storage, while an in-memory store may just
+   * return something like 'in-memory'.
+   */
   String getIdentifier();
 
   /**
    * Generic method to store one of the {@link SignedTufMeta} resources in the local tuf store. Do
-   * not use for Root role, use {@link #setRoot(Root)} instead.
+   * not use for Root role, use {@link #writeRoot(Root)} instead.
    *
    * @param roleName the name of the role
    * @param meta the metadata to store
    * @throws IOException if writing the resource causes an IO error
    */
-  void setMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException;
+  void writeMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException;
 
   /**
    * Once you have ascertained that your root is trustworthy use this method to persist it to your
@@ -46,7 +51,7 @@ public interface MetaStore extends MetaReader {
    * @see <a
    *     href="https://theupdateframework.github.io/specification/latest/#detailed-client-workflow">5.3.8</a>
    */
-  void setRoot(Root root) throws IOException;
+  void writeRoot(Root root) throws IOException;
 
   /**
    * This clears out the snapshot and timestamp metadata from the store, as required when snapshot

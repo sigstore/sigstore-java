@@ -20,6 +20,7 @@ import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
 import java.util.Optional;
 
+/** Interface that defines reading meta from local storage. */
 public interface MetaReader {
 
   /**
@@ -31,6 +32,6 @@ public interface MetaReader {
    * @return an instance of the signed metadata for the role if it was found
    * @throws IOException if an error occurs reading from the backing store
    */
-  <T extends SignedTufMeta<? extends TufMeta>> Optional<T> findMeta(
+  <T extends SignedTufMeta<? extends TufMeta>> Optional<T> readMeta(
       String roleName, Class<T> tClass) throws IOException;
 }

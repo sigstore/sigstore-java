@@ -17,9 +17,14 @@ package dev.sigstore.tuf;
 
 import java.io.IOException;
 
-/** Interface that defined a mutable meta store functionality. */
+/** Interface that defines a mutable target store functionality. */
 public interface TargetStore extends TargetReader {
 
+  /**
+   * A generic string for identifying the local store in debug messages. A file system based
+   * implementation might return the path being used for storage, while an in-memory store may just
+   * return something like 'in-memory'.
+   */
   String getIdentifier();
 
   /**

@@ -45,15 +45,15 @@ public class PassthroughCacheMetaStore implements MetaReader, MetaStore {
   }
 
   @Override
-  public void setRoot(Root root) throws IOException {
-    // call storeRoot instead of generic storeMeta because it does extra work when storing on disk
-    localStore.setRoot(root);
+  public void writeRoot(Root root) throws IOException {
+    // call writeRoot instead of generic writeMeta because it may do extra work when storing on disk
+    localStore.writeRoot(root);
     cache.put(RootRole.ROOT, root);
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  public <T extends SignedTufMeta<? extends TufMeta>> Optional<T> findMeta(
+  public <T extends SignedTufMeta<? extends TufMeta>> Optional<T> readMeta(
       String roleName, Class<T> tClass) throws IOException {
     // check memory cache
     if (cache.containsKey(roleName)) {
@@ -61,18 +61,18 @@ public class PassthroughCacheMetaStore implements MetaReader, MetaStore {
     }
 
     // check backing storage and write to memory if found
-    var value = localStore.findMeta(roleName, tClass);
+    var value = localStore.readMeta(roleName, tClass);
     value.ifPresent(v -> cache.put(roleName, v));
 
     return value;
   }
 
   @Override
-  public void setMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException {
+  public void writeMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException {
     if (Objects.equals(roleName, RootRole.ROOT)) {
-      throw new IllegalArgumentException("Calling setMeta on root instead of setRoot");
+      throw new IllegalArgumentException("Calling writeMeta on root instead of writeRoot");
     }
-    localStore.setMeta(roleName, meta);
+    localStore.writeMeta(roleName, meta);
     cache.put(roleName, meta);
   }
 

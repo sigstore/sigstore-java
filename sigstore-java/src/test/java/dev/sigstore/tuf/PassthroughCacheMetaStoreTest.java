@@ -61,54 +61,54 @@ class PassthroughCacheMetaStoreTest {
 
   @Test
   public void root_test() throws Exception {
-    assertTrue(fileSystemTufStore.findMeta(RootRole.ROOT, Root.class).isEmpty());
-    assertTrue(passthroughCacheMetaStore.findMeta(RootRole.ROOT, Root.class).isEmpty());
+    assertTrue(fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
+    assertTrue(passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
 
-    passthroughCacheMetaStore.setRoot(root);
+    passthroughCacheMetaStore.writeRoot(root);
 
-    assertEquals(root, fileSystemTufStore.findMeta(RootRole.ROOT, Root.class).get());
-    assertEquals(root, passthroughCacheMetaStore.findMeta(RootRole.ROOT, Root.class).get());
+    assertEquals(root, fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).get());
+    assertEquals(root, passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).get());
   }
 
   @Test
   public void root_canInitFromDisk() throws Exception {
-    assertTrue(fileSystemTufStore.findMeta(RootRole.ROOT, Root.class).isEmpty());
-    assertTrue(passthroughCacheMetaStore.findMeta(RootRole.ROOT, Root.class).isEmpty());
+    assertTrue(fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
+    assertTrue(passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
 
     try (BufferedWriter fileWriter = Files.newBufferedWriter(localStore.resolve("root.json"))) {
       GSON.get().toJson(root, fileWriter);
     }
 
-    assertEquals(root, fileSystemTufStore.findMeta(RootRole.ROOT, Root.class).get());
-    assertEquals(root, passthroughCacheMetaStore.findMeta(RootRole.ROOT, Root.class).get());
+    assertEquals(root, fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).get());
+    assertEquals(root, passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).get());
   }
 
   @Test
   public void meta_test() throws Exception {
     // root uses special handling for writing, but the rest of them don't, so we just test
     // timestamp here arbitrarily
-    assertTrue(fileSystemTufStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
-    assertTrue(passthroughCacheMetaStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
+    assertTrue(fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
+    assertTrue(passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
 
-    passthroughCacheMetaStore.setMeta(RootRole.TIMESTAMP, timestamp);
+    passthroughCacheMetaStore.writeMeta(RootRole.TIMESTAMP, timestamp);
 
-    assertEquals(timestamp, fileSystemTufStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).get());
+    assertEquals(timestamp, fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).get());
     assertEquals(
-        timestamp, passthroughCacheMetaStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).get());
+        timestamp, passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).get());
   }
 
   @Test
   public void timestamp_canInitFromDisk() throws Exception {
-    assertTrue(fileSystemTufStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
-    assertTrue(passthroughCacheMetaStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
+    assertTrue(fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
+    assertTrue(passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
 
     try (BufferedWriter fileWriter =
         Files.newBufferedWriter(localStore.resolve("timestamp.json"))) {
       GSON.get().toJson(timestamp, fileWriter);
     }
 
-    assertEquals(timestamp, fileSystemTufStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).get());
+    assertEquals(timestamp, fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).get());
     assertEquals(
-        timestamp, passthroughCacheMetaStore.findMeta(RootRole.TIMESTAMP, Timestamp.class).get());
+        timestamp, passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).get());
   }
 }

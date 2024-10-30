@@ -32,21 +32,21 @@ class FileSystemTufStoreTest {
   @Test
   void newFileSystemStore_empty(@TempDir Path repoBase) throws IOException {
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    assertFalse(tufStore.findMeta(RootRole.ROOT, Root.class).isPresent());
+    assertFalse(tufStore.readMeta(RootRole.ROOT, Root.class).isPresent());
   }
 
   @Test
   void newFileSystemStore_hasRepo(@TempDir Path repoBase) throws IOException {
     TestResources.setupRepoFiles(PROD_REPO, repoBase, "root.json");
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    assertTrue(tufStore.findMeta(RootRole.ROOT, Root.class).isPresent());
+    assertTrue(tufStore.readMeta(RootRole.ROOT, Root.class).isPresent());
   }
 
   @Test
   void setTrustedRoot_noPrevious(@TempDir Path repoBase) throws IOException {
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
-    tufStore.setRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
+    tufStore.writeRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
     assertEquals(2, repoBase.toFile().list().length, "Expect 2: root.json plus the /targets dir.");
     assertTrue(repoBase.resolve("root.json").toFile().exists());
     assertTrue(repoBase.resolve("targets").toFile().isDirectory());
@@ -56,9 +56,9 @@ class FileSystemTufStoreTest {
   void setTrustedRoot_backupPerformed(@TempDir Path repoBase) throws IOException {
     TestResources.setupRepoFiles(PROD_REPO, repoBase, "root.json");
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
-    int version = tufStore.findMeta(RootRole.ROOT, Root.class).get().getSignedMeta().getVersion();
+    int version = tufStore.readMeta(RootRole.ROOT, Root.class).get().getSignedMeta().getVersion();
     assertFalse(repoBase.resolve(version + ".root.json").toFile().exists());
-    tufStore.setRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
+    tufStore.writeRoot(TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
     assertTrue(repoBase.resolve(version + ".root.json").toFile().exists());
   }
 
