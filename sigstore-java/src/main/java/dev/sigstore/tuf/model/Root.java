@@ -24,6 +24,7 @@ import org.immutables.value.Value.Derived;
 @Value.Immutable
 public interface Root extends SignedTufMeta<RootMeta> {
   @Override
+  @Gson.Ignore
   @Derived
   default RootMeta getSignedMeta() {
     return getSignedMeta(RootMeta.class);

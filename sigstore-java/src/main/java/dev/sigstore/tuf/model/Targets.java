@@ -25,6 +25,7 @@ import org.immutables.value.Value.Derived;
 public interface Targets extends SignedTufMeta<TargetMeta> {
   @Override
   @Derived
+  @Gson.Ignore
   default TargetMeta getSignedMeta() {
     return getSignedMeta(TargetMeta.class);
   }

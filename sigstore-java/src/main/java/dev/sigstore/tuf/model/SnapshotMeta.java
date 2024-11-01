@@ -59,6 +59,7 @@ public interface SnapshotMeta extends TufMeta {
 
     /** The length in bytes of the given target's metadata, or a default if not present */
     @Derived
+    @Gson.Ignore
     default Integer getLengthOrDefault() {
       return getLength().orElse(DEFAULT_MAX_LENGTH);
     }
