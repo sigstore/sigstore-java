@@ -22,6 +22,7 @@ import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.tuf.model.*;
+import dev.sigstore.tuf.model.TargetMeta.TargetData;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -91,13 +92,15 @@ public class Updater {
     return new Builder();
   }
 
+  /** Update metadata and download all targets. */
   public void update()
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
     updateMeta();
     downloadTargets(trustedMetaStore.getTargets());
   }
 
-  void updateMeta() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+  /** Update just metadata but do not download targets. */
+  public void updateMeta() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
     updateRoot();
     var oldTimestamp = trustedMetaStore.findTimestamp();
     updateTimestamp();
@@ -110,6 +113,16 @@ public class Updater {
     // targets from remote
     updateSnapshot();
     updateTargets();
+  }
+
+  /** Download a single target defined in targets. Does not handle delegated targets. */
+  public void downloadTarget(String targetName)
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    var targetData = trustedMetaStore.getTargets().getSignedMeta().getTargets().get(targetName);
+    if (targetData == null) {
+      throw new TargetMetadataMissingException(targetName);
+    }
+    downloadTarget(targetName, targetData);
   }
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
@@ -304,7 +317,6 @@ public class Updater {
             localTimestamp.getSignedMeta().getVersion(), timestamp.getSignedMeta().getVersion());
       }
       if (localTimestamp.getSignedMeta().getVersion() == timestamp.getSignedMeta().getVersion()) {
-        trustedMetaStore.setTimestamp(localTimestamp);
         return;
       }
     }
@@ -459,24 +471,28 @@ public class Updater {
         throw new TargetMetadataMissingException(targetName);
       }
       TargetMeta.TargetData targetData = entry.getValue();
-      // 9) Download target up to length specified in bytes. verify against hash.
-      String versionedTargetName;
-      if (targetData.getHashes().getSha512() != null) {
-        versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
-      } else {
-        versionedTargetName = targetData.getHashes().getSha256() + "." + targetName;
-      }
-
-      var targetBytes = targetFetcher.fetchResource(versionedTargetName, targetData.getLength());
-      if (targetBytes == null) {
-        throw new FileNotFoundException(targetName, targetFetcher.getSource());
-      }
-      verifyHashes(entry.getKey(), targetBytes, targetData.getHashes());
-
-      // when persisting targets use the targetname without sha512 prefix
-      // https://theupdateframework.github.io/specification/latest/index.html#fetch-target
-      targetStore.writeTarget(targetName, targetBytes);
+      downloadTarget(targetName, targetData);
     }
+  }
+
+  void downloadTarget(String targetName, TargetData targetData) throws IOException {
+    // 9) Download target up to length specified in bytes. verify against hash.
+    String versionedTargetName;
+    if (targetData.getHashes().getSha512() != null) {
+      versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
+    } else {
+      versionedTargetName = targetData.getHashes().getSha256() + "." + targetName;
+    }
+
+    var targetBytes = targetFetcher.fetchResource(versionedTargetName, targetData.getLength());
+    if (targetBytes == null) {
+      throw new FileNotFoundException(targetName, targetFetcher.getSource());
+    }
+    verifyHashes(targetName, targetBytes, targetData.getHashes());
+
+    // when persisting targets use the targetname without sha512 prefix
+    // https://theupdateframework.github.io/specification/latest/index.html#fetch-target
+    targetStore.writeTarget(targetName, targetBytes);
   }
 
   @VisibleForTesting

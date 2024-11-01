@@ -25,6 +25,7 @@ import org.immutables.value.Value.Derived;
 public interface Snapshot extends SignedTufMeta<SnapshotMeta> {
   @Override
   @Derived
+  @Gson.Ignore
   default SnapshotMeta getSignedMeta() {
     return getSignedMeta(SnapshotMeta.class);
   }

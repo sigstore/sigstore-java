@@ -26,6 +26,7 @@ public interface Timestamp extends SignedTufMeta<TimestampMeta> {
 
   @Override
   @Derived
+  @Gson.Ignore
   default TimestampMeta getSignedMeta() {
     return getSignedMeta(TimestampMeta.class);
   }

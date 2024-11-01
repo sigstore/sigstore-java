@@ -38,6 +38,7 @@ public interface SignedTufMeta<T extends TufMeta> {
 
   /** An internal helper to translate raw signed json to a useable type. */
   @Derived
+  @Gson.Ignore
   default T getSignedMeta(Class<T> type) {
     return GsonSupplier.GSON.get().fromJson(getRawSignedMeta(), type);
   }
