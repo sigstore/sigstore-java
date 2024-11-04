@@ -15,6 +15,7 @@
  */
 package dev.sigstore.tuf.model;
 
+import com.google.common.base.Preconditions;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Derived;
@@ -28,5 +29,10 @@ public interface Root extends SignedTufMeta<RootMeta> {
   @Derived
   default RootMeta getSignedMeta() {
     return getSignedMeta(RootMeta.class);
+  }
+
+  @Value.Check
+  default void checkType() {
+    Preconditions.checkState(getSignedMeta().getType().equals("root"));
   }
 }

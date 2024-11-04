@@ -15,6 +15,7 @@
  */
 package dev.sigstore.tuf.model;
 
+import com.google.common.base.Preconditions;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Derived;
@@ -28,5 +29,10 @@ public interface Snapshot extends SignedTufMeta<SnapshotMeta> {
   @Gson.Ignore
   default SnapshotMeta getSignedMeta() {
     return getSignedMeta(SnapshotMeta.class);
+  }
+
+  @Value.Check
+  default void checkType() {
+    Preconditions.checkState(getSignedMeta().getType().equals("snapshot"));
   }
 }

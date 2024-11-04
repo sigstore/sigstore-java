@@ -15,14 +15,11 @@
  */
 package dev.sigstore.tuf;
 
-import dev.sigstore.tuf.model.Root;
-import dev.sigstore.tuf.model.RootRole;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 /** An in memory cache that will pass through to a provided local tuf store. */
@@ -45,13 +42,6 @@ public class PassthroughCacheMetaStore implements MetaReader, MetaStore {
   }
 
   @Override
-  public void writeRoot(Root root) throws IOException {
-    // call writeRoot instead of generic writeMeta because it may do extra work when storing on disk
-    localStore.writeRoot(root);
-    cache.put(RootRole.ROOT, root);
-  }
-
-  @Override
   @SuppressWarnings("unchecked")
   public <T extends SignedTufMeta<? extends TufMeta>> Optional<T> readMeta(
       String roleName, Class<T> tClass) throws IOException {
@@ -69,17 +59,13 @@ public class PassthroughCacheMetaStore implements MetaReader, MetaStore {
 
   @Override
   public void writeMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException {
-    if (Objects.equals(roleName, RootRole.ROOT)) {
-      throw new IllegalArgumentException("Calling writeMeta on root instead of writeRoot");
-    }
     localStore.writeMeta(roleName, meta);
     cache.put(roleName, meta);
   }
 
   @Override
-  public void clearMetaDueToKeyRotation() throws IOException {
-    localStore.clearMetaDueToKeyRotation();
-    cache.remove(RootRole.TIMESTAMP);
-    cache.remove(RootRole.SNAPSHOT);
+  public void clearMeta(String role) throws IOException {
+    localStore.clearMeta(role);
+    cache.remove(role);
   }
 }

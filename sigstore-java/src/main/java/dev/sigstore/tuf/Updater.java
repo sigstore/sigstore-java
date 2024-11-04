@@ -104,15 +104,14 @@ public class Updater {
     updateRoot();
     var oldTimestamp = trustedMetaStore.findTimestamp();
     updateTimestamp();
-    if (Objects.equals(oldTimestamp.orElse(null), trustedMetaStore.getTimestamp())
-        && trustedMetaStore.findSnapshot().isPresent()
-        && trustedMetaStore.findTargets().isPresent()) {
-      return;
+    if (!Objects.equals(oldTimestamp.orElse(null), trustedMetaStore.getTimestamp())
+        || trustedMetaStore.findSnapshot().isEmpty()
+        || trustedMetaStore.findTargets().isEmpty()) {
+      // if we need to update or we can't find targets/snapshots locally then grab new snapshot and
+      // targets from remote
+      updateSnapshot();
+      updateTargets();
     }
-    // if we need to update or we can't find targets/timestamps locally then grab new snapshot and
-    // targets from remote
-    updateSnapshot();
-    updateTargets();
   }
 
   /** Download a single target defined in targets. Does not handle delegated targets. */
@@ -141,7 +140,11 @@ public class Updater {
       trustedRoot = localRoot.get();
     } else {
       trustedRoot = GSON.get().fromJson(trustedRootPath.get(), Root.class);
+      trustedMetaStore.setRoot(trustedRoot);
     }
+    // verify root that we're bootstrapping this update with is good to go
+    verifyDelegate(trustedRoot, trustedRoot);
+
     int baseVersion = trustedRoot.getSignedMeta().getVersion();
     int nextVersion = baseVersion + 1;
     // keep these for verifying the last step. 5.3.11
@@ -194,7 +197,6 @@ public class Updater {
             trustedRoot.getSignedMeta().getRoles().get(RootRole.TIMESTAMP))) {
       trustedMetaStore.clearMetaDueToKeyRotation();
     }
-    trustedMetaStore.setRoot(trustedRoot);
   }
 
   private void throwIfExpired(ZonedDateTime expires) {

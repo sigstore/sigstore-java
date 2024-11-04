@@ -15,6 +15,7 @@
  */
 package dev.sigstore.tuf.model;
 
+import com.google.common.base.Preconditions;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Derived;
@@ -29,5 +30,10 @@ public interface Timestamp extends SignedTufMeta<TimestampMeta> {
   @Gson.Ignore
   default TimestampMeta getSignedMeta() {
     return getSignedMeta(TimestampMeta.class);
+  }
+
+  @Value.Check
+  default void checkType() {
+    Preconditions.checkState(getSignedMeta().getType().equals("timestamp"));
   }
 }
