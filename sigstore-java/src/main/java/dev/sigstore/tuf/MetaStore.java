@@ -15,7 +15,6 @@
  */
 package dev.sigstore.tuf;
 
-import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
@@ -31,8 +30,7 @@ public interface MetaStore extends MetaReader {
   String getIdentifier();
 
   /**
-   * Generic method to store one of the {@link SignedTufMeta} resources in the local tuf store. Do
-   * not use for Root role, use {@link #writeRoot(Root)} instead.
+   * Generic method to store one of the {@link SignedTufMeta} resources in the local tuf store.
    *
    * @param roleName the name of the role
    * @param meta the metadata to store
@@ -41,26 +39,13 @@ public interface MetaStore extends MetaReader {
   void writeMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException;
 
   /**
-   * Once you have ascertained that your root is trustworthy use this method to persist it to your
-   * local store. This will usually only be called with a root loaded statically from a bundled
-   * trusted root, or after the successful verification of an updated root from a mirror.
-   *
-   * @param root a root that has been proven trustworthy by the client
-   * @throws IOException since some implementations may persist the root to disk or over the network
-   *     we throw {@code IOException} in case of IO error.
-   * @see <a
-   *     href="https://theupdateframework.github.io/specification/latest/#detailed-client-workflow">5.3.8</a>
-   */
-  void writeRoot(Root root) throws IOException;
-
-  /**
-   * This clears out the snapshot and timestamp metadata from the store, as required when snapshot
-   * or timestamp verification keys have changed as a result of a root update.
+   * Generic method to remove meta, useful when keys rotated in root. Deletion is not optional,
+   * implementers must ensure meta is removed from the storage medium.
    *
    * @throws IOException implementations that read/write IO to clear the data may throw {@code
    *     IOException}
    * @see <a
    *     href="https://theupdateframework.github.io/specification/latest/#detailed-client-workflow">5.3.11</a>
    */
-  void clearMetaDueToKeyRotation() throws IOException;
+  void clearMeta(String role) throws IOException;
 }

@@ -70,7 +70,7 @@ public class TrustedMetaStore {
   }
 
   public void setRoot(Root root) throws IOException {
-    metaStore.writeRoot(root);
+    metaStore.writeMeta(RootRole.ROOT, root);
   }
 
   public Root getRoot() throws IOException {
@@ -118,6 +118,7 @@ public class TrustedMetaStore {
   }
 
   public void clearMetaDueToKeyRotation() throws IOException {
-    metaStore.clearMetaDueToKeyRotation();
+    metaStore.clearMeta(RootRole.TIMESTAMP);
+    metaStore.clearMeta(RootRole.SNAPSHOT);
   }
 }

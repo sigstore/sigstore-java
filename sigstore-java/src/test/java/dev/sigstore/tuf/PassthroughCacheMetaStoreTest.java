@@ -20,12 +20,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.io.Resources;
-import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.RootRole;
 import dev.sigstore.tuf.model.Timestamp;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,14 +37,10 @@ class PassthroughCacheMetaStoreTest {
   private FileSystemTufStore fileSystemTufStore;
   private PassthroughCacheMetaStore passthroughCacheMetaStore;
 
-  private static Root root;
   private static Timestamp timestamp;
 
   @BeforeAll
-  public static void readAllMeta() throws IOException, URISyntaxException {
-    Path rootResource =
-        Path.of(Resources.getResource("dev/sigstore/tuf/real/prod/root.json").getPath());
-    root = GSON.get().fromJson(Files.newBufferedReader(rootResource), Root.class);
+  public static void readAllMeta() throws IOException {
     Path timestampResource =
         Path.of(Resources.getResource("dev/sigstore/tuf/real/prod/timestamp.json").getPath());
     timestamp = GSON.get().fromJson(Files.newBufferedReader(timestampResource), Timestamp.class);
@@ -60,33 +54,8 @@ class PassthroughCacheMetaStoreTest {
   }
 
   @Test
-  public void root_test() throws Exception {
-    assertTrue(fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
-    assertTrue(passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
-
-    passthroughCacheMetaStore.writeRoot(root);
-
-    assertEquals(root, fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).get());
-    assertEquals(root, passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).get());
-  }
-
-  @Test
-  public void root_canInitFromDisk() throws Exception {
-    assertTrue(fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
-    assertTrue(passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).isEmpty());
-
-    try (BufferedWriter fileWriter = Files.newBufferedWriter(localStore.resolve("root.json"))) {
-      GSON.get().toJson(root, fileWriter);
-    }
-
-    assertEquals(root, fileSystemTufStore.readMeta(RootRole.ROOT, Root.class).get());
-    assertEquals(root, passthroughCacheMetaStore.readMeta(RootRole.ROOT, Root.class).get());
-  }
-
-  @Test
   public void meta_test() throws Exception {
-    // root uses special handling for writing, but the rest of them don't, so we just test
-    // timestamp here arbitrarily
+    // test timestamp here arbitrarily
     assertTrue(fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
     assertTrue(passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
 
@@ -95,10 +64,15 @@ class PassthroughCacheMetaStoreTest {
     assertEquals(timestamp, fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).get());
     assertEquals(
         timestamp, passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).get());
+
+    passthroughCacheMetaStore.clearMeta(RootRole.TIMESTAMP);
+
+    assertTrue(fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
+    assertTrue(passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
   }
 
   @Test
-  public void timestamp_canInitFromDisk() throws Exception {
+  public void readMeta_canInitFromDisk() throws Exception {
     assertTrue(fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
     assertTrue(passthroughCacheMetaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).isEmpty());
 

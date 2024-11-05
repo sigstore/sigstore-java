@@ -20,9 +20,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.tuf.model.*;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -30,9 +28,6 @@ import java.util.Optional;
 /** Uses a local file system directory to store the trusted TUF metadata. */
 public class FileSystemTufStore implements MetaStore, TargetStore {
 
-  private static final String ROOT_FILE_NAME = "root.json";
-  private static final String SNAPSHOT_FILE_NAME = "snapshot.json";
-  private static final String TIMESTAMP_FILE_NAME = "timestamp.json";
   private final Path repoBaseDir;
   private final Path targetsCache;
 
@@ -101,30 +96,10 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   }
 
   @Override
-  public void writeRoot(Root root) throws IOException {
-    Optional<Root> trustedRoot = readMeta(RootRole.ROOT, Root.class);
-    if (trustedRoot.isPresent()) {
-      try {
-        Files.move(
-            repoBaseDir.resolve(ROOT_FILE_NAME),
-            repoBaseDir.resolve(
-                trustedRoot.get().getSignedMeta().getVersion() + "." + ROOT_FILE_NAME));
-      } catch (FileAlreadyExistsException e) {
-        // The file is already backed-up. continue.
-      }
-    }
-    storeRole(RootRole.ROOT, root);
-  }
-
-  @Override
-  public void clearMetaDueToKeyRotation() throws IOException {
-    File snapshotMetaFile = repoBaseDir.resolve(SNAPSHOT_FILE_NAME).toFile();
-    if (snapshotMetaFile.exists()) {
-      Files.delete(snapshotMetaFile.toPath());
-    }
-    File timestampMetaFile = repoBaseDir.resolve(TIMESTAMP_FILE_NAME).toFile();
-    if (timestampMetaFile.exists()) {
-      Files.delete(timestampMetaFile.toPath());
+  public void clearMeta(String role) throws IOException {
+    Path metaFile = repoBaseDir.resolve(role + ".json");
+    if (Files.isRegularFile(metaFile)) {
+      Files.delete(metaFile);
     }
   }
 }
