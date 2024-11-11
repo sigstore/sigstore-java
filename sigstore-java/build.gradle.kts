@@ -24,11 +24,11 @@ dependencies {
     // this requires inclusion of protos is src/main/proto
     protobuf("dev.sigstore:protobuf-specs:0.3.2")
 
-    implementation(platform("com.google.protobuf:protobuf-bom:4.28.2"))
+    implementation(platform("com.google.protobuf:protobuf-bom:4.28.3"))
     implementation("com.google.protobuf:protobuf-java-util")
 
     // grpc deps
-    implementation(platform("io.grpc:grpc-bom:1.68.0"))
+    implementation(platform("io.grpc:grpc-bom:1.68.1"))
     implementation("io.grpc:grpc-protobuf")
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
@@ -63,11 +63,11 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.28.2"
+        artifact = "com.google.protobuf:protoc:4.28.3"
     }
     plugins {
         id("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.68.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.68.1"
         }
     }
     generateProtoTasks {
