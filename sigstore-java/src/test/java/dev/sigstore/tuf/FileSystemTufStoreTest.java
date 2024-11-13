@@ -27,7 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class FileSystemTufStoreTest {
 
-  public static final String PROD_REPO = "real/prod";
+  public static final String REPO = "synthetic/test-template";
 
   @Test
   void newFileSystemStore_empty(@TempDir Path repoBase) throws IOException {
@@ -37,7 +37,7 @@ class FileSystemTufStoreTest {
 
   @Test
   void newFileSystemStore_hasRepo(@TempDir Path repoBase) throws IOException {
-    TestResources.setupRepoFiles(PROD_REPO, repoBase, "root.json");
+    TestResources.setupRepoFiles(REPO, repoBase, "root.json");
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertTrue(tufStore.readMeta(RootRole.ROOT, Root.class).isPresent());
   }
@@ -47,7 +47,7 @@ class FileSystemTufStoreTest {
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
     tufStore.writeMeta(
-        RootRole.ROOT, TestResources.loadRoot(TestResources.UPDATER_REAL_TRUSTED_ROOT));
+        RootRole.ROOT, TestResources.loadRoot(TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT));
     assertEquals(2, repoBase.toFile().list().length, "Expect 2: root.json plus the /targets dir.");
     assertTrue(repoBase.resolve("root.json").toFile().exists());
     assertTrue(repoBase.resolve("targets").toFile().isDirectory());
@@ -55,7 +55,7 @@ class FileSystemTufStoreTest {
 
   @Test
   void clearMeta(@TempDir Path repoBase) throws IOException {
-    TestResources.setupRepoFiles(PROD_REPO, repoBase, "snapshot.json", "timestamp.json");
+    TestResources.setupRepoFiles(REPO, repoBase, "snapshot.json", "timestamp.json");
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertTrue(repoBase.resolve("snapshot.json").toFile().exists());
     assertTrue(repoBase.resolve("timestamp.json").toFile().exists());

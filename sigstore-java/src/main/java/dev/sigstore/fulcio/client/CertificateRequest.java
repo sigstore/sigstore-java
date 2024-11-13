@@ -23,6 +23,8 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public interface CertificateRequest {
+  // Really Fuclio PublicKeyAlgorithm.RSA_PSS is not a PSS signature scheme, it's a PKCS1 scheme.
+  // https://github.com/sigstore/fulcio/issues/1858
   Map<String, PublicKeyAlgorithm> SUPPORTED_ALGORITHMS =
       ImmutableMap.of("EC", PublicKeyAlgorithm.ECDSA, "RSA", PublicKeyAlgorithm.RSA_PSS);
 

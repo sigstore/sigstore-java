@@ -16,24 +16,30 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import dev.sigstore.encryption.Keys;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
+import dev.sigstore.tuf.encryption.Verifiers;
+import dev.sigstore.tuf.model.ImmutableKey;
+import dev.sigstore.tuf.model.Key;
+import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.util.Map;
 
-public class TufKeysFuzzer {
+public class TufVerifierFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      String[] schemes = {"rsassa-pss-sha256", "ed25519", "ecdsa-sha2-nistp256", "ecdsa"};
-      String scheme = data.pickValue(schemes);
-      byte[] byteArray = data.consumeRemainingAsBytes();
+      String keyType = data.consumeString(10);
+      String scheme = data.consumeString(20);
+      String keyData = data.consumeRemainingAsString();
 
-      Keys.constructTufPublicKey(byteArray, scheme);
-    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+      Key key =
+          ImmutableKey.builder()
+              .keyType(keyType)
+              .keyVal(Map.of("public", keyData))
+              .scheme(scheme)
+              .build();
+
+      Verifiers.newVerifier(key);
+    } catch (IOException | InvalidKeyException e) {
       // known exceptions
-    } catch (RuntimeException e) {
-      if (!e.toString().contains("not currently supported")) {
-        throw e;
-      }
     }
   }
 }

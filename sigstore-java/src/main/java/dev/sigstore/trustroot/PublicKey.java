@@ -35,6 +35,9 @@ public abstract class PublicKey {
     if (getKeyDetails().equals("PKIX_ECDSA_P256_SHA_256")) {
       return Keys.parsePkixPublicKey(getRawBytes(), "EC");
     }
+    if (getKeyDetails().startsWith("PKIX_RSA")) {
+      return Keys.parsePkixPublicKey(getRawBytes(), "RSA");
+    }
     if (getKeyDetails().equals("PKCS1_RSA_PKCS1V5")) {
       return Keys.parsePkcs1RsaPublicKey(getRawBytes());
     }

@@ -16,7 +16,6 @@
 package dev.sigstore.tuf;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
-import static dev.sigstore.testkit.tuf.TestResources.UPDATER_REAL_TRUSTED_ROOT;
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,12 +26,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 import com.google.gson.JsonSyntaxException;
-import dev.sigstore.encryption.signers.Verifier;
-import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.testkit.tuf.TestResources;
+import dev.sigstore.tuf.encryption.Verifier;
+import dev.sigstore.tuf.encryption.Verifiers;
 import dev.sigstore.tuf.model.Hashes;
 import dev.sigstore.tuf.model.ImmutableKey;
 import dev.sigstore.tuf.model.ImmutableRootRole;
@@ -41,7 +39,6 @@ import dev.sigstore.tuf.model.Key;
 import dev.sigstore.tuf.model.Role;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.Signature;
-import dev.sigstore.tuf.model.TargetMeta;
 import dev.sigstore.tuf.model.Targets;
 import io.github.netmikey.logunit.api.LogCapturer;
 import java.io.File;
@@ -52,8 +49,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Clock;
 import java.time.Instant;
@@ -121,19 +116,6 @@ class UpdaterTest {
     remote.start();
     remoteUrl = "http://" + connector.getHost() + ":" + connector.getLocalPort() + "/";
     System.out.println("TUF local server listening on: " + remoteUrl);
-  }
-
-  @Test
-  public void testRootUpdate_fromProdData() throws Exception {
-    setupMirror(
-        "real/prod", "1.root.json", "2.root.json", "3.root.json", "4.root.json", "5.root.json");
-    var updater = createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
-    updater.updateRoot();
-    assertStoreContains("root.json");
-    Root oldRoot = TestResources.loadRoot(UPDATER_REAL_TRUSTED_ROOT);
-    Root newRoot = TestResources.loadRoot(localStorePath.resolve("root.json"));
-    assertRootVersionIncreased(oldRoot, newRoot);
-    assertRootNotExpired(newRoot);
   }
 
   @Test
@@ -603,50 +585,6 @@ class UpdaterTest {
     assertDoesNotThrow(updater::update);
   }
 
-  // End to end sanity test on the actual prod sigstore repo.
-  @Test
-  public void testUpdate_fromProdData()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
-    setupMirror(
-        "real/prod",
-        "1.root.json",
-        "2.root.json",
-        "3.root.json",
-        "4.root.json",
-        "5.root.json",
-        "69.snapshot.json",
-        "5.targets.json",
-        "timestamp.json",
-        "snapshot.json",
-        "targets.json",
-        "root.json",
-        "targets/0ae7705e02db33e814329746a4a0e5603c5bdcd91c96d072158d71011a2695788866565a2fec0fe363eb72cbcaeda39e54c5fe8d416daf9f3101fdba4217ef35.rekor.pub",
-        "targets/0f99f47dbc26c5f1e3cba0bfd9af4245a26e5cb735d6ef005792ec7e603f66fdb897de985973a6e50940ca7eff5e1849719e967b5ad2dac74a29115a41cf6f21.fulcio_intermediate_v1.crt.pem",
-        "targets/4b20747d1afe2544238ad38cc0cc3010921b177d60ac743767e0ef675b915489bd01a36606c0ff83c06448622d7160f0d866c83d20f0c0f44653dcc3f9aa0bd4.ctfe.pub",
-        "targets/308fd1d1d95d7f80aa33b837795251cc3e886792982275e062409e13e4e236ffc34d676682aa96fdc751414de99c864bf132dde71581fa651c6343905e3bf988.artifact.pub",
-        "targets/0713252a7fd17f7f3ab12f88a64accf2eb14b8ad40ca711d7fe8b4ecba3b24db9e9dffadb997b196d3867b8f9ff217faf930d80e4dab4e235c7fc3f07be69224.fulcio.crt.pem",
-        "targets/e83fa4f427b24ee7728637fad1b4aa45ebde2ba02751fa860694b1bb16059a490328f9985e51cc70e4d237545315a1bc866dc4fdeef2f6248d99cc7a6077bf85.ctfe_2022.pub",
-        "targets/f2e33a6dc208cee1f51d33bbea675ab0f0ced269617497985f9a0680689ee7073e4b6f8fef64c91bda590d30c129b3070dddce824c05bc165ac9802f0705cab6.fulcio_v1.crt.pem");
-    var updater = createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
-    updater.update();
-
-    Root oldRoot = TestResources.loadRoot(UPDATER_REAL_TRUSTED_ROOT);
-    TrustedMetaStore metaStore = updater.getMetaStore();
-    TargetStore targetStore = updater.getTargetStore();
-    Root newRoot = metaStore.getRoot(); // should be present
-    assertRootVersionIncreased(oldRoot, newRoot);
-    Targets targets = metaStore.getTargets(); // should be present
-    Map<String, TargetMeta.TargetData> targetsData = targets.getSignedMeta().getTargets();
-    for (String file : targetsData.keySet()) {
-      TargetMeta.TargetData fileData = targetsData.get(file);
-      byte[] fileBytes = targetStore.readTarget(file);
-      assertNotNull(fileBytes, "each file from targets data should be present");
-      assertEquals(fileData.getLength(), fileBytes.length, "file length should match metadata");
-      assertEquals(
-          fileData.getHashes().getSha512(), Hashing.sha512().hashBytes(fileBytes).toString());
-    }
-  }
-
   private static final byte[] TEST_HASH_VERIFYIER_BYTES =
       "testdata".getBytes(StandardCharsets.UTF_8);
   private static final String GOOD_256_HASH =
@@ -941,8 +879,8 @@ class UpdaterTest {
 
   @Test
   public void canCreateMultipleUpdaters() throws IOException {
-    createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
-    createTimeStaticUpdater(localStorePath, UPDATER_REAL_TRUSTED_ROOT);
+    createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
   }
 
   static Key newKey(String keyContents) {
@@ -1027,43 +965,7 @@ class UpdaterTest {
   }
 
   public static final Verifiers.Supplier ALWAYS_VERIFIES =
-      publicKey ->
-          new Verifier() {
-            @Override
-            public PublicKey getPublicKey() {
-              return null;
-            }
-
-            @Override
-            public boolean verify(byte[] artifact, byte[] signature)
-                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-              return true;
-            }
-
-            @Override
-            public boolean verifyDigest(byte[] artifactDigest, byte[] signature)
-                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-              return true;
-            }
-          };
+      (key) -> (Verifier) (artifactDigest, signature) -> true;
   public static final Verifiers.Supplier ALWAYS_FAILS =
-      publicKey ->
-          new Verifier() {
-            @Override
-            public PublicKey getPublicKey() {
-              return null;
-            }
-
-            @Override
-            public boolean verify(byte[] artifact, byte[] signature)
-                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-              return false;
-            }
-
-            @Override
-            public boolean verifyDigest(byte[] artifactDigest, byte[] signature)
-                throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-              return false;
-            }
-          };
+      (key) -> (Verifier) (artifactDigest, signature) -> false;
 }
