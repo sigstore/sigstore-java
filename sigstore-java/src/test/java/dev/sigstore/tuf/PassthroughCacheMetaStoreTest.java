@@ -42,7 +42,9 @@ class PassthroughCacheMetaStoreTest {
   @BeforeAll
   public static void readAllMeta() throws IOException {
     Path timestampResource =
-        Path.of(Resources.getResource("dev/sigstore/tuf/real/prod/timestamp.json").getPath());
+        Path.of(
+            Resources.getResource("dev/sigstore/tuf/synthetic/test/repository/timestamp.json")
+                .getPath());
     timestamp = GSON.get().fromJson(Files.newBufferedReader(timestampResource), Timestamp.class);
   }
 
