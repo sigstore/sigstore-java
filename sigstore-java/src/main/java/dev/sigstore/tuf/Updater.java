@@ -19,15 +19,15 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
-import dev.sigstore.encryption.Keys;
-import dev.sigstore.encryption.signers.Verifiers;
+import dev.sigstore.tuf.encryption.Verifiers;
 import dev.sigstore.tuf.model.*;
 import dev.sigstore.tuf.model.TargetMeta.TargetData;
+import dev.sigstore.tuf.model.Targets;
+import dev.sigstore.tuf.model.Timestamp;
+import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Clock;
@@ -247,24 +247,23 @@ public class Updater {
         // look for the public key that matches the key ID and use it for verification.
         var key = publicKeys.get(signature.getKeyId());
         if (key != null) {
-          String publicKeyContents = key.getKeyVal().get("public");
-          PublicKey pubKey;
-          // TUF root version 4 and less is raw hex encoded key while 5+ is PEM.
-          // TODO(patrick@chainguard.dev): remove hex handling code once we upgrade the trusted root
-          // to v5.
-          if (publicKeyContents.startsWith("-----BEGIN PUBLIC KEY-----")) {
-            pubKey = Keys.parsePublicKey(publicKeyContents.getBytes(StandardCharsets.UTF_8));
-          } else {
-            pubKey = Keys.constructTufPublicKey(Hex.decode(publicKeyContents), key.getScheme());
-          }
           try {
             // while we error on keys that are not readable, we are intentionally more permissive
             // about signatures. If for ANY reason (except unparsed keys) we cannot validate a
             // signature, we continue as long as we find enough valid signatures within the
             // threshold. We still warn the user as this could be an indicator of data issues
             byte[] signatureBytes = Hex.decode(signature.getSignature());
-            if (verifiers.newVerifier(pubKey).verify(verificationMaterial, signatureBytes)) {
+            if (verifiers.newVerifier(key).verify(verificationMaterial, signatureBytes)) {
               goodSigs.add(signature.getKeyId());
+            } else {
+              log.log(
+                  Level.FINE,
+                  () ->
+                      String.format(
+                          Locale.ROOT,
+                          "TUF: ignored failed signature verification: '%s' for keyid: '%s'",
+                          signature.getSignature(),
+                          signature.getKeyId()));
             }
           } catch (SignatureException e) {
             log.log(
@@ -272,9 +271,10 @@ public class Updater {
                 () ->
                     String.format(
                         Locale.ROOT,
-                        "TUF: ignored unverifiable signature: '%s' for keyid: '%s'",
+                        "TUF: ignored unverifiable signature: '%s' for keyid: '%s', because '%s'",
                         signature.getSignature(),
-                        signature.getKeyId()));
+                        signature.getKeyId(),
+                        e.getMessage()));
           } catch (DecoderException | NoSuchAlgorithmException | InvalidKeyException e) {
             log.log(
                 Level.WARNING,
