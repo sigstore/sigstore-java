@@ -26,6 +26,7 @@ import dev.sigstore.tuf.model.Targets;
 import dev.sigstore.tuf.model.Timestamp;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
@@ -478,12 +479,25 @@ public class Updater {
   }
 
   void downloadTarget(String targetName, TargetData targetData) throws IOException {
+    var calculatedName = targetName;
+    var calculatedPath = "";
+    // if target name includes directories then we have to process the path
+    if (targetName.contains("/")) {
+      var targetPath = Paths.get(targetName);
+      calculatedName = targetPath.getFileName().toString();
+      calculatedPath = targetPath.getParent().toString();
+      if (!calculatedPath.endsWith("/")) {
+        calculatedPath = calculatedPath + "/";
+      }
+    }
     // 9) Download target up to length specified in bytes. verify against hash.
     String versionedTargetName;
     if (targetData.getHashes().getSha512() != null) {
-      versionedTargetName = targetData.getHashes().getSha512() + "." + targetName;
+      versionedTargetName =
+          calculatedPath + targetData.getHashes().getSha512() + "." + calculatedName;
     } else {
-      versionedTargetName = targetData.getHashes().getSha256() + "." + targetName;
+      versionedTargetName =
+          calculatedPath + targetData.getHashes().getSha256() + "." + calculatedName;
     }
 
     var targetBytes = targetFetcher.fetchResource(versionedTargetName, targetData.getLength());

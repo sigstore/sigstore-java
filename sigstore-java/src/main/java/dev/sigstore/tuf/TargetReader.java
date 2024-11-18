@@ -21,7 +21,8 @@ import java.io.IOException;
 public interface TargetReader {
 
   /**
-   * Reads a TUF target file from the local TUF store
+   * Reads a TUF target file from the local TUF store. Target names may include path elements and
+   * the storage engine should be consistent when handling writing and reading these.
    *
    * @param targetName the name of the target file to read (e.g. ctfe.pub)
    * @return the content of the file as bytes

@@ -28,7 +28,8 @@ public interface TargetStore extends TargetReader {
   String getIdentifier();
 
   /**
-   * Writes a TUF target to the local target store.
+   * Writes a TUF target to the local target store. Target names may include path elements and the
+   * storage engine should be consistent when handling writing and reading these.
    *
    * @param targetName the name of the target file to write (e.g. ctfe.pub)
    * @param targetContents the content of the target file as bytes
