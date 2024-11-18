@@ -1,5 +1,4 @@
 test_metadata_bytes_match
-test_duplicate_sig_keyids
 test_unusual_role_name[?]
 test_unusual_role_name[#]
 test_unusual_role_name[/delegatedrole]
