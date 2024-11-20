@@ -39,4 +39,4 @@ jobs:
         with:
           entrypoint: ${{ github.workspace }}/bin/sigstore-cli
           environment: ${{ matrix.sigstore-env }}
-          xfail: "test_verify_dsse_bundle_with_trust_root test_verify_in_toto_in_dsse_envelope"
+          xfail: "test_verify_dsse_bundle_with_trust_root"
