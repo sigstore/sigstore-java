@@ -42,6 +42,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -211,8 +212,7 @@ public class Updater {
   }
 
   void verifyDelegate(Root trustedRoot, SignedTufMeta<? extends TufMeta> delegate)
-      throws SignatureVerificationException, IOException, NoSuchAlgorithmException,
-          InvalidKeySpecException {
+      throws SignatureVerificationException, IOException {
     verifyDelegate(
         delegate.getSignatures(),
         trustedRoot.getSignedMeta().getKeys(),
@@ -228,6 +228,7 @@ public class Updater {
    * @param role the key ids and threshold values for role signing
    * @param verificationMaterial the contents to be verified for authenticity
    * @throws SignatureVerificationException if there are not enough verified signatures
+   * @throws IOException if an error occurred parsing a key
    */
   @VisibleForTesting
   void verifyDelegate(
@@ -235,16 +236,23 @@ public class Updater {
       Map<String, Key> publicKeys,
       Role role,
       byte[] verificationMaterial)
-      throws InvalidKeySpecException, IOException, NoSuchAlgorithmException {
+      throws IOException {
     // use set to not count the same key multiple times towards the threshold.
     var goodSigs = new HashSet<>(role.getKeyids().size() * 4 / 3);
     // role.getKeyIds() defines the keys allowed to sign for this role.
     for (String keyid : role.getKeyids()) {
-      Optional<Signature> signatureMaybe =
-          signatures.stream().filter(sig -> sig.getKeyId().equals(keyid)).findFirst();
+      List<Signature> matchingSignatures =
+          signatures.stream()
+              .filter(sig -> sig.getKeyId().equals(keyid))
+              .collect(Collectors.toList());
+      // check for any duplicate key_ids:
+      // https://theupdateframework.github.io/specification/latest/#file-formats-object-format
+      if (matchingSignatures.size() > 1) {
+        throw new DuplicateKeyIdsException(matchingSignatures, keyid);
+      }
       // only verify if we find a signature that matches an allowed key id.
-      if (signatureMaybe.isPresent()) {
-        var signature = signatureMaybe.get();
+      if (matchingSignatures.size() == 1) {
+        var signature = matchingSignatures.get(0);
         // look for the public key that matches the key ID and use it for verification.
         var key = publicKeys.get(signature.getKeyId());
         if (key != null) {
