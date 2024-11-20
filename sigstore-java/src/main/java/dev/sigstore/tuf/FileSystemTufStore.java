@@ -21,6 +21,8 @@ import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.tuf.model.*;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -65,12 +67,14 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
 
   @Override
   public void writeTarget(String targetName, byte[] targetContents) throws IOException {
-    Files.write(targetsCache.resolve(targetName), targetContents);
+    var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
+    Files.write(targetsCache.resolve(encoded), targetContents);
   }
 
   @Override
   public byte[] readTarget(String targetName) throws IOException {
-    return Files.readAllBytes(targetsCache.resolve(targetName));
+    var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
+    return Files.readAllBytes(targetsCache.resolve(encoded));
   }
 
   @Override
