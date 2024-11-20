@@ -43,13 +43,11 @@ import dev.sigstore.tuf.model.Targets;
 import io.github.netmikey.logunit.api.LogCapturer;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -119,8 +117,7 @@ class UpdaterTest {
   }
 
   @Test
-  public void testRootUpdate_notEnoughSignatures()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+  public void testRootUpdate_notEnoughSignatures() throws Exception {
     setupMirror("synthetic/root-unsigned", "2.root.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     try {
@@ -453,8 +450,7 @@ class UpdaterTest {
   }
 
   @Test
-  public void testTargetsUpdate_success()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+  public void testTargetsUpdate_success() throws Exception {
     setupMirror(
         "synthetic/test-template",
         "2.root.json",
@@ -495,8 +491,7 @@ class UpdaterTest {
   }
 
   @Test
-  public void testTargetsDownload_targetFileNotFound()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+  public void testTargetsDownload_targetFileNotFound() throws Exception {
     setupMirror(
         "synthetic/test-template",
         "2.root.json",
@@ -512,8 +507,7 @@ class UpdaterTest {
   }
 
   @Test
-  public void testTargetsDownload_targetInvalidLength()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+  public void testTargetsDownload_targetInvalidLength() throws Exception {
     setupMirror(
         "synthetic/targets-download-invalid-length",
         "2.root.json",
@@ -530,8 +524,7 @@ class UpdaterTest {
   }
 
   @Test
-  public void testTargetsDownload_targetFileInvalidHash()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+  public void testTargetsDownload_targetFileInvalidHash() throws Exception {
     setupMirror(
         "synthetic/targets-download-invalid-hash",
         "2.root.json",
@@ -583,6 +576,53 @@ class UpdaterTest {
                 .getPath());
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_ROOT);
     assertDoesNotThrow(updater::update);
+  }
+
+  @Test
+  public void testDownloadTarget_singleTarget() throws Exception {
+    setupMirror(
+        "synthetic/test-template",
+        "2.root.json",
+        "timestamp.json",
+        "3.snapshot.json",
+        "3.targets.json",
+        "targets/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt",
+        "targets/32005f02eac21b4cf161a02495330b6c14b548622b5f7e19d59ecfa622de650603ecceea39ed86cc322749a813503a72ad14ce5462c822b511eaf2f2cd2ad8f2.test.txt.v2",
+        "targets/53904bc6216230bf8da0ec42d34004a3f36764de698638641870e37d270e4fd13e1079285f8bca73c2857a279f6f7fbc82038274c3eb48ec5bb2da9b2e30491a.test2.txt");
+    var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
+    updater.updateMeta();
+    updater.downloadTarget("test.txt");
+    Assertions.assertEquals(1, countFilesInTargetsDir(updater));
+    updater.downloadTarget("test2.txt");
+    Assertions.assertEquals(2, countFilesInTargetsDir(updater));
+  }
+
+  @Test
+  public void testDownloadTarget_inSubDirectory() throws Exception {
+    var root =
+        Path.of(
+            Resources.getResource("dev/sigstore/tuf/synthetic/targets-with-subdirs/root.json")
+                .getPath());
+    setupMirror(
+        "synthetic/targets-with-subdirs",
+        "1.root.json",
+        "timestamp.json",
+        "1.snapshot.json",
+        "1.targets.json",
+        "targets/subdir/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt");
+    var updater = createTimeStaticUpdater(localStorePath, root);
+    updater.updateMeta();
+    updater.downloadTarget("subdir/test.txt");
+    Assertions.assertEquals(1, countFilesInTargetsDir(updater));
+  }
+
+  private long countFilesInTargetsDir(Updater updater) throws IOException {
+    try (var filesStream =
+        Files.list(((FileSystemTufStore) updater.getTargetStore()).getTargetsDir())) {
+      return filesStream.count();
+    } catch (UncheckedIOException ex) {
+      throw ex.getCause();
+    }
   }
 
   private static final byte[] TEST_HASH_VERIFYIER_BYTES =
@@ -737,8 +777,7 @@ class UpdaterTest {
               "04cc1cd53a61c23e88cc54b488dfae168a257c34fac3e88811c55962b24cffbfecb724447999c54670e365883716302e49da57c79a33cd3e16f81fbc66f0bcdf48"));
 
   @Test
-  public void testVerifyDelegate_verified()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
+  public void testVerifyDelegate_verified() throws Exception {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
     Map<String, Key> publicKeys =
@@ -800,8 +839,7 @@ class UpdaterTest {
 
   // Just testing boundary conditions for iteration bugs.
   @Test
-  public void testVerifyDelegate_emptyLists()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
+  public void testVerifyDelegate_emptyLists() throws Exception {
     List<Signature> sigs = ImmutableList.of();
 
     Map<String, Key> publicKeys = ImmutableMap.of();
@@ -821,8 +859,7 @@ class UpdaterTest {
   }
 
   @Test
-  public void testVerifyDelegate_goodSigsAndKeysButNotInRole()
-      throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, IOException {
+  public void testVerifyDelegate_goodSigsAndKeysButNotInRole() throws Exception {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
     Map<String, Key> publicKeys =
@@ -929,21 +966,6 @@ class UpdaterTest {
    */
   private static void setupMirror(String repoName, String... files) throws IOException {
     TestResources.setupRepoFiles(repoName, localMirrorPath, files);
-  }
-
-  private void assertRootNotExpired(Root root) {
-    assertTrue(
-        root.getSignedMeta()
-            .getExpiresAsDate()
-            .isAfter(ZonedDateTime.parse(TEST_STATIC_UPDATE_TIME)),
-        "The root should not be expired passed test static update time: "
-            + TEST_STATIC_UPDATE_TIME);
-  }
-
-  private void assertRootVersionIncreased(Root oldRoot, Root newRoot) throws IOException {
-    assertTrue(
-        oldRoot.getSignedMeta().getVersion() <= newRoot.getSignedMeta().getVersion(),
-        "The new root version should be higher than the old root.");
   }
 
   private void assertStoreContains(String resource) {

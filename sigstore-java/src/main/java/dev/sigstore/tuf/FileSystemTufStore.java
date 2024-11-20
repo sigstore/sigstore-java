@@ -31,12 +31,12 @@ import java.util.Optional;
 public class FileSystemTufStore implements MetaStore, TargetStore {
 
   private final Path repoBaseDir;
-  private final Path targetsCache;
+  private final Path targetsDir;
 
   @VisibleForTesting
-  FileSystemTufStore(Path repoBaseDir, Path targetsCache) {
+  FileSystemTufStore(Path repoBaseDir, Path targetsDir) {
     this.repoBaseDir = repoBaseDir;
-    this.targetsCache = targetsCache;
+    this.targetsDir = targetsDir;
   }
 
   public static FileSystemTufStore newFileSystemStore(Path repoBaseDir) throws IOException {
@@ -62,19 +62,19 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
 
   @Override
   public String getIdentifier() {
-    return "Meta: " + repoBaseDir.toAbsolutePath() + ", Targets:" + targetsCache.toAbsolutePath();
+    return "Meta: " + repoBaseDir.toAbsolutePath() + ", Targets:" + targetsDir.toAbsolutePath();
   }
 
   @Override
   public void writeTarget(String targetName, byte[] targetContents) throws IOException {
     var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
-    Files.write(targetsCache.resolve(encoded), targetContents);
+    Files.write(targetsDir.resolve(encoded), targetContents);
   }
 
   @Override
   public byte[] readTarget(String targetName) throws IOException {
     var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
-    return Files.readAllBytes(targetsCache.resolve(encoded));
+    return Files.readAllBytes(targetsDir.resolve(encoded));
   }
 
   @Override
@@ -105,5 +105,13 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
     if (Files.isRegularFile(metaFile)) {
       Files.delete(metaFile);
     }
+  }
+
+  public Path getRepoBaseDir() {
+    return repoBaseDir;
+  }
+
+  public Path getTargetsDir() {
+    return targetsDir;
   }
 }
