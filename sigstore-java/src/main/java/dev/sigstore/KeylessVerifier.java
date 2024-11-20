@@ -22,6 +22,9 @@ import com.google.common.io.Files;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.VerificationOptions.UncheckedCertificateException;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.bundle.Bundle.DsseEnvelope;
+import dev.sigstore.bundle.Bundle.MessageSignature;
+import dev.sigstore.dsse.InTotoPayload;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
@@ -44,7 +47,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
@@ -118,15 +123,13 @@ public class KeylessVerifier {
   public void verify(byte[] artifactDigest, Bundle bundle, VerificationOptions options)
       throws KeylessVerificationException {
 
-    if (bundle.getDSSESignature().isPresent()) {
-      throw new KeylessVerificationException("Cannot verify DSSE signature based bundles");
-    }
-
-    if (bundle.getMessageSignature().isEmpty()) {
-      // this should be unreachable
+    if (bundle.getDsseEnvelope().isPresent()) {
+      checkDsseEnvelope(bundle.getDsseEnvelope().get(), artifactDigest);
+    } else if (bundle.getMessageSignature().isPresent()) {
+      checkMessageSignature(bundle.getMessageSignature().get(), artifactDigest);
+    } else {
       throw new IllegalStateException("Bundle must contain a message signature to verify");
     }
-    var messageSignature = bundle.getMessageSignature().get();
 
     if (bundle.getEntries().isEmpty()) {
       throw new KeylessVerificationException("Cannot verify bundle without tlog entry");
@@ -145,20 +148,6 @@ public class KeylessVerifier {
     var signingCert = bundle.getCertPath();
     var leafCert = Certificates.getLeaf(signingCert);
 
-    // this ensures the provided artifact digest matches what may have come from a bundle (in
-    // keyless signature)
-    if (messageSignature.getMessageDigest().isPresent()) {
-      var bundleDigest = messageSignature.getMessageDigest().get().getDigest();
-      if (!Arrays.equals(artifactDigest, bundleDigest)) {
-        throw new KeylessVerificationException(
-            "Provided artifact digest does not match digest used for verification"
-                + "\nprovided(hex) : "
-                + Hex.toHexString(artifactDigest)
-                + "\nverification  : "
-                + Hex.toHexString(bundleDigest));
-      }
-    }
-
     // verify the certificate chains up to a trusted root (fulcio) and contains a valid SCT from
     // a trusted CT log
     try {
@@ -170,8 +159,6 @@ public class KeylessVerifier {
 
     // verify the certificate identity if options are present
     checkCertificateMatchers(leafCert, options.getCertificateMatchers());
-
-    var signature = messageSignature.getSignature();
 
     RekorEntry rekorEntry = bundle.getEntries().get(0);
 
@@ -197,8 +184,17 @@ public class KeylessVerifier {
     var publicKey = leafCert.getPublicKey();
     try {
       var verifier = Verifiers.newVerifier(publicKey);
-      if (!verifier.verifyDigest(artifactDigest, signature)) {
-        throw new KeylessVerificationException("Artifact signature was not valid");
+      if (bundle.getMessageSignature().isPresent()) {
+        if (!verifier.verifyDigest(
+            artifactDigest, bundle.getMessageSignature().get().getSignature())) {
+          throw new KeylessVerificationException("Artifact signature was not valid");
+        }
+      } else {
+        if (!verifier.verify(
+            bundle.getDsseEnvelope().get().getPAE(),
+            bundle.getDsseEnvelope().get().getSignature())) {
+          throw new KeylessVerificationException("DSSE signature was not valid");
+        }
       }
     } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
       throw new RuntimeException(ex);
@@ -221,6 +217,69 @@ public class KeylessVerifier {
     } catch (UncheckedCertificateException ce) {
       throw new KeylessVerificationException(
           "Could not verify certificate identities: " + ce.getMessage());
+    }
+  }
+
+  void checkMessageSignature(MessageSignature messageSignature, byte[] artifactDigest)
+      throws KeylessVerificationException {
+    // this ensures the provided artifact digest matches what may have come from a bundle (in
+    // keyless signature)
+    if (messageSignature.getMessageDigest().isPresent()) {
+      var bundleDigest = messageSignature.getMessageDigest().get().getDigest();
+      if (!Arrays.equals(artifactDigest, bundleDigest)) {
+        throw new KeylessVerificationException(
+            "Provided artifact digest does not match digest used for verification"
+                + "\nprovided(hex) : "
+                + Hex.toHexString(artifactDigest)
+                + "\nverification  : "
+                + Hex.toHexString(bundleDigest));
+      }
+    }
+  }
+
+  // since we don't check dsse signatures over the artifact, we must verify the artifact is in
+  // the subject list of the envelope
+  void checkDsseEnvelope(DsseEnvelope dsseEnvelope, byte[] artifactDigest)
+      throws KeylessVerificationException {
+    if (!Objects.equals(InTotoPayload.PAYLOAD_TYPE, dsseEnvelope.getPayloadType())) {
+      throw new KeylessVerificationException(
+          "DSSE envelope must have payload type "
+              + InTotoPayload.PAYLOAD_TYPE
+              + ", but found '"
+              + dsseEnvelope.getPayloadType()
+              + "'");
+    }
+    if (dsseEnvelope.getSignatures().size() != 1) {
+      throw new KeylessVerificationException(
+          "DSSE envelope must have exactly 1 signature, but found: "
+              + dsseEnvelope.getSignatures().size());
+    }
+    // find one sha256 hash in the subject list that matches the artifact hash
+    InTotoPayload payload = InTotoPayload.from(dsseEnvelope);
+    if (payload.getSubject().stream()
+        .noneMatch(
+            subject -> {
+              if (subject.getDigest().containsKey("sha256")) {
+                try {
+                  var digestBytes = Hex.decode(subject.getDigest().get("sha256"));
+                  return Arrays.equals(artifactDigest, digestBytes);
+                } catch (DecoderException de) {
+                  // ignore and return false
+                }
+              }
+              return false;
+            })) {
+      var providedHashes =
+          payload.getSubject().stream()
+              .map(s -> s.getDigest().getOrDefault("sha256", "no-sha256-hash"))
+              .collect(Collectors.joining(",", "[", "]"));
+
+      throw new KeylessVerificationException(
+          "Provided artifact digest does not match any subject sha256 digests in DSSE payload"
+              + "\nprovided(hex) : "
+              + Hex.toHexString(artifactDigest)
+              + "\nverification  : "
+              + providedHashes);
     }
   }
 }

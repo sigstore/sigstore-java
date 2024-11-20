@@ -81,7 +81,7 @@ class BundleReaderTest {
   @Test
   public void readDSSEBundle() throws Exception {
     var bundle = readBundle("dev/sigstore/samples/bundles/bundle.dsse.sigstore");
-    Assertions.assertTrue(bundle.getDSSESignature().isPresent());
+    Assertions.assertTrue(bundle.getDsseEnvelope().isPresent());
   }
 
   private Bundle readBundle(String resourcePath) throws Exception {
