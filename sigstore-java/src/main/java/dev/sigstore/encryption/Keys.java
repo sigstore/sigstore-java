@@ -15,95 +15,90 @@
  */
 package dev.sigstore.encryption;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.List;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.util.encoders.DecoderException;
 
 /** For internal use. Key related utility functions. */
 public class Keys {
-
-  private static final List<String> SUPPORTED_KEY_TYPES =
-      List.of("ECDSA", "EC", "RSA", "Ed25519", "EdDSA");
 
   static {
     Security.addProvider(new BouncyCastleProvider());
   }
 
   /**
-   * Takes a PEM formatted public key in bytes and constructs a {@code PublicKey} with it.
+   * Takes a PKIX DER formatted ECDSA public key in bytes and constructs a {@code PublicKey} with
+   * it.
    *
-   * <p>This method supports the follow public key algorithms: RSA, EdDSA, EC.
-   *
-   * @throws InvalidKeySpecException if the PEM does not contain just one public key.
-   * @throws NoSuchAlgorithmException if the public key is using an unsupported algorithm.
+   * @param contents the public key bytes
+   * @return a PublicKey object
+   * @throws InvalidKeySpecException if the public key material is invalid
    */
-  public static PublicKey parsePublicKey(byte[] keyBytes)
-      throws InvalidKeySpecException, IOException, NoSuchAlgorithmException {
-    try (PEMParser pemParser =
-        new PEMParser(
-            new InputStreamReader(new ByteArrayInputStream(keyBytes), StandardCharsets.UTF_8))) {
-      var keyObj = pemParser.readObject(); // throws DecoderException
-      if (keyObj == null) {
-        throw new InvalidKeySpecException(
-            "sigstore public keys must be only a single PEM encoded public key");
-      }
-      JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
-      converter.setProvider(BouncyCastleProvider.PROVIDER_NAME);
-      if (keyObj instanceof SubjectPublicKeyInfo) {
-        PublicKey pk = converter.getPublicKey((SubjectPublicKeyInfo) keyObj);
-        if (!SUPPORTED_KEY_TYPES.contains(pk.getAlgorithm())) {
-          throw new NoSuchAlgorithmException("Unsupported key type: " + pk.getAlgorithm());
-        }
-        return pk;
-      }
-      throw new InvalidKeySpecException("Could not parse PEM section into public key");
-    } catch (DecoderException e) {
-      throw new InvalidKeySpecException("Invalid key, could not parse PEM section");
-    }
+  public static PublicKey parseEcdsa(byte[] contents) throws InvalidKeySpecException {
+    return parse(contents, "ECDSA");
   }
 
   /**
-   * Takes a PKIX DER formatted public key in bytes and constructs a {@code PublicKey} with it.
-   *
-   * <p>This method is known to work with keys algorithms: RSA, EdDSA, EC.
+   * Takes a PKIX DER formatted Ed25519 public key in bytes and constructs a {@code PublicKey} with
+   * it.
    *
    * @param contents the public key bytes
-   * @param algorithm the key algorithm
    * @return a PublicKey object
-   * @throws NoSuchAlgorithmException if we don't support the scheme provided
    * @throws InvalidKeySpecException if the public key material is invalid
    */
-  public static PublicKey parsePkixPublicKey(byte[] contents, String algorithm)
-      throws NoSuchAlgorithmException, InvalidKeySpecException {
-    X509EncodedKeySpec spec = new X509EncodedKeySpec(contents);
-    KeyFactory factory = KeyFactory.getInstance(algorithm);
-    return factory.generatePublic(spec);
+  public static PublicKey parseEd25519(byte[] contents) throws InvalidKeySpecException {
+    return parse(contents, "Ed25519");
   }
 
-  public static PublicKey parsePkcs1RsaPublicKey(byte[] contents)
-      throws NoSuchAlgorithmException, InvalidKeySpecException {
-    ASN1Sequence sequence = ASN1Sequence.getInstance(contents);
-    ASN1Integer modulus = ASN1Integer.getInstance(sequence.getObjectAt(0));
-    ASN1Integer exponent = ASN1Integer.getInstance(sequence.getObjectAt(1));
-    RSAPublicKeySpec keySpec =
-        new RSAPublicKeySpec(modulus.getPositiveValue(), exponent.getPositiveValue());
-    KeyFactory factory = KeyFactory.getInstance("RSA");
-    return factory.generatePublic(keySpec);
+  /**
+   * Takes a PKIX DER formatted RSA public key in bytes and constructs a {@code PublicKey} with it.
+   *
+   * @param contents the public key bytes
+   * @return a PublicKey object
+   * @throws InvalidKeySpecException if the public key material is invalid
+   */
+  public static PublicKey parseRsa(byte[] contents) throws InvalidKeySpecException {
+    return parse(contents, "RSA");
+  }
+
+  /**
+   * Takes a PKCS1 DER formatted RSA public key in bytes and constructs a {@code PublicKey} with it.
+   *
+   * @param contents the public key bytes
+   * @return a PublicKey object
+   * @throws InvalidKeySpecException if the public key material is invalid
+   */
+  public static PublicKey parseRsaPkcs1(byte[] contents) throws InvalidKeySpecException {
+    try {
+      ASN1Sequence sequence = ASN1Sequence.getInstance(contents);
+      ASN1Integer modulus = ASN1Integer.getInstance(sequence.getObjectAt(0));
+      ASN1Integer exponent = ASN1Integer.getInstance(sequence.getObjectAt(1));
+      RSAPublicKeySpec keySpec =
+          new RSAPublicKeySpec(modulus.getPositiveValue(), exponent.getPositiveValue());
+      KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+      return factory.generatePublic(keySpec);
+    } catch (IllegalArgumentException | NullPointerException e) {
+      throw new InvalidKeySpecException("Failed to parse pkcs1 rsa key", e);
+    } catch (NoSuchProviderException | NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static PublicKey parse(byte[] contents, String type) throws InvalidKeySpecException {
+    try {
+      var keySpec = new X509EncodedKeySpec(contents);
+      var factory = KeyFactory.getInstance(type, BouncyCastleProvider.PROVIDER_NAME);
+      return factory.generatePublic(keySpec);
+    } catch (NoSuchProviderException | NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

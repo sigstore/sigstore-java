@@ -16,18 +16,31 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import dev.sigstore.encryption.Keys;
-import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 
 public class KeysParsingFuzzer {
+
+  @FunctionalInterface
+  interface Parser {
+    @CanIgnoreReturnValue
+    PublicKey parse(byte[] contents) throws InvalidKeySpecException;
+  }
+
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      byte[] byteArray = data.consumeRemainingAsBytes();
+      Parser parser =
+          data.pickValue(
+              new Parser[] {
+                Keys::parseRsaPkcs1, Keys::parseRsa, Keys::parseEcdsa, Keys::parseEd25519,
+              });
+      byte[] keyContents = data.consumeRemainingAsBytes();
 
-      Keys.parsePublicKey(byteArray);
-    } catch (IOException | InvalidKeySpecException | NoSuchAlgorithmException e) {
+      parser.parse(keyContents);
+
+    } catch (InvalidKeySpecException e) {
       // known exceptions
     }
   }

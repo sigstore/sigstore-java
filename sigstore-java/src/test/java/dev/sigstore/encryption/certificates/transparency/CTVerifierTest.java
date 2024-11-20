@@ -20,10 +20,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 import dev.sigstore.encryption.Keys;
 import dev.sigstore.encryption.certificates.Certificates;
+import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.List;
+import org.bouncycastle.util.encoders.Base64;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,11 +57,16 @@ public class CTVerifierTest {
                     Resources.getResource(
                         "dev/sigstore/samples/certificatetransparency/cert-ct-embedded.pem")));
 
-    PublicKey key =
-        Keys.parsePublicKey(
-            Resources.toByteArray(
+    // a little hacky pem parser, but lightweight
+    String keyData =
+        Resources.toString(
                 Resources.getResource(
-                    "dev/sigstore/samples/certificatetransparency/ct-server-key-public.pem")));
+                    "dev/sigstore/samples/certificatetransparency/ct-server-key-public.pem"),
+                StandardCharsets.UTF_8)
+            .replace("-----BEGIN PUBLIC KEY-----", "")
+            .replace("-----END PUBLIC KEY-----", "")
+            .replaceAll("\\s", "");
+    PublicKey key = Keys.parseEcdsa(Base64.decode(keyData));
 
     final CTLogInfo log = new CTLogInfo(key, "Test Log", "foo");
     CTLogStore store =

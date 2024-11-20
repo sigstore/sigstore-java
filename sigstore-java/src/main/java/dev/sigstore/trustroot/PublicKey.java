@@ -33,10 +33,13 @@ public abstract class PublicKey {
   public java.security.PublicKey toJavaPublicKey()
       throws NoSuchAlgorithmException, InvalidKeySpecException {
     if (getKeyDetails().equals("PKIX_ECDSA_P256_SHA_256")) {
-      return Keys.parsePkixPublicKey(getRawBytes(), "EC");
+      return Keys.parseEcdsa(getRawBytes());
+    }
+    if (getKeyDetails().startsWith("PKIX_RSA")) {
+      return Keys.parseRsa(getRawBytes());
     }
     if (getKeyDetails().equals("PKCS1_RSA_PKCS1V5")) {
-      return Keys.parsePkcs1RsaPublicKey(getRawBytes());
+      return Keys.parseRsaPkcs1(getRawBytes());
     }
     throw new InvalidKeySpecException("Unsupported key algorithm: " + getKeyDetails());
   }
