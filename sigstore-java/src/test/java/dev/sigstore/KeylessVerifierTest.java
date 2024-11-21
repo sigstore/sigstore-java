@@ -16,6 +16,7 @@
 package dev.sigstore;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.bundle.Bundle;
@@ -27,6 +28,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -63,26 +66,6 @@ public class KeylessVerifierTest {
                 Path.of(artifact),
                 Bundle.from(new StringReader(bundleFile)),
                 VerificationOptions.empty()));
-  }
-
-  @Test
-  public void testVerify_errorsOnDSSEBundle() throws Exception {
-    var bundleFile =
-        Resources.toString(
-            Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.sigstore"),
-            StandardCharsets.UTF_8);
-    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    var ex =
-        Assertions.assertThrows(
-            KeylessVerificationException.class,
-            () ->
-                verifier.verify(
-                    Path.of(artifact),
-                    Bundle.from(new StringReader(bundleFile)),
-                    VerificationOptions.empty()));
-    Assertions.assertEquals("Cannot verify DSSE signature based bundles", ex.getMessage());
   }
 
   @Test
@@ -190,5 +173,61 @@ public class KeylessVerifierTest {
     Assertions.assertEquals(
         "No provided certificate identities matched values in certificate: [{issuer:'String: not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String: not-match-again'}]",
         ex.getMessage());
+  }
+
+  @Test
+  public void testVerify_dsseBundle() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.sigstore"),
+            StandardCharsets.UTF_8);
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    verifier.verify(
+        Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
+  }
+
+  @Test
+  public void testVerify_dsseBundleBadSignature() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.bad.sig.sigstore"),
+            StandardCharsets.UTF_8);
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () ->
+                verifier.verify(
+                    Path.of(artifact),
+                    Bundle.from(new StringReader(bundleFile)),
+                    VerificationOptions.empty()));
+    Assertions.assertEquals("DSSE signature was not valid", ex.getMessage());
+  }
+
+  @Test
+  public void testVerify_dsseBundleArtifactNotInSubjects() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.bad.sig.sigstore"),
+            StandardCharsets.UTF_8);
+    var badArtifactDigest =
+        Hashing.sha256().hashString("nonsense", StandardCharsets.UTF_8).asBytes();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () ->
+                verifier.verify(
+                    badArtifactDigest,
+                    Bundle.from(new StringReader(bundleFile)),
+                    VerificationOptions.empty()));
+    MatcherAssert.assertThat(
+        ex.getMessage(),
+        CoreMatchers.startsWith(
+            "Provided artifact digest does not match any subject sha256 digests in DSSE payload"));
   }
 }
