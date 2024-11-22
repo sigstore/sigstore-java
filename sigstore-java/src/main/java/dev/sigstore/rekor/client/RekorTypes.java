@@ -17,7 +17,9 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
-import dev.sigstore.rekor.HashedRekord;
+import com.google.gson.JsonParseException;
+import dev.sigstore.rekor.dsse.v0_0_1.Dsse;
+import dev.sigstore.rekor.hashedRekord.v0_0_1.HashedRekord;
 
 /** Parser for the body.spec element of {@link RekorEntry}. */
 public class RekorTypes {
@@ -27,12 +29,33 @@ public class RekorTypes {
    *
    * @param entry the rekor entry obtained from rekor
    * @return the parsed pojo
-   * @throws RekorTypeException if the kind != hashedrekord or apiVersion != 0.0.1
+   * @throws RekorTypeException if the hashrekord:0.0.1 entry could not be parsed
    */
   public static HashedRekord getHashedRekord(RekorEntry entry) throws RekorTypeException {
     expect(entry, "hashedrekord", "0.0.1");
 
-    return GSON.get().fromJson(entry.getBodyDecoded().getSpec(), HashedRekord.class);
+    try {
+      return GSON.get().fromJson(entry.getBodyDecoded().getSpec(), HashedRekord.class);
+    } catch (JsonParseException jpe) {
+      throw new RekorTypeException("Could not parse hashrekord:0.0.1", jpe);
+    }
+  }
+
+  /**
+   * Parse a dsse from rekor at api version 0.0.1.
+   *
+   * @param entry the rekor entry obtained from rekor
+   * @return the parsed pojo
+   * @throws RekorTypeException if the dsse:0.0.1 entry could not be parsed
+   */
+  public static Dsse getDsse(RekorEntry entry) throws RekorTypeException {
+    expect(entry, "dsse", "0.0.1");
+
+    try {
+      return GSON.get().fromJson(entry.getBodyDecoded().getSpec(), Dsse.class);
+    } catch (JsonParseException jpe) {
+      throw new RekorTypeException("Could not parse dsse:0.0.1", jpe);
+    }
   }
 
   private static void expect(RekorEntry entry, String expectedKind, String expectedApiVersion)
