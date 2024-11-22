@@ -66,6 +66,27 @@ public class KeylessVerifierTest {
   }
 
   @Test
+  public void testVerify_mismatchedArtifactHash() throws Exception {
+    // a bundle file that uses the tlog entry from another artifact signed with the same
+    // certificate. The Bundle is fully valid except that the artifact hash doesn't match
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource(
+                "dev/sigstore/samples/bundles/bundle-with-wrong-tlog-entry.sigstore"),
+            StandardCharsets.UTF_8);
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    Assertions.assertThrows(
+        KeylessVerificationException.class,
+        () ->
+            verifier.verify(
+                Path.of(artifact),
+                Bundle.from(new StringReader(bundleFile)),
+                VerificationOptions.empty()));
+  }
+
+  @Test
   public void testVerify_errorsOnDSSEBundle() throws Exception {
     var bundleFile =
         Resources.toString(
