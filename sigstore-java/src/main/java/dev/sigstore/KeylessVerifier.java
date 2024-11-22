@@ -26,11 +26,13 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
+import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -44,7 +46,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
@@ -180,6 +184,23 @@ public class KeylessVerifier {
       rekorVerifier.verifyEntry(rekorEntry);
     } catch (RekorVerificationException ex) {
       throw new KeylessVerificationException("Rekor entry signature was not valid", ex);
+    }
+
+    // verify the log entry is relevant to the provided verification materials
+    try {
+      var calculatedHashedRekord =
+          Base64.toBase64String(
+              HashedRekordRequest.newHashedRekordRequest(
+                      artifactDigest, Certificates.toPemBytes(leafCert), signature)
+                  .toJsonPayload()
+                  .getBytes(StandardCharsets.UTF_8));
+      if (!Objects.equals(calculatedHashedRekord, rekorEntry.getBody())) {
+        throw new KeylessVerificationException(
+            "Provided verification materials are inconsistent with log entry");
+      }
+    } catch (IOException e) {
+      // this should be unreachable, we know leafCert is a valid certificate at this point
+      throw new RuntimeException("Unexpected IOException on valid leafCert", e);
     }
 
     // check if the time of entry inclusion in the log (a stand-in for signing time) is within the

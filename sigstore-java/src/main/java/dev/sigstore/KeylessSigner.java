@@ -63,8 +63,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nullable;
+import org.bouncycastle.util.encoders.Base64;
 
 /**
  * A full sigstore keyless signing flow.
@@ -333,6 +335,12 @@ public class KeylessSigner implements AutoCloseable {
         rekorResponse = rekorClient.putEntry(rekorRequest);
       } catch (RekorParseException | IOException ex) {
         throw new KeylessSignerException("Failed to put entry in rekor", ex);
+      }
+
+      var calculatedHashedRekord =
+          Base64.toBase64String(rekorRequest.toJsonPayload().getBytes(StandardCharsets.UTF_8));
+      if (!Objects.equals(calculatedHashedRekord, rekorResponse.getEntry().getBody())) {
+        throw new KeylessSignerException("Returned log entry was inconsistent with request");
       }
 
       try {
