@@ -38,6 +38,7 @@ import java.nio.file.Path;
 import java.security.cert.CertPath;
 import java.util.Base64;
 import java.util.concurrent.Callable;
+import org.apache.commons.codec.binary.Hex;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -48,8 +49,14 @@ import picocli.CommandLine.Parameters;
     aliases = {"verify-bundle"},
     description = "verify an artifact")
 public class Verify implements Callable<Integer> {
-  @Parameters(arity = "1", paramLabel = "<artifact>", description = "artifact to verify")
-  Path artifact;
+
+  private static final String SHA256_PREFIX = "sha256:";
+
+  @Parameters(
+      arity = "1",
+      paramLabel = "<artifact>",
+      description = "an artifact path or artifact hash (sha256:abc...) to verify")
+  String artifact;
 
   @ArgGroup(multiplicity = "1", exclusive = true)
   SignatureFiles signatureFiles;
@@ -107,7 +114,10 @@ public class Verify implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    byte[] digest = asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
+    byte[] digest =
+        artifact.startsWith(SHA256_PREFIX)
+            ? Hex.decodeHex(artifact.substring(SHA256_PREFIX.length()))
+            : asByteSource(Path.of(artifact).toFile()).hash(Hashing.sha256()).asBytes();
 
     Bundle bundle;
     if (signatureFiles.sigAndCert != null) {
@@ -178,7 +188,11 @@ public class Verify implements Callable<Integer> {
     } else {
       throw new IllegalStateException("Unable to initialize verifier");
     }
-    verifier.verify(artifact, bundle, verificationOptions);
+    if (artifact.startsWith(SHA256_PREFIX)) {
+      verifier.verify(digest, bundle, verificationOptions);
+    } else {
+      verifier.verify(Path.of(artifact), bundle, verificationOptions);
+    }
     return 0;
   }
 }
