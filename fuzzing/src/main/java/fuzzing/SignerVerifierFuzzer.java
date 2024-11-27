@@ -36,8 +36,8 @@ public class SignerVerifierFuzzer {
       byte[] signature1 = signer.sign(byteArray);
       byte[] signature2 = signer.signDigest(byteArray);
 
-      verifier.verify(byteArray, signature1);
-      verifier.verifyDigest(byteArray, signature2);
+      var unused1 = verifier.verify(byteArray, signature1);
+      var unused2 = verifier.verifyDigest(byteArray, signature2);
     } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException e) {
       // Known exception
     }

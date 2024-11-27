@@ -87,6 +87,9 @@ public interface RekorEntry {
 
   @Value.Immutable
   interface Checkpoint {
+    /** Signed portion of checkpoint. */
+    String getSignedData();
+
     /** Unique identity for the log. */
     String getOrigin();
 
