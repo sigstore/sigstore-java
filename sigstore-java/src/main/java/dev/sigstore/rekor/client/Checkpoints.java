@@ -71,6 +71,7 @@ class Checkpoints {
     }
 
     return ImmutableCheckpoint.builder()
+        .signedData(header + "\n")
         .origin(origin)
         .size(size)
         .base64Hash(base64Hash)

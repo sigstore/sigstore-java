@@ -16,6 +16,7 @@
 package dev.sigstore.encryption.signers;
 
 import java.security.*;
+import javax.annotation.CheckReturnValue;
 
 /** A verifier helper that wraps common verification operations for use within this library. */
 public interface Verifier {
@@ -30,6 +31,7 @@ public interface Verifier {
    * @param signature the signature associated with the artifact
    * @return true if the signature is valid, false otherwise
    */
+  @CheckReturnValue
   boolean verify(byte[] artifact, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 
@@ -41,6 +43,7 @@ public interface Verifier {
    * @param signature the signature associated with the artifact
    * @return true if the signature is valid, false otherwise
    */
+  @CheckReturnValue
   boolean verifyDigest(byte[] artifactDigest, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 }

@@ -87,6 +87,25 @@ public class KeylessVerifierTest {
   }
 
   @Test
+  public void testVerify_badCheckpointSignature() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource(
+                "dev/sigstore/samples/bundles/bundle-with-bad-checkpoint-signature.sigstore"),
+            StandardCharsets.UTF_8);
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    Assertions.assertThrows(
+        KeylessVerificationException.class,
+        () ->
+            verifier.verify(
+                Path.of(artifact),
+                Bundle.from(new StringReader(bundleFile)),
+                VerificationOptions.empty()));
+  }
+
+  @Test
   public void testVerify_errorsOnDSSEBundle() throws Exception {
     var bundleFile =
         Resources.toString(

@@ -20,6 +20,7 @@ import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.rekor.client.RekorEntry.Checkpoint;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import dev.sigstore.trustroot.TransparencyLog;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
@@ -163,9 +164,12 @@ public class RekorVerifier {
             "Checkpoint key hint did not match provided log public key");
       }
     }
+    var signedData = checkpoint.getSignedData();
     try {
-      Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey())
-          .verifyDigest(inclusionRootHash, sig.getSignature());
+      if (!Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey())
+          .verify(signedData.getBytes(StandardCharsets.UTF_8), sig.getSignature())) {
+        throw new RekorVerificationException("Checkpoint signature was invalid");
+      }
     } catch (NoSuchAlgorithmException
         | InvalidKeySpecException
         | SignatureException
