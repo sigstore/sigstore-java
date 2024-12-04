@@ -9,6 +9,15 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [1.2.0] - 2024-12-4
+
+## Added
+- Add option to sigstore conformance cli to verify artifact digests in addition to file paths https://github.com/sigstore/sigstore-java/pull/859
+
+## Security
+- Ensure checkpoints for log inclusion proofs in sigstore bundles are correctly
+  verified. https://github.com/sigstore/sigstore-java/commit/23fb4885e6704a5df4977f7acf253a745349edf9
+
 # [1.1.0] - 2024-11-22
 
 ## Added
