@@ -29,9 +29,13 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.Arguments.arguments
 import java.io.File
 import java.nio.file.Path
+import kotlin.io.path.appendText
 
 open class BaseGradleTest {
     enum class ConfigurationCache {
+        ON, OFF
+    }
+    enum class ProjectIsolation {
         ON, OFF
     }
 
@@ -63,16 +67,16 @@ open class BaseGradleTest {
             if (!isCI) {
                 // Execute a single combination only when running locally
                 return listOf(
-                    TestedGradle(gradleVersions().first(), ConfigurationCache.ON)
+                    TestedGradle(gradleVersions().first(), ConfigurationCache.ON, ProjectIsolation.ON)
                 )
             }
             return buildList {
                 addAll(
-                    gradleVersions().map { TestedGradle(it, ConfigurationCache.ON) }
+                    gradleVersions().map { TestedGradle(it, ConfigurationCache.ON, ProjectIsolation.ON) }
                 )
                 // Test the first and the last version without configuration cache
-                add(TestedGradle(gradleVersions().first(), ConfigurationCache.OFF))
-                add(TestedGradle(gradleVersions().last(), ConfigurationCache.OFF))
+                add(TestedGradle(gradleVersions().first(), ConfigurationCache.OFF, ProjectIsolation.OFF))
+                add(TestedGradle(gradleVersions().last(), ConfigurationCache.OFF, ProjectIsolation.OFF))
             }
         }
 
@@ -198,6 +202,23 @@ open class BaseGradleTest {
 
             org.gradle.unsafe.configuration-cache=true
             org.gradle.unsafe.configuration-cache-problems=fail
+            """.trimIndent()
+        )
+    }
+
+    protected fun enableProjectIsolation(
+        gradle: TestedGradle,
+    ) {
+        if (gradle.projectIsolation != ProjectIsolation.ON) {
+            return
+        }
+        require(gradle.configurationCache == ConfigurationCache.ON) {
+            "Project isolation requires Configuration Cache."
+        }
+        projectDir.resolve("gradle.properties").appendText(
+            """
+
+            org.gradle.unsafe.isolated-projects=true
             """.trimIndent()
         )
     }
