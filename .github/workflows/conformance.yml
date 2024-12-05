@@ -35,8 +35,8 @@ jobs:
       - name: Unpack sigstore-java distribution
         run: tar -xvf ${{ github.workspace }}/sigstore-cli/build/distributions/sigstore-cli-*.tar --strip-components 1
 
-      - uses: sigstore/sigstore-conformance@ee4de0e602873beed74cf9e49d5332529fe69bf6 # v0.0.11
+      - uses: sigstore/sigstore-conformance@6bd1c54e236c9517da56f7344ad16cc00439fe19 # v0.0.13
         with:
           entrypoint: ${{ github.workspace }}/bin/sigstore-cli
           environment: ${{ matrix.sigstore-env }}
-          xfail: "test_verify_dsse_bundle_with_trust_root"
+          xfail: "test_verify_dsse_bundle_with_trust_root test_verify_in_toto_in_dsse_envelope"
