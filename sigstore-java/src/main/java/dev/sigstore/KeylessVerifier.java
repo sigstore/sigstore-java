@@ -122,7 +122,7 @@ public class KeylessVerifier {
   public void verify(byte[] artifactDigest, Bundle bundle, VerificationOptions options)
       throws KeylessVerificationException {
 
-    if (bundle.getDSSESignature().isPresent()) {
+    if (bundle.getDsseEnvelope().isPresent()) {
       throw new KeylessVerificationException("Cannot verify DSSE signature based bundles");
     }
 

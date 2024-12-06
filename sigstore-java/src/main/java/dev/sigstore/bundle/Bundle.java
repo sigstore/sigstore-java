@@ -20,13 +20,16 @@ import dev.sigstore.rekor.client.RekorEntry;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.CertPath;
 import java.util.List;
 import java.util.Optional;
+import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Default;
+import org.immutables.value.Value.Derived;
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Lazy;
 
@@ -59,13 +62,13 @@ public abstract class Bundle {
   public abstract Optional<MessageSignature> getMessageSignature();
 
   /** A DSSE envelope signature type that may contain an arbitrary payload */
-  public abstract Optional<DSSESignature> getDSSESignature();
+  public abstract Optional<DsseEnvelope> getDsseEnvelope();
 
   @Value.Check
   protected void checkOnlyOneSignature() {
     Preconditions.checkState(
-        (getDSSESignature().isEmpty() && getMessageSignature().isPresent())
-            || (getDSSESignature().isPresent() && getMessageSignature().isEmpty()));
+        (getDsseEnvelope().isEmpty() && getMessageSignature().isPresent())
+            || (getDsseEnvelope().isPresent() && getMessageSignature().isEmpty()));
   }
 
   @Value.Check
@@ -132,7 +135,7 @@ public abstract class Bundle {
   }
 
   @Immutable
-  public interface DSSESignature {
+  public interface DsseEnvelope {
 
     /** An arbitrary payload that does not need to be parsed to be validated */
     String getPayload();
@@ -141,7 +144,36 @@ public abstract class Bundle {
     String getPayloadType();
 
     /** DSSE specific signature */
-    byte[] getSignature();
+    List<Signature> getSignatures();
+
+    /**
+     * The "Pre-Authentication Encoding" of this statement. The signature is generated over this
+     * content.
+     */
+    @Gson.Ignore
+    @Derived
+    default byte[] getPAE() {
+      return ("DSSEv1 "
+              + getPayloadType().length()
+              + " "
+              + getPayloadType()
+              + " "
+              + getPayload().length()
+              + " "
+              + getPayload())
+          .getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Lazy
+    @Gson.Ignore
+    default byte[] getSignature() {
+      return getSignatures().get(0).getSig();
+    }
+
+    @Immutable
+    interface Signature {
+      byte[] getSig();
+    }
   }
 
   @Immutable

@@ -16,6 +16,7 @@
 package dev.sigstore.json;
 
 import com.google.gson.*;
+import dev.sigstore.dsse.GsonAdaptersInTotoPayload;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntry;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntryBody;
 import dev.sigstore.tuf.model.*;
@@ -59,6 +60,7 @@ public enum GsonSupplier implements Supplier<Gson> {
           .registerTypeAdapterFactory(new GsonAdaptersTargetMeta())
           .registerTypeAdapterFactory(new GsonAdaptersTimestamp())
           .registerTypeAdapterFactory(new GsonAdaptersTimestampMeta())
+          .registerTypeAdapterFactory(new GsonAdaptersInTotoPayload())
           .disableHtmlEscaping()
           .create();
 

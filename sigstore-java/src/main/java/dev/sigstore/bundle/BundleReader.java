@@ -100,17 +100,18 @@ class BundleReader {
     }
 
     if (protoBundle.hasDsseEnvelope()) {
-      var dsseEnvelope = protoBundle.getDsseEnvelope();
-      if (dsseEnvelope.getSignaturesCount() != 1) {
-        throw new BundleParseException("DSEE envelopes must contain exactly one signature");
+      var dsseEnvelopeProto = protoBundle.getDsseEnvelope();
+      var dsseEnvelopeBuilder =
+          ImmutableDsseEnvelope.builder()
+              .payload(dsseEnvelopeProto.getPayload().toStringUtf8())
+              .payloadType(dsseEnvelopeProto.getPayloadType());
+      for (int sigIndex = 0; sigIndex < dsseEnvelopeProto.getSignaturesCount(); sigIndex++) {
+        dsseEnvelopeBuilder.addSignatures(
+            ImmutableSignature.builder()
+                .sig(dsseEnvelopeProto.getSignatures(sigIndex).getSig().toByteArray())
+                .build());
       }
-      var dsseSignature =
-          ImmutableDSSESignature.builder()
-              .payload(dsseEnvelope.getPayload().toStringUtf8())
-              .payloadType(dsseEnvelope.getPayloadType())
-              .signature(dsseEnvelope.getSignatures(0).toByteArray())
-              .build();
-      bundleBuilder.dSSESignature(dsseSignature);
+      bundleBuilder.dsseEnvelope(dsseEnvelopeBuilder.build());
     } else if (protoBundle.hasMessageSignature()) {
       var signature = protoBundle.getMessageSignature().getSignature().toByteArray();
       if (protoBundle.getMessageSignature().hasMessageDigest()) {
