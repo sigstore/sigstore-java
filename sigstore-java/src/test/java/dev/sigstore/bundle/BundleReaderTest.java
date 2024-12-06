@@ -16,6 +16,7 @@
 package dev.sigstore.bundle;
 
 import com.google.common.io.Resources;
+import dev.sigstore.dsse.InTotoPayload;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Assertions;
@@ -81,7 +82,9 @@ class BundleReaderTest {
   @Test
   public void readDSSEBundle() throws Exception {
     var bundle = readBundle("dev/sigstore/samples/bundles/bundle.dsse.sigstore");
-    Assertions.assertTrue(bundle.getDSSESignature().isPresent());
+    Assertions.assertTrue(bundle.getDsseEnvelope().isPresent());
+    var intotoPayload = InTotoPayload.from(bundle.getDsseEnvelope().get());
+    Assertions.assertEquals("https://slsa.dev/provenance/v1", intotoPayload.getPredicateType());
   }
 
   private Bundle readBundle(String resourcePath) throws Exception {
