@@ -29,12 +29,17 @@ public class RekorTypesFuzzer {
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
+      int type = data.pickValue(new int[] {0, 1});
       String string = data.consumeRemainingAsString();
 
       URI uri = new URI(URL);
       RekorEntry entry = RekorResponse.newRekorResponse(uri, string).getEntry();
 
-      RekorTypes.getHashedRekord(entry);
+      if (type == 0) {
+        RekorTypes.getHashedRekord(entry);
+      } else {
+        RekorTypes.getDsse(entry);
+      }
     } catch (URISyntaxException | RekorTypeException | RekorParseException e) {
       // Known exception
     }

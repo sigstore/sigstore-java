@@ -19,7 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Bytes;
-import dev.sigstore.rekor.*;
+import dev.sigstore.rekor.hashedRekord.v0_0_1.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;

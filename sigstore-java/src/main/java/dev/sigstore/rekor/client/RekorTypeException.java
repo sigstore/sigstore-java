@@ -19,4 +19,8 @@ public class RekorTypeException extends Exception {
   public RekorTypeException(String message) {
     super(message);
   }
+
+  public RekorTypeException(String message, Throwable reason) {
+    super(message, reason);
+  }
 }
