@@ -197,4 +197,9 @@ public abstract class Bundle {
   public String toJson() {
     return BundleWriter.writeBundle(this);
   }
+
+  /** Check if this bundle has MessageSignature, use to determine what verification method to use */
+  public static boolean hasMessageSignature(Bundle bundle) {
+    return bundle.getMessageSignature().isPresent();
+  }
 }
