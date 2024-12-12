@@ -17,7 +17,6 @@ package dev.sigstore.cli;
 
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.TrustedRootProvider;
-import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.tuf.RootProvider;
 import dev.sigstore.tuf.SigstoreTufClient;
@@ -25,7 +24,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Base64;
 import java.util.concurrent.Callable;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -41,8 +39,11 @@ public class Sign implements Callable<Integer> {
   @Parameters(arity = "1", paramLabel = "<artifact>", description = "artifact to sign")
   Path artifact;
 
-  @ArgGroup(multiplicity = "1", exclusive = true)
-  SignatureFiles signatureFiles;
+  @Option(
+      names = {"--bundle"},
+      description = "path to bundle file",
+      required = true)
+  Path bundleFile;
 
   @ArgGroup(multiplicity = "0..1", exclusive = true)
   Verify.Target target;
@@ -113,15 +114,7 @@ public class Sign implements Callable<Integer> {
     }
     var signer = signerBuilder.build();
     var bundle = signer.signFile(artifact);
-    if (signatureFiles.sigAndCert != null) {
-      Files.write(
-          signatureFiles.sigAndCert.signatureFile,
-          Base64.getEncoder().encode(bundle.getMessageSignature().get().getSignature()));
-      Files.write(
-          signatureFiles.sigAndCert.certificateFile, Certificates.toPemBytes(bundle.getCertPath()));
-    } else {
-      Files.write(signatureFiles.bundleFile, bundle.toJson().getBytes(StandardCharsets.UTF_8));
-    }
+    Files.write(bundleFile, bundle.toJson().getBytes(StandardCharsets.UTF_8));
     return 0;
   }
 }
