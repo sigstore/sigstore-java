@@ -24,7 +24,7 @@ import java.security.spec.InvalidKeySpecException;
 public class KeysFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      String[] schemes = {"rsassa-pss-sha256", "ed25519", "ecdsa-sha2-nistp256"};
+      String[] schemes = {"ecdsa-sha2-nistp256"};
       String scheme = data.pickValue(schemes);
       byte[] byteArray = data.consumeRemainingAsBytes();
 

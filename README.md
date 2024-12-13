@@ -5,6 +5,8 @@
 # sigstore-java
 A sigstore java client for interacting with sigstore infrastructure
 
+whatever, more nonsense
+
 You can file [issues directly](https://github.com/sigstore/sigstore-java/issues) on this project or
 if you have any questions message us on the [sigstore#java](https://sigstore.slack.com/archives/C03239XUL92)
 slack channel
