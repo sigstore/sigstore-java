@@ -23,20 +23,12 @@ import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.VerificationOptions;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.bundle.Bundle;
-import dev.sigstore.bundle.Bundle.HashAlgorithm;
-import dev.sigstore.bundle.Bundle.MessageSignature;
-import dev.sigstore.bundle.ImmutableBundle;
-import dev.sigstore.encryption.certificates.Certificates;
-import dev.sigstore.rekor.client.RekorEntryFetcher;
 import dev.sigstore.strings.StringMatcher;
 import dev.sigstore.tuf.RootProvider;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.cert.CertPath;
-import java.util.Base64;
 import java.util.concurrent.Callable;
 import org.apache.commons.codec.binary.Hex;
 import picocli.CommandLine.ArgGroup;
@@ -58,8 +50,11 @@ public class Verify implements Callable<Integer> {
       description = "an artifact path or artifact hash (sha256:abc...) to verify")
   String artifact;
 
-  @ArgGroup(multiplicity = "1", exclusive = true)
-  SignatureFiles signatureFiles;
+  @Option(
+      names = {"--bundle"},
+      description = "path to bundle file",
+      required = true)
+  Path bundleFile;
 
   @ArgGroup(multiplicity = "0..1", exclusive = false)
   Policy policy;
@@ -119,29 +114,7 @@ public class Verify implements Callable<Integer> {
             ? Hex.decodeHex(artifact.substring(SHA256_PREFIX.length()))
             : asByteSource(Path.of(artifact).toFile()).hash(Hashing.sha256()).asBytes();
 
-    Bundle bundle;
-    if (signatureFiles.sigAndCert != null) {
-      byte[] signature =
-          Base64.getMimeDecoder()
-              .decode(Files.readAllBytes(signatureFiles.sigAndCert.signatureFile));
-      CertPath certPath =
-          Certificates.fromPemChain(Files.readAllBytes(signatureFiles.sigAndCert.certificateFile));
-      RekorEntryFetcher fetcher =
-          target == null
-              ? RekorEntryFetcher.sigstorePublicGood()
-              : target.staging
-                  ? RekorEntryFetcher.sigstoreStaging()
-                  : RekorEntryFetcher.fromTrustedRoot(target.trustedRoot);
-      bundle =
-          ImmutableBundle.builder()
-              .messageSignature(MessageSignature.of(HashAlgorithm.SHA2_256, digest, signature))
-              .certPath(certPath)
-              .addEntries(
-                  fetcher.getEntryFromRekor(digest, Certificates.getLeaf(certPath), signature))
-              .build();
-    } else {
-      bundle = Bundle.from(signatureFiles.bundleFile, StandardCharsets.UTF_8);
-    }
+    Bundle bundle = Bundle.from(bundleFile, StandardCharsets.UTF_8);
 
     var verificationOptionsBuilder = VerificationOptions.builder();
     if (policy != null) {
