@@ -138,7 +138,7 @@ public abstract class Bundle {
   public interface DsseEnvelope {
 
     /** An arbitrary payload that does not need to be parsed to be validated */
-    String getPayload();
+    byte[] getPayload();
 
     /** Information on how to interpret the payload */
     String getPayloadType();
@@ -158,10 +158,16 @@ public abstract class Bundle {
               + " "
               + getPayloadType()
               + " "
-              + getPayload().length()
+              + getPayloadAsString().length()
               + " "
-              + getPayload())
+              + getPayloadAsString())
           .getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Lazy
+    @Gson.Ignore
+    default String getPayloadAsString() {
+      return new String(getPayload(), StandardCharsets.UTF_8);
     }
 
     @Lazy

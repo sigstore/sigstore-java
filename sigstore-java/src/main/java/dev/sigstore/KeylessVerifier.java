@@ -22,14 +22,21 @@ import com.google.common.io.Files;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.VerificationOptions.UncheckedCertificateException;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.bundle.Bundle.DsseEnvelope;
+import dev.sigstore.bundle.Bundle.MessageSignature;
+import dev.sigstore.dsse.InTotoPayload;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorEntry;
+import dev.sigstore.rekor.client.RekorTypeException;
+import dev.sigstore.rekor.client.RekorTypes;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.rekor.dsse.v0_0_1.Dsse;
+import dev.sigstore.rekor.dsse.v0_0_1.PayloadHash;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -45,10 +52,11 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import org.bouncycastle.util.encoders.Base64;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
@@ -122,15 +130,10 @@ public class KeylessVerifier {
   public void verify(byte[] artifactDigest, Bundle bundle, VerificationOptions options)
       throws KeylessVerificationException {
 
-    if (bundle.getDsseEnvelope().isPresent()) {
-      throw new KeylessVerificationException("Cannot verify DSSE signature based bundles");
+    if (bundle.getDsseEnvelope().isEmpty() && bundle.getMessageSignature().isEmpty()) {
+      throw new IllegalStateException(
+          "Bundle must contain a message signature or DSSE envelope to verify");
     }
-
-    if (bundle.getMessageSignature().isEmpty()) {
-      // this should be unreachable
-      throw new IllegalStateException("Bundle must contain a message signature to verify");
-    }
-    var messageSignature = bundle.getMessageSignature().get();
 
     if (bundle.getEntries().isEmpty()) {
       throw new KeylessVerificationException("Cannot verify bundle without tlog entry");
@@ -149,20 +152,6 @@ public class KeylessVerifier {
     var signingCert = bundle.getCertPath();
     var leafCert = Certificates.getLeaf(signingCert);
 
-    // this ensures the provided artifact digest matches what may have come from a bundle (in
-    // keyless signature)
-    if (messageSignature.getMessageDigest().isPresent()) {
-      var bundleDigest = messageSignature.getMessageDigest().get().getDigest();
-      if (!Arrays.equals(artifactDigest, bundleDigest)) {
-        throw new KeylessVerificationException(
-            "Provided artifact digest does not match digest used for verification"
-                + "\nprovided(hex) : "
-                + Hex.toHexString(artifactDigest)
-                + "\nverification  : "
-                + Hex.toHexString(bundleDigest));
-      }
-    }
-
     // verify the certificate chains up to a trusted root (fulcio) and contains a valid SCT from
     // a trusted CT log
     try {
@@ -175,8 +164,6 @@ public class KeylessVerifier {
     // verify the certificate identity if options are present
     checkCertificateMatchers(leafCert, options.getCertificateMatchers());
 
-    var signature = messageSignature.getSignature();
-
     RekorEntry rekorEntry = bundle.getEntries().get(0);
 
     // verify the rekor entry is signed by the log keys
@@ -184,23 +171,6 @@ public class KeylessVerifier {
       rekorVerifier.verifyEntry(rekorEntry);
     } catch (RekorVerificationException ex) {
       throw new KeylessVerificationException("Rekor entry signature was not valid", ex);
-    }
-
-    // verify the log entry is relevant to the provided verification materials
-    try {
-      var calculatedHashedRekord =
-          Base64.toBase64String(
-              HashedRekordRequest.newHashedRekordRequest(
-                      artifactDigest, Certificates.toPemBytes(leafCert), signature)
-                  .toJsonPayload()
-                  .getBytes(StandardCharsets.UTF_8));
-      if (!Objects.equals(calculatedHashedRekord, rekorEntry.getBody())) {
-        throw new KeylessVerificationException(
-            "Provided verification materials are inconsistent with log entry");
-      }
-    } catch (IOException e) {
-      // this should be unreachable, we know leafCert is a valid certificate at this point
-      throw new RuntimeException("Unexpected IOException on valid leafCert", e);
     }
 
     // check if the time of entry inclusion in the log (a stand-in for signing time) is within the
@@ -214,18 +184,11 @@ public class KeylessVerifier {
       throw new KeylessVerificationException("Signing time was after certificate expiry", e);
     }
 
-    // finally check the supplied signature can be verified by the public key in the certificate
-    var publicKey = leafCert.getPublicKey();
-    try {
-      var verifier = Verifiers.newVerifier(publicKey);
-      if (!verifier.verifyDigest(artifactDigest, signature)) {
-        throw new KeylessVerificationException("Artifact signature was not valid");
-      }
-    } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
-      throw new RuntimeException(ex);
-    } catch (SignatureException ex) {
-      throw new KeylessVerificationException(
-          "Signature could not be processed: " + ex.getMessage(), ex);
+    if (bundle.getMessageSignature().isPresent()) { // hashedrekord
+      checkMessageSignature(
+          bundle.getMessageSignature().get(), rekorEntry, artifactDigest, leafCert);
+    } else { // dsse
+      checkDsseEnvelope(rekorEntry, bundle.getDsseEnvelope().get(), artifactDigest, leafCert);
     }
   }
 
@@ -242,6 +205,167 @@ public class KeylessVerifier {
     } catch (UncheckedCertificateException ce) {
       throw new KeylessVerificationException(
           "Could not verify certificate identities: " + ce.getMessage());
+    }
+  }
+
+  void checkMessageSignature(
+      MessageSignature messageSignature,
+      RekorEntry rekorEntry,
+      byte[] artifactDigest,
+      X509Certificate leafCert)
+      throws KeylessVerificationException {
+    // this ensures the provided artifact digest matches what may have come from a bundle (in
+    // keyless signature)
+    if (messageSignature.getMessageDigest().isPresent()) {
+      var bundleDigest = messageSignature.getMessageDigest().get().getDigest();
+      if (!Arrays.equals(artifactDigest, bundleDigest)) {
+        throw new KeylessVerificationException(
+            "Provided artifact digest does not match digest used for verification"
+                + "\nprovided(hex) : "
+                + Hex.toHexString(artifactDigest)
+                + "\nverification(hex) : "
+                + Hex.toHexString(bundleDigest));
+      }
+    }
+
+    // verify the signature over the artifact
+    var signature = messageSignature.getSignature();
+    try {
+      if (!Verifiers.newVerifier(leafCert.getPublicKey()).verifyDigest(artifactDigest, signature)) {
+        throw new KeylessVerificationException("Artifact signature was not valid");
+      }
+    } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
+      throw new RuntimeException(ex);
+    } catch (SignatureException ex) {
+      throw new KeylessVerificationException(
+          "Signature could not be processed: " + ex.getMessage(), ex);
+    }
+
+    // recreate the log entry and check if it matches what was provided in the rekorEntry
+    try {
+      RekorTypes.getHashedRekord(rekorEntry);
+      var calculatedHashedRekord =
+          Base64.getEncoder()
+              .encodeToString(
+                  HashedRekordRequest.newHashedRekordRequest(
+                          artifactDigest, Certificates.toPemBytes(leafCert), signature)
+                      .toJsonPayload()
+                      .getBytes(StandardCharsets.UTF_8));
+      if (!Objects.equals(calculatedHashedRekord, rekorEntry.getBody())) {
+        throw new KeylessVerificationException(
+            "Provided verification materials are inconsistent with log entry");
+      }
+    } catch (IOException e) {
+      // this should be unreachable, we know leafCert is a valid certificate at this point
+      throw new RuntimeException("Unexpected IOException on valid leafCert", e);
+    } catch (RekorTypeException re) {
+      throw new KeylessVerificationException("Unexpected rekor type", re);
+    }
+  }
+
+  // do all dsse specific checks
+  void checkDsseEnvelope(
+      RekorEntry rekorEntry,
+      DsseEnvelope dsseEnvelope,
+      byte[] artifactDigest,
+      X509Certificate leafCert)
+      throws KeylessVerificationException {
+
+    // verify the artifact is in the subject list of the envelope
+    if (!Objects.equals(InTotoPayload.PAYLOAD_TYPE, dsseEnvelope.getPayloadType())) {
+      throw new KeylessVerificationException(
+          "DSSE envelope must have payload type "
+              + InTotoPayload.PAYLOAD_TYPE
+              + ", but found '"
+              + dsseEnvelope.getPayloadType()
+              + "'");
+    }
+    InTotoPayload payload = InTotoPayload.from(dsseEnvelope);
+
+    // find one sha256 hash in the subject list that matches the artifact hash
+    if (payload.getSubject().stream()
+        .noneMatch(
+            subject -> {
+              if (subject.getDigest().containsKey("sha256")) {
+                try {
+                  var digestBytes = Hex.decode(subject.getDigest().get("sha256"));
+                  return Arrays.equals(artifactDigest, digestBytes);
+                } catch (DecoderException de) {
+                  // ignore (assume false)
+                }
+              }
+              return false;
+            })) {
+      var providedHashes =
+          payload.getSubject().stream()
+              .map(s -> s.getDigest().getOrDefault("sha256", "no-sha256-hash"))
+              .collect(Collectors.joining(",", "[", "]"));
+
+      throw new KeylessVerificationException(
+          "Provided artifact digest does not match any subject sha256 digests in DSSE payload"
+              + "\nprovided(hex) : "
+              + Hex.toHexString(artifactDigest)
+              + "\nverification  : "
+              + providedHashes);
+    }
+
+    // verify the dsse signature
+    if (dsseEnvelope.getSignatures().size() != 1) {
+      throw new KeylessVerificationException(
+          "DSSE envelope must have exactly 1 signature, but found: "
+              + dsseEnvelope.getSignatures().size());
+    }
+    try {
+      if (!Verifiers.newVerifier(leafCert.getPublicKey())
+          .verify(dsseEnvelope.getPAE(), dsseEnvelope.getSignature())) {
+        throw new KeylessVerificationException("DSSE signature was not valid");
+      }
+    } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
+      throw new RuntimeException(ex);
+    } catch (SignatureException se) {
+      throw new KeylessVerificationException("Signature could not be processed", se);
+    }
+
+    // check if the digest over the dsse payload matches the digest in the rekorEntry
+    Dsse rekorDsse;
+    try {
+      rekorDsse = RekorTypes.getDsse(rekorEntry);
+    } catch (RekorTypeException re) {
+      throw new KeylessVerificationException("Unexpected rekor type", re);
+    }
+
+    var algorithm = rekorDsse.getPayloadHash().getAlgorithm();
+    if (algorithm != PayloadHash.Algorithm.SHA_256) {
+      throw new KeylessVerificationException(
+          "Cannot process DSSE entry with hashing algorithm " + algorithm.toString());
+    }
+
+    byte[] payloadDigest;
+    try {
+      payloadDigest = Hex.decode(rekorDsse.getPayloadHash().getValue());
+    } catch (DecoderException de) {
+      throw new KeylessVerificationException(
+          "Could not decode hex sha256 artifact hash in hashrekord", de);
+    }
+
+    byte[] calculatedDigest = Hashing.sha256().hashBytes(dsseEnvelope.getPayload()).asBytes();
+    if (!Arrays.equals(calculatedDigest, payloadDigest)) {
+      throw new KeylessVerificationException(
+          "Digest of DSSE payload in bundle does not match DSSE payload digest in log entry");
+    }
+
+    // check if the signature over the dsse payload matches the signature in the rekorEntry
+    if (rekorDsse.getSignatures().size() != 1) {
+      throw new KeylessVerificationException(
+          "DSSE log entry must have exactly 1 signature, but found: "
+              + rekorDsse.getSignatures().size());
+    }
+
+    if (!Base64.getEncoder()
+        .encodeToString(dsseEnvelope.getSignature())
+        .equals(rekorDsse.getSignatures().get(0).getSignature())) {
+      throw new KeylessVerificationException(
+          "Provided DSSE signature materials are inconsistent with DSSE log entry");
     }
   }
 }
