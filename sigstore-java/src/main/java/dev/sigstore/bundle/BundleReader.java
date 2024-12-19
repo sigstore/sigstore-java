@@ -103,7 +103,7 @@ class BundleReader {
       var dsseEnvelopeProto = protoBundle.getDsseEnvelope();
       var dsseEnvelopeBuilder =
           ImmutableDsseEnvelope.builder()
-              .payload(dsseEnvelopeProto.getPayload().toStringUtf8())
+              .payload(dsseEnvelopeProto.getPayload().toByteArray())
               .payloadType(dsseEnvelopeProto.getPayloadType());
       for (int sigIndex = 0; sigIndex < dsseEnvelopeProto.getSignaturesCount(); sigIndex++) {
         dsseEnvelopeBuilder.addSignatures(
