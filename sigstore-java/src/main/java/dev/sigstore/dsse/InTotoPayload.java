@@ -52,6 +52,6 @@ public interface InTotoPayload {
   }
 
   static InTotoPayload from(DsseEnvelope dsseEnvelope) {
-    return GSON.get().fromJson(dsseEnvelope.getPayload(), InTotoPayload.class);
+    return GSON.get().fromJson(dsseEnvelope.getPayloadAsString(), InTotoPayload.class);
   }
 }
