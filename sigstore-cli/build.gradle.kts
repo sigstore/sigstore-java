@@ -12,7 +12,7 @@ dependencies {
     implementation("info.picocli:picocli:4.7.6")
     implementation("com.google.guava:guava:33.4.0-jre")
 
-    implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.36.0"))
+    implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.37.0"))
     implementation("com.google.oauth-client:google-oauth-client")
 
     annotationProcessor("info.picocli:picocli-codegen:4.7.6")
