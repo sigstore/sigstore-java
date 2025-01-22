@@ -6,7 +6,7 @@ export ORG_GRADLE_PROJECT_signingKey=$MAVEN_GPG_KEY
 export ORG_GRADLE_PROJECT_signingPassword=$MAVEN_GPG_PASSPHRASE
 set -x
 # gradle
-./gradlew clean publishMavenPublicationToExamplesRepository $@
+./gradlew clean publishMavenPublicationToExamplesRepository --stacktrace $@
 test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.jar.sigstore.json
 test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.module.sigstore.json
 test -f build/example-repo/com/example/hello-world/1.0.0/hello-world-1.0.0.pom.sigstore.json
