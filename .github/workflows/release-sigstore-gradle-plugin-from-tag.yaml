@@ -48,11 +48,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f # v0.8.1
+        with:
+          workload_identity_provider: projects/306323169285/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+          service_account: sigstore-java-releaser@sigstore-secrets.iam.gserviceaccount.com
+
+      - uses: google-github-actions/get-secretmanager-secrets@e5bb06c2ca53b244f978d33348d18317a7f263ce # v2.2.2
+        id: secrets
+        with:
+          secrets: |-
+            signing_key:sigstore-secrets/sigstore-java-pgp-priv-key
+            signing_password:sigstore-secrets/sigstore-java-pgp-priv-key-password
+            sonatype_username:sigstore-secrets/sigstore-java-sonatype-username
+            sonatype_password:sigstore-secrets/sigstore-java-sonatype-password
+
       - name: Build, Sign and Release to Gradle Plugin Portal
         run: |
           ./gradlew publishPlugins -Prelease -Pgradle.publish.key=$GRADLE_PUBLISH_KEY -Pgradle.publish.secret=$GRADLE_PUBLISH_SECRET
         env:
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.PGP_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.PGP_PASSPHRASE }}
-          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
-          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ steps.secrets.outputs.signing_key }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ steps.secrets.outputs.signing_password }}
+          GRADLE_PUBLISH_KEY: ${{ steps.secrets.outputs.sonatype_username }}
+          GRADLE_PUBLISH_SECRET: ${{ steps.secrets.outputs.sonatype_password }}
