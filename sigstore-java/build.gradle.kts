@@ -36,8 +36,8 @@ dependencies {
 
     implementation("commons-codec:commons-codec:1.17.2")
     implementation("com.google.code.gson:gson:2.11.0")
-    implementation("org.bouncycastle:bcutil-jdk18on:1.79")
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.79")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.80")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.80")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.37.0"))
     implementation("com.google.oauth-client:google-oauth-client")
