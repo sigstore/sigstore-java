@@ -41,7 +41,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
                     // Gradle < 8.1 + configuration cache=on which is incompatible with signing plugin.
                     listOf(
                         TestedGradleAndSigstoreJava(
-                            TestedGradle(GradleVersion.version("8.1"), ConfigurationCache.OFF),
+                            TestedGradle(GradleVersion.version("8.1"), ConfigurationCache.OFF, ProjectIsolation.OFF),
                             SIGSTORE_JAVA_CURRENT_VERSION
                         )
                     )
@@ -147,6 +147,7 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
             """.trimIndent()
         )
         enableConfigurationCache(case.gradle)
+        enableProjectIsolation(case.gradle)
     }
 
     private fun SoftAssertions.assertSignatures(name: String, expectSigstoreAsc: Boolean = false) {
