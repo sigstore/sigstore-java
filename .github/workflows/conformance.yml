@@ -42,3 +42,4 @@ jobs:
           entrypoint: ${{ github.workspace }}/bin/sigstore-cli
           environment: ${{ matrix.sigstore-env }}
           xfail: "test_verify_dsse_bundle_with_trust_root"
+          skip-cpython-release-tests: ${{ !(matrix.sigstore-env == 'production' && matrix.java-version == '17') }}
