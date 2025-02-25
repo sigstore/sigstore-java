@@ -66,6 +66,14 @@ try {
 }
 ```
 
+#### Verifying DSSE Bundles
+
+sigstore-java doesn't create DSSE bundles yet, but it can verify the signatures over them with the same
+KeylessVerifier workflow detailed above. While sigstore-java inspects the [embedded payload](https://docs.sigstore.dev/about/bundle/#dsse)
+to ensure the provided artifact is a subject in the [in-toto statement](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
+it is not able to make any further assertions about the payload. Consumers of DSSE bundles should inspect
+the embedded payload to verify extended attestation data using tools like [slsa-verifier](https://github.com/slsa-framework/slsa-verifier).
+
 ### Exploring the API
 
 The public stable API is limited to [`dev.sigstore.KeylessSigner`](https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessSigner.html) and [`dev.sigstore.KeylessVerifier`](https://javadoc.io/doc/dev.sigstore/sigstore-java/latest/dev/sigstore/KeylessVerifier.html) and the classes exposed by those APIs. Other classes in the library are subject to change without notice.
