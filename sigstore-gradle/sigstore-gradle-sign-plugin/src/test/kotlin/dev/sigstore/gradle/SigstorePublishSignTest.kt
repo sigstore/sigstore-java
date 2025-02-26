@@ -65,6 +65,7 @@ class SigstorePublishSignTest : BaseGradleTest() {
             """.trimIndent()
         )
         enableConfigurationCache(case.gradle)
+        enableProjectIsolation(case.gradle)
         prepare(case.gradle.version, "publishAllPublicationsToTmpRepository", "-s")
             .build()
 
