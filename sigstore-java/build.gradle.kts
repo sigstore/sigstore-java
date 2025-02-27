@@ -22,7 +22,7 @@ dependencies {
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
 
     // this requires inclusion of protos is src/main/proto
-    protobuf("dev.sigstore:protobuf-specs:0.3.3")
+    protobuf("dev.sigstore:protobuf-specs:0.4.0")
 
     implementation(platform("com.google.protobuf:protobuf-bom:4.29.3"))
     implementation("com.google.protobuf:protobuf-java-util")
