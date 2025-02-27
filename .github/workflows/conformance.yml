@@ -37,7 +37,7 @@ jobs:
       - name: Unpack sigstore-java distribution
         run: tar -xvf ${{ github.workspace }}/sigstore-cli/build/distributions/sigstore-cli-*.tar --strip-components 1
 
-      - uses: sigstore/sigstore-conformance@d658ea74a060aeabae78f8a379167f219dc38c38 # v0.0.16
+      - uses: sigstore/sigstore-conformance@640e7dfb715518eeeb492910c6d244cedcc6cfea # v0.0.17
         with:
           entrypoint: ${{ github.workspace }}/bin/sigstore-cli
           environment: ${{ matrix.sigstore-env }}
