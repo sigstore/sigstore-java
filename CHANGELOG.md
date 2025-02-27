@@ -9,6 +9,11 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [1.3.0] - 2025-02-25
+
+## Added
+- Add support for verifying dsse sigstore bundles https://github.com/sigstore/sigstore-java/pull/855
+
 # [1.2.0] - 2024-12-4
 
 ## Added
