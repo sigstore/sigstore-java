@@ -1,5 +1,9 @@
 rootProject.name = "sigstore-java-root"
 
+if (JavaVersion.current() < JavaVersion.VERSION_17) {
+    throw UnsupportedOperationException("Please use Java 17 or 21 for launching Gradle when building sigstore-java, the current Java is ${JavaVersion.current().majorVersion}")
+}
+
 includeBuild("build-logic-commons")
 includeBuild("build-logic")
 

@@ -22,10 +22,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up JDK ${{ matrix.java-version }}
+      - name: Set up JDK 17
         uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
         with:
-          java-version: ${{ matrix.java-version }}
+          java-version: 17
           distribution: 'temurin'
 
       - name: Setup Gradle
@@ -36,6 +36,12 @@ jobs:
 
       - name: Unpack sigstore-java distribution
         run: tar -xvf ${{ github.workspace }}/sigstore-cli/build/distributions/sigstore-cli-*.tar --strip-components 1
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
 
       - uses: sigstore/sigstore-conformance@640e7dfb715518eeeb492910c6d244cedcc6cfea # v0.0.17
         with:
