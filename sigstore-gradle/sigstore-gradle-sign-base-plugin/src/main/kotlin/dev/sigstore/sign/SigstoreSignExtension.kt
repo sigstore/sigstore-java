@@ -23,6 +23,7 @@ import org.gradle.api.DomainObjectCollection
 import org.gradle.api.Project
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.publish.Publication
 import org.gradle.api.publish.PublicationArtifact
 import org.gradle.api.publish.internal.PublicationInternal
@@ -35,6 +36,7 @@ import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.the
 import org.gradle.kotlin.dsl.withType
 import org.gradle.plugins.signing.Sign
+import org.gradle.util.GradleVersion
 import kotlin.collections.set
 
 abstract class SigstoreSignExtension(private val project: Project) {
@@ -83,8 +85,17 @@ abstract class SigstoreSignExtension(private val project: Project) {
             this.signatureDirectory.set(signatureDirectory)
         }
 
+        var removeSignatureProperty = project.providers.gradleProperty("dev.sigstore.sign.remove.sigstore.json.asc")
+        if (GradleVersion.current() < GradleVersion.version("7.4")) {
+            // Since Gradle 7.4 the method does nothing
+            // We use reflection here to avoid breakage when Gradle drops the method
+            @Suppress("UNCHECKED_CAST")
+            removeSignatureProperty = Provider::class.java.getMethod("forUseAtConfigurationTime")
+                .invoke(removeSignatureProperty) as Provider<String>
+        }
+
         val removeSigstoreAsc =
-            project.providers.gradleProperty("dev.sigstore.sign.remove.sigstore.json.asc").orNull?.toBoolean() != false
+            removeSignatureProperty.orNull?.toBoolean() != false
 
         val publicationName = publication.name
 
