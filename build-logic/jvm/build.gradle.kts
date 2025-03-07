@@ -1,5 +1,3 @@
-import buildlogic.embeddedKotlinDsl
-
 plugins {
     id("build-logic.kotlin-dsl-gradle-plugin")
 }
@@ -9,7 +7,8 @@ repositories {
 }
 
 dependencies {
-    implementation(embeddedKotlinDsl())
+    implementation(project(":basics"))
+    implementation(project(":build-parameters"))
     implementation("com.diffplug.spotless:com.diffplug.spotless.gradle.plugin:7.0.2")
     implementation("com.github.vlsi.gradle-extensions:com.github.vlsi.gradle-extensions.gradle.plugin:1.90")
     implementation("de.thetaphi.forbiddenapis:de.thetaphi.forbiddenapis.gradle.plugin:3.8")

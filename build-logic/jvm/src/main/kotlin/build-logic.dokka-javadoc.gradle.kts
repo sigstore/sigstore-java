@@ -1,11 +1,14 @@
 plugins {
     id("java-base")
     id("org.jetbrains.dokka")
+    id("build-logic.build-params")
 }
 
 java {
-    // Workaround https://github.com/gradle/gradle/issues/21933, so it adds javadocElements configuration
-    withJavadocJar()
+    if (!buildParameters.skipJavadoc) {
+        // Workaround https://github.com/gradle/gradle/issues/21933, so it adds javadocElements configuration
+        withJavadocJar()
+    }
 }
 
 val dokkaJar by tasks.registering(Jar::class) {
@@ -15,4 +18,6 @@ val dokkaJar by tasks.registering(Jar::class) {
     archiveClassifier.set("javadoc")
 }
 
-configurations[JavaPlugin.JAVADOC_ELEMENTS_CONFIGURATION_NAME].outgoing.artifact(dokkaJar)
+if (!buildParameters.skipJavadoc) {
+    configurations[JavaPlugin.JAVADOC_ELEMENTS_CONFIGURATION_NAME].outgoing.artifact(dokkaJar)
+}

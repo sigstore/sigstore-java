@@ -22,10 +22,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up JDK ${{ matrix.java-version }}
+      - name: Set up JDK 17
         uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
         with:
-          java-version: ${{ matrix.java-version }}
+          java-version: 17
           distribution: 'temurin'
 
       - name: Setup Gradle
@@ -36,6 +36,12 @@ jobs:
 
       - name: Unpack tuf distribution
         run: tar -xvf ${{ github.workspace }}/tuf-cli/build/distributions/tuf-cli-*.tar --strip-components 1
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
 
       - uses: theupdateframework/tuf-conformance@dee4e23533d7a12a6394d96b59b3ea0aa940f9bf # v2.2.0
         with:

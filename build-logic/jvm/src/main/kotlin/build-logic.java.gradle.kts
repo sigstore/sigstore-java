@@ -1,8 +1,10 @@
 import buildlogic.filterEolSimple
+import com.github.vlsi.gradle.dsl.configureEach
 
 plugins {
     `java-base`
     id("com.github.vlsi.gradle-extensions")
+    id("build-logic.build-params")
     id("build-logic.spotless-base")
     id("build-logic.testing")
     id("build-logic.errorprone")
@@ -10,8 +12,15 @@ plugins {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    toolchain {
+        configureToolchain(buildParameters.buildJdk)
+    }
+}
+
+tasks.configureEach<JavaExec> {
+    buildParameters.testJdk?.let {
+        javaLauncher.convention(javaToolchains.launcherFor(it))
+    }
 }
 
 spotless {
@@ -30,16 +39,24 @@ tasks.withType<JavaCompile>().configureEach {
     options.apply {
         encoding = "UTF-8"
         compilerArgs.add("-Xlint:deprecation")
-        compilerArgs.add("-Werror")
+        if (buildParameters.failOnJavacWarning) {
+            compilerArgs.add("-Werror")
+        }
+
+        release.set(buildParameters.targetJavaVersion)
     }
 }
 
 tasks.withType<Javadoc>().configureEach {
     (options as StandardJavadocDocletOptions).apply {
-        addBooleanOption("Xwerror", true)
         addStringOption("sourcepath", "src/main/java")
         // intentionally ignore missing errors for now
         addBooleanOption("Xdoclint:all,-missing", true)
+        if (buildParameters.failOnJavadocWarning) {
+            // See JDK-8200363 (https://bugs.openjdk.java.net/browse/JDK-8200363)
+            // for information about the -Xwerror option.
+            addBooleanOption("Xwerror", true)
+        }
     }
 }
 

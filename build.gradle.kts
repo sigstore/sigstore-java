@@ -9,3 +9,9 @@ val calculatedVersion = property("version") as String + (if (hasProperty("releas
 allprojects {
     version = calculatedVersion
 }
+
+val parameters by tasks.registering {
+    group = HelpTasksPlugin.HELP_GROUP
+    description = "Displays build parameters (i.e. -P flags) that can be used to customize the build"
+    dependsOn(gradle.includedBuild("build-logic").task(":build-parameters:parameters"))
+}
