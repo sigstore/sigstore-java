@@ -13,23 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.cli;
+package dev.sigstore.oidc.client;
 
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.json.webtoken.JsonWebSignature;
-import dev.sigstore.oidc.client.ImmutableOidcToken;
-import dev.sigstore.oidc.client.OidcClient;
-import dev.sigstore.oidc.client.OidcException;
-import dev.sigstore.oidc.client.OidcToken;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * This should only be used when the user has an out of band mechanism for obtaining an OIDC token
+ * to be consumed by a sigstore signing event. So it should not be included in any defaults for
+ * {@link OidcClients}.
+ *
+ * <p>It's not explicitly designed for multi use, but implementers of the {@link
+ * TokenStringProvider} may include mechanisms for longer lived signing events. Each time a token is
+ * requested, the provider may execute a fetch of the token.
+ */
 public class TokenStringOidcClient implements OidcClient {
 
-  private final String idToken;
+  private final TokenStringProvider idTokenProvider;
 
-  public TokenStringOidcClient(String idToken) {
-    this.idToken = idToken;
+  TokenStringOidcClient(TokenStringProvider provider) {
+    this.idTokenProvider = provider;
+  }
+
+  public static TokenStringOidcClient from(TokenStringProvider provider) {
+    return new TokenStringOidcClient(provider);
+  }
+
+  public static TokenStringOidcClient from(String token) {
+    return new TokenStringOidcClient(() -> token);
   }
 
   @Override
@@ -40,6 +53,7 @@ public class TokenStringOidcClient implements OidcClient {
   @Override
   public OidcToken getIDToken(Map<String, String> env) throws OidcException {
     try {
+      var idToken = idTokenProvider.getTokenString();
       var jws = JsonWebSignature.parse(new GsonFactory(), idToken);
       return ImmutableOidcToken.builder()
           .idToken(idToken)
@@ -48,6 +62,13 @@ public class TokenStringOidcClient implements OidcClient {
           .build();
     } catch (IOException e) {
       throw new OidcException("Failed to parse JWT", e);
+    } catch (Exception e) {
+      throw new OidcException("Failed to obtain token", e);
     }
+  }
+
+  @FunctionalInterface
+  public interface TokenStringProvider {
+    String getTokenString() throws Exception;
   }
 }
