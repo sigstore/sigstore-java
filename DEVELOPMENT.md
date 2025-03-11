@@ -3,6 +3,17 @@
 ./gradlew build
 ```
 
+## execute tests with Java 23 
+```sh
+./gradlew build -PjdkTestVersion=23
+```
+
+# list build parameters
+
+```sh
+./gradlew parameters
+```
+
 ## skip tests that require OIDC logins
 
 ```sh

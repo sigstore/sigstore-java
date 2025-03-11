@@ -1,4 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id("java-library")
@@ -23,8 +24,10 @@ autostyle {
     }
 }
 
-tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions {
-        jvmTarget = "11"
+tasks.withType<KotlinJvmCompile>().configureEach {
+    compilerOptions {
+        val targetJdkRelease = buildParameters.targetJavaVersion.toString()
+        freeCompilerArgs.add("-Xjdk-release=$targetJdkRelease")
+        jvmTarget = JvmTarget.fromTarget(targetJdkRelease)
     }
 }

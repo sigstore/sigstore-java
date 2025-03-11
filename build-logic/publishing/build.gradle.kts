@@ -7,6 +7,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":build-parameters"))
     implementation(project(":basics"))
     implementation(project(":jvm"))
     implementation("dev.sigstore.build-logic:gradle-plugin")

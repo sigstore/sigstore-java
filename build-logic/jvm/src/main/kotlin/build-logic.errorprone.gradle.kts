@@ -2,9 +2,10 @@ import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
     java
+    id("build-logic.build-params")
 }
 
-if (!project.hasProperty("skipErrorprone")) {
+if (!project.hasProperty("skipErrorprone") && buildParameters.enableErrorprone) {
     apply(plugin = "net.ltgt.errorprone")
 
     dependencies {

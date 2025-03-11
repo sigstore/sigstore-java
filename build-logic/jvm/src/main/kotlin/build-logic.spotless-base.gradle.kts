@@ -11,7 +11,7 @@ spotless {
         target("*.md", ".gitignore", "**/*.yaml")
 
         trimTrailingWhitespace()
-        indentWithSpaces()
+        leadingTabsToSpaces()
         endWithNewline()
     }
 }
