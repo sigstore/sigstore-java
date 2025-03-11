@@ -18,6 +18,7 @@ package dev.sigstore.cli;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.oidc.client.OidcClients;
+import dev.sigstore.oidc.client.TokenStringOidcClient;
 import dev.sigstore.tuf.RootProvider;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.net.URL;
@@ -110,7 +111,7 @@ public class Sign implements Callable<Integer> {
     if (identityToken != null) {
       // If we've explicitly provided an identity token, customize the signer to only use the token
       // string OIDC client.
-      signerBuilder.oidcClients(OidcClients.of(new TokenStringOidcClient(identityToken)));
+      signerBuilder.oidcClients(OidcClients.of(TokenStringOidcClient.from(identityToken)));
     }
     var signer = signerBuilder.build();
     var bundle = signer.signFile(artifact);
