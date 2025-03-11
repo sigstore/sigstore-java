@@ -78,6 +78,12 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   }
 
   @Override
+  public boolean hasTarget(String targetName) throws IOException {
+    var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
+    return Files.isRegularFile(targetsDir.resolve(encoded));
+  }
+
+  @Override
   public void writeMeta(String roleName, SignedTufMeta<?> meta) throws IOException {
     storeRole(roleName, meta);
   }
