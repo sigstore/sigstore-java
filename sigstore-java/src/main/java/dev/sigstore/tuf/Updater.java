@@ -116,12 +116,26 @@ public class Updater {
     }
   }
 
-  /** Download a single target defined in targets. Does not handle delegated targets. */
-  public void downloadTarget(String targetName)
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+  /**
+   * Download a single target defined in targets. Will not re-download a target that is already
+   * cached locally. Does not handle delegated targets.
+   */
+  public void downloadTarget(String targetName) throws IOException {
     var targetData = trustedMetaStore.getTargets().getSignedMeta().getTargets().get(targetName);
     if (targetData == null) {
       throw new TargetMetadataMissingException(targetName);
+    }
+    if (targetStore.hasTarget(targetName)) {
+      byte[] target = targetStore.readTarget(targetName);
+      // TODO: Using exceptions for control flow here, we should have something that returns a true
+      // TODO: or false on hashes, but requires reworking verifyHashes.
+      try {
+        verifyHashes(targetName, target, targetData.getHashes());
+        // found a valid cached instance of the target
+        return;
+      } catch (InvalidHashesException ioe) {
+        // continue to download targets
+      }
     }
     downloadTarget(targetName, targetData);
   }

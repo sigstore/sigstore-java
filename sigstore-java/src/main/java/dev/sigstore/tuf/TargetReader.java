@@ -29,4 +29,13 @@ public interface TargetReader {
    * @throws IOException if an error occurs
    */
   byte[] readTarget(String targetName) throws IOException;
+
+  /**
+   * Checks if the local TUF store actually contains a target file with name.
+   *
+   * @param targetName the name of the target file to read (e.g. ctfe.pub)
+   * @return true if the target exists locally
+   * @throws IOException if an error occurs
+   */
+  boolean hasTarget(String targetName) throws IOException;
 }
