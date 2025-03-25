@@ -10,7 +10,7 @@ repositories {
 dependencies {
     implementation(project(":sigstore-java"))
     implementation("info.picocli:picocli:4.7.6")
-    implementation("com.google.guava:guava:33.4.0-jre")
+    implementation("com.google.guava:guava:33.4.6-jre")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.38.0"))
     implementation("com.google.oauth-client:google-oauth-client")
