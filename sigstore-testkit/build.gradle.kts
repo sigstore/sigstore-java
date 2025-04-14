@@ -7,7 +7,7 @@ plugins {
 dependencies {
     implementation(project(":sigstore-java"))
     implementation("com.google.code.gson:gson:2.12.1")
-    implementation("com.google.guava:guava:33.4.6-jre")
+    implementation("com.google.guava:guava:33.4.8-jre")
 
     // This is different from typical "testImplementation" dependencies, because
     // testkit exposes junit5 dependencies in its API (e.g. annotations)
