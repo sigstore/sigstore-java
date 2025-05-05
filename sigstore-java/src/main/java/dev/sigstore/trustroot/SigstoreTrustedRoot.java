@@ -16,7 +16,13 @@
 package dev.sigstore.trustroot;
 
 import com.google.api.client.util.Lists;
+import com.google.common.base.Strings;
+import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,10 +41,21 @@ public interface SigstoreTrustedRoot {
   List<TransparencyLog> getCTLogs();
 
   /** Create an instance from a parsed proto definition of a trustroot. */
-  static SigstoreTrustedRoot from(TrustedRoot proto) throws CertificateException {
+  static SigstoreTrustedRoot from(TrustedRoot proto) throws SigstoreConfigurationException {
+    if (!Strings.isNullOrEmpty(proto.getMediaType())
+        && !proto
+            .getMediaType()
+            .equals("application/vnd.dev.sigstore.trustedroot+json;version=0.1")) {
+      throw new SigstoreConfigurationException(
+          "Unsupported trusted root mediaType: " + proto.getMediaType());
+    }
     List<CertificateAuthority> cas = Lists.newArrayList();
-    for (var certAuthority : proto.getCertificateAuthoritiesList()) {
-      cas.add(CertificateAuthority.from(certAuthority));
+    try {
+      for (var certAuthority : proto.getCertificateAuthoritiesList()) {
+        cas.add(CertificateAuthority.from(certAuthority));
+      }
+    } catch (CertificateException ce) {
+      throw new SigstoreConfigurationException("Could not parse certificate in trusted root", ce);
     }
 
     List<TransparencyLog> tlogs =
@@ -48,5 +65,16 @@ public interface SigstoreTrustedRoot {
         proto.getCtlogsList().stream().map(TransparencyLog::from).collect(Collectors.toList());
 
     return ImmutableSigstoreTrustedRoot.builder().cAs(cas).tLogs(tlogs).cTLogs(ctlogs).build();
+  }
+
+  /** Parse the trusted root from an input stream and close the stream */
+  static SigstoreTrustedRoot from(InputStream json) throws SigstoreConfigurationException {
+    var trustedRootBuilder = TrustedRoot.newBuilder();
+    try (var reader = new InputStreamReader(json, StandardCharsets.UTF_8)) {
+      JsonFormat.parser().merge(reader, trustedRootBuilder);
+    } catch (IOException ex) {
+      throw new SigstoreConfigurationException("Could not parse trusted root", ex);
+    }
+    return from(trustedRootBuilder.build());
   }
 }

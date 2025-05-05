@@ -17,48 +17,36 @@ package dev.sigstore;
 
 import com.google.common.base.Preconditions;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
-import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
 @FunctionalInterface
-public interface TrustedRootProvider {
+public interface SigningConfigProvider {
 
-  SigstoreTrustedRoot get() throws SigstoreConfigurationException;
+  SigstoreSigningConfig get()
+      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
+          NoSuchAlgorithmException, IOException, InvalidKeyException,
+          SigstoreConfigurationException;
 
-  static TrustedRootProvider from(SigstoreTufClient.Builder tufClientBuilder) {
+  static SigningConfigProvider from(SigstoreTufClient.Builder tufClientBuilder) {
     Preconditions.checkNotNull(tufClientBuilder);
     return () -> {
-      try {
-        var tufClient = tufClientBuilder.build();
-        tufClient.update();
-        return tufClient.getSigstoreTrustedRoot();
-      } catch (CertificateException
-          | IOException
-          | NoSuchAlgorithmException
-          | InvalidKeyException
-          | InvalidKeySpecException e) {
-        throw new SigstoreConfigurationException(
-            "Could not initialize trusted root from provided tuf client", e);
-      }
+      var tufClient = tufClientBuilder.build();
+      tufClient.update();
+      return tufClient.getSigstoreSigningConfig();
     };
   }
 
-  static TrustedRootProvider from(Path trustedRoot) {
-    Preconditions.checkNotNull(trustedRoot);
-    return () -> {
-      try {
-        return SigstoreTrustedRoot.from(Files.newInputStream(trustedRoot));
-      } catch (IOException e) {
-        throw new SigstoreConfigurationException(
-            "Could not initialize trusted root from " + trustedRoot, e);
-      }
-    };
+  static SigningConfigProvider from(Path signingConfig) {
+    Preconditions.checkNotNull(signingConfig);
+    return () -> SigstoreSigningConfig.from(Files.newInputStream(signingConfig));
   }
 }

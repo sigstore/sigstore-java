@@ -16,10 +16,8 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
-import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
-import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.ImmutableLogId;
 import dev.sigstore.trustroot.ImmutableTransparencyLog;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
@@ -59,14 +57,8 @@ public class FulcioVerifierTest {
 
   @BeforeAll
   public static void initTrustRoot() throws Exception {
-    var json =
-        Resources.toString(
-            Resources.getResource("dev/sigstore/trustroot/trusted_root.json"),
-            StandardCharsets.UTF_8);
-    var builder = TrustedRoot.newBuilder();
-    JsonFormat.parser().merge(json, builder);
-
-    trustRoot = SigstoreTrustedRoot.from(builder.build());
+    var json = Resources.getResource("dev/sigstore/trustroot/trusted_root.json").openStream();
+    trustRoot = SigstoreTrustedRoot.from(json);
   }
 
   @Test

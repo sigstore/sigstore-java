@@ -30,11 +30,13 @@ import com.google.api.client.json.GenericJson;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.Key;
+import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.client.util.store.MemoryDataStoreFactory;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
@@ -47,9 +49,6 @@ import java.util.logging.Logger;
  */
 public class WebOidcClient implements OidcClient {
   private static final Logger log = Logger.getLogger(WebOidcClient.class.getName());
-
-  public static final String PUBLIC_DEX_ISSUER = "https://oauth2.sigstore.dev/auth";
-  public static final String STAGING_DEX_ISSUER = "https://oauth2.sigstage.dev/auth";
 
   private static final String ID_TOKEN_KEY = "id_token";
   private static final String DEFAULT_CLIENT_ID = "sigstore";
@@ -75,7 +74,7 @@ public class WebOidcClient implements OidcClient {
   public static class Builder {
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
     private String clientId = DEFAULT_CLIENT_ID;
-    private String issuer = PUBLIC_DEX_ISSUER;
+    private Service issuer;
     private BrowserHandler browserHandler = null;
 
     private Builder() {}
@@ -92,8 +91,8 @@ public class WebOidcClient implements OidcClient {
       return this;
     }
 
-    /** The issuer of the oidc tokens (the oidc service) {@value PUBLIC_DEX_ISSUER}. */
-    public Builder setIssuer(String issuer) {
+    /** The issuer of the oidc tokens (the oidc service). */
+    public Builder setIssuer(Service issuer) {
       this.issuer = issuer;
       return this;
     }
@@ -108,11 +107,12 @@ public class WebOidcClient implements OidcClient {
     }
 
     public WebOidcClient build() {
+      Preconditions.checkNotNull(issuer);
       BrowserHandler bh =
           browserHandler != null
               ? browserHandler
               : new AuthorizationCodeInstalledApp.DefaultBrowser()::browse;
-      return new WebOidcClient(httpParams, issuer, clientId, bh);
+      return new WebOidcClient(httpParams, issuer.getUrl().toString(), clientId, bh);
     }
   }
 

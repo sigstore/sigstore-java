@@ -46,9 +46,10 @@ import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.trustroot.Service;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.InvalidAlgorithmParameterException;
@@ -145,24 +146,11 @@ public class KeylessSigner implements AutoCloseable {
 
   public static class Builder {
     private TrustedRootProvider trustedRootProvider;
+    private SigningConfigProvider signingConfigProvider;
     private OidcClients oidcClients;
     private List<OidcTokenMatcher> oidcIdentities = Collections.emptyList();
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
-    private URI fulcioUri;
-    private URI rekorUri;
-
-    @CanIgnoreReturnValue
-    public Builder fulcioUrl(URI uri) {
-      this.fulcioUri = uri;
-      return this;
-    }
-
-    @CanIgnoreReturnValue
-    public Builder rekorUrl(URI uri) {
-      this.rekorUri = uri;
-      return this;
-    }
 
     @CanIgnoreReturnValue
     public Builder trustedRootProvider(TrustedRootProvider trustedRootProvider) {
@@ -170,6 +158,15 @@ public class KeylessSigner implements AutoCloseable {
       return this;
     }
 
+    @CanIgnoreReturnValue
+    public Builder signingConfigProvider(SigningConfigProvider signingConfigProvider) {
+      this.signingConfigProvider = signingConfigProvider;
+      return this;
+    }
+
+    /**
+     * A standard set will be inferred from the signingConfigProvider, they can be overridden here.
+     */
     @CanIgnoreReturnValue
     public Builder oidcClients(OidcClients oidcClients) {
       this.oidcClients = oidcClients;
@@ -214,19 +211,41 @@ public class KeylessSigner implements AutoCloseable {
     @CheckReturnValue
     public KeylessSigner build()
         throws CertificateException, IOException, NoSuchAlgorithmException, InvalidKeySpecException,
-            InvalidKeyException, InvalidAlgorithmParameterException {
+            InvalidKeyException, InvalidAlgorithmParameterException,
+            SigstoreConfigurationException {
       Preconditions.checkNotNull(trustedRootProvider);
       var trustedRoot = trustedRootProvider.get();
-      Preconditions.checkNotNull(fulcioUri);
-      Preconditions.checkNotNull(rekorUri);
-      Preconditions.checkNotNull(oidcClients);
+      Preconditions.checkNotNull(signingConfigProvider);
+      var signingConfig = signingConfigProvider.get();
       Preconditions.checkNotNull(oidcIdentities);
       Preconditions.checkNotNull(signer);
       Preconditions.checkNotNull(minSigningCertificateLifetime);
-      var fulcioClient = FulcioClientGrpc.builder().setUri(fulcioUri).build();
+      var fulcioService = Service.select(signingConfig.getCas(), 1);
+      if (fulcioService.isEmpty()) {
+        throw new SigstoreConfigurationException(
+            "No suitable fulcio target was found in signing config");
+      }
+      var fulcioClient = FulcioClientGrpc.builder().setService(fulcioService.get()).build();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
-      var rekorClient = RekorClientHttp.builder().setUri(rekorUri).build();
+
+      var rekorService = Service.select(signingConfig.getTLogs(), 1);
+      if (rekorService.isEmpty()) {
+        throw new SigstoreConfigurationException(
+            "No suitable rekor target was found in signing config");
+      }
+      var rekorClient = RekorClientHttp.builder().setService(rekorService.get()).build();
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
+
+      // if the client hasn't overridden the oidc provider, determine it from the service config
+      if (oidcClients == null) {
+        var oidcService = Service.select(signingConfig.getOidcProviders(), 1);
+        if (oidcService.isEmpty()) {
+          throw new SigstoreConfigurationException(
+              "No suitable oidc target was found in signing config");
+        }
+        oidcClients = OidcClients.from(oidcService.get());
+      }
+
       return new KeylessSigner(
           fulcioClient,
           fulcioVerifier,
@@ -246,9 +265,7 @@ public class KeylessSigner implements AutoCloseable {
     public Builder sigstorePublicDefaults() {
       var sigstoreTufClientBuilder = SigstoreTufClient.builder().usePublicGoodInstance();
       trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
-      fulcioUri = FulcioClient.PUBLIC_GOOD_URI;
-      rekorUri = RekorClient.PUBLIC_GOOD_URI;
-      oidcClients(OidcClients.PUBLIC_GOOD);
+      signingConfigProvider = SigningConfigProvider.from(sigstoreTufClientBuilder);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
@@ -262,9 +279,7 @@ public class KeylessSigner implements AutoCloseable {
     public Builder sigstoreStagingDefaults() {
       var sigstoreTufClientBuilder = SigstoreTufClient.builder().useStagingInstance();
       trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
-      fulcioUri = FulcioClient.STAGING_URI;
-      rekorUri = RekorClient.STAGING_URI;
-      oidcClients(OidcClients.STAGING);
+      signingConfigProvider = SigningConfigProvider.from(sigstoreTufClientBuilder);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
