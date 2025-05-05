@@ -111,7 +111,8 @@ public class Sign implements Callable<Integer> {
     if (identityToken != null) {
       // If we've explicitly provided an identity token, customize the signer to only use the token
       // string OIDC client.
-      signerBuilder.oidcClients(OidcClients.of(TokenStringOidcClient.from(identityToken)));
+      signerBuilder.forceCredentialProviders(
+          OidcClients.of(TokenStringOidcClient.from(identityToken)));
     }
     var signer = signerBuilder.build();
     var bundle = signer.signFile(artifact);

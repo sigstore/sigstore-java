@@ -17,12 +17,12 @@
 package dev.sigstore.sign.work
 
 import dev.sigstore.KeylessSigner
-import dev.sigstore.bundle.Bundle
 import dev.sigstore.oidc.client.OidcClient
 import dev.sigstore.oidc.client.OidcClients
 import dev.sigstore.sign.OidcClientConfiguration
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.internal.impldep.org.hamcrest.core.AnyOf
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.slf4j.LoggerFactory
@@ -39,6 +39,9 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
         private val logger = LoggerFactory.getLogger(SignWorkAction::class.java)
 
         private val clients = ConcurrentHashMap<Any, KeylessSigner>()
+
+        // the default key that delegates to KeylessSigners set of default OIDC providers
+        const val DEFAULT_KEY = "_default"
     }
 
     abstract val parameters: SignWorkParameters
@@ -47,11 +50,13 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
         val inputFile = parameters.inputFile.get().asFile
         logger.info("Signing in Sigstore: {}", inputFile)
 
-        val oidcClient = parameters.oidcClient.get()
-        val signer = clients.computeIfAbsent(oidcClient.key()) {
+        val signerKey = if (parameters.oidcClient.isPresent) parameters.oidcClient.get().key() else DEFAULT_KEY
+        val signer = clients.computeIfAbsent(signerKey) {
             KeylessSigner.builder().apply {
                 sigstorePublicDefaults()
-                oidcClients(OidcClients.of(oidcClient.build() as OidcClient))
+                if (signerKey != DEFAULT_KEY) {
+                    forceCredentialProviders(OidcClients.of(parameters.oidcClient.get().build() as OidcClient))
+                }
             }.build()
         }
 

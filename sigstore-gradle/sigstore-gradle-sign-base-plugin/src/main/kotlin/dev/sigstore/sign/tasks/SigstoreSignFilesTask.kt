@@ -201,7 +201,7 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
                     submit(SignWorkAction::class.java) {
                         inputFile.set(file)
                         outputSignature.set(signature.outputSignature)
-                        oidcClient.set(this@SigstoreSignFilesTask.oidcClient.get())
+                        oidcClient.set(this@SigstoreSignFilesTask.oidcClient)
                     }
                     // Wait after submitting each action, so the worker become active, and we can reuse it.
                     // It enables reusing Fulcio certificates
