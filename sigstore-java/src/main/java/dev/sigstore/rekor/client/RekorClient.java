@@ -16,15 +16,11 @@
 package dev.sigstore.rekor.client;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
 /** A client to communicate with a rekor service instance. */
 public interface RekorClient {
-  URI PUBLIC_GOOD_URI = URI.create("https://rekor.sigstore.dev");
-  URI STAGING_URI = URI.create("https://rekor.sigstage.dev");
-
   /**
    * Put a new hashedrekord entry on the Rekor log.
    *

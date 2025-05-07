@@ -16,6 +16,7 @@
 package dev.sigstore.oidc.client;
 
 import com.google.common.collect.ImmutableList;
+import dev.sigstore.trustroot.Service;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -24,19 +25,21 @@ public class OidcClients {
 
   private static final Logger log = Logger.getLogger(OidcClients.class.getName());
 
-  public static final OidcClients PUBLIC_GOOD =
-      of(GithubActionsOidcClient.builder().build(), WebOidcClient.builder().build());
-
-  public static final OidcClients STAGING =
-      of(
-          GithubActionsOidcClient.builder().build(),
-          WebOidcClient.builder().setIssuer(WebOidcClient.STAGING_DEX_ISSUER).build());
-
   private final ImmutableList<OidcClient> clients;
   private final Map<String, String> env;
 
   public static OidcClients of(OidcClient... clients) {
     return new OidcClients(ImmutableList.copyOf(clients), System.getenv());
+  }
+
+  /**
+   * The default set of OidcClients for a given signing configuration including any supported
+   * ambient token extractors
+   */
+  public static OidcClients from(Service oidcService) {
+    return of(
+        GithubActionsOidcClient.builder().build(),
+        WebOidcClient.builder().setIssuer(oidcService).build());
   }
 
   private OidcClients(ImmutableList<OidcClient> clients, Map<String, String> env) {

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
+import dev.sigstore.trustroot.LegacySigningConfig;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -49,7 +50,10 @@ public class RekorClientHttpTest {
   @BeforeAll
   public static void setupClient() throws Exception {
     // this tests directly against rekor in prod, it's a bit hard to bring up a rekor instance
-    client = RekorClientHttp.builder().build();
+    client =
+        RekorClientHttp.builder()
+            .setService(LegacySigningConfig.PUBLIC_GOOD.getTLogs().get(0))
+            .build();
     req = createdRekorRequest();
     resp = client.putEntry(req);
   }
@@ -61,7 +65,9 @@ public class RekorClientHttpTest {
     // pretty basic testing
     MatcherAssert.assertThat(
         resp.getEntryLocation().toString(),
-        CoreMatchers.startsWith(RekorClient.PUBLIC_GOOD_URI + "/api/v1/log/entries/"));
+        CoreMatchers.startsWith(
+            LegacySigningConfig.PUBLIC_GOOD.getTLogs().get(0).getUrl().toString()
+                + "/api/v1/log/entries/"));
 
     assertNotNull(resp.getUuid());
     assertNotNull(resp.getRaw());

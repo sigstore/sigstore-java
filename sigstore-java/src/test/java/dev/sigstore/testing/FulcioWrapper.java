@@ -17,6 +17,9 @@ package dev.sigstore.testing;
 
 import com.google.gson.Gson;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.trustroot.ImmutableService;
+import dev.sigstore.trustroot.ImmutableValidFor;
+import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.extension.*;
@@ -49,8 +53,12 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     return URI.create("http://localhost:5555");
   }
 
-  public URI getGrpcURI2() {
-    return URI.create("http://localhost:5554");
+  public Service getGrpcService() {
+    return ImmutableService.builder()
+        .apiVersion(1)
+        .url(URI.create("http://localhost:5554"))
+        .validFor(ImmutableValidFor.builder().start(Instant.now()).build())
+        .build();
   }
 
   public CertPath getTrustBundle() throws CertificateException, IOException, InterruptedException {

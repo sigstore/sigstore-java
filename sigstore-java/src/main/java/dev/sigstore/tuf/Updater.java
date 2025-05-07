@@ -142,8 +142,8 @@ public class Updater {
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
   void updateRoot()
-      throws IOException, RoleExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
-          FileExceedsMaxLengthException, RollbackVersionException, SignatureVerificationException {
+      throws IOException, RoleExpiredException, FileExceedsMaxLengthException,
+          RollbackVersionException, SignatureVerificationException {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);

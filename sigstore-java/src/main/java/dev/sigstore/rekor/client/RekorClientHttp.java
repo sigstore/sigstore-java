@@ -22,9 +22,11 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpResponseException;
+import com.google.api.client.util.Preconditions;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -52,7 +54,7 @@ public class RekorClientHttp implements RekorClient {
 
   public static class Builder {
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
-    private URI uri = RekorClient.PUBLIC_GOOD_URI;
+    private Service service;
 
     private Builder() {}
 
@@ -62,14 +64,15 @@ public class RekorClientHttp implements RekorClient {
       return this;
     }
 
-    /** Base url of the remote rekor instance. */
-    public Builder setUri(URI uri) {
-      this.uri = uri;
+    /** Service information for a remote rekor instance. */
+    public Builder setService(Service service) {
+      this.service = service;
       return this;
     }
 
     public RekorClientHttp build() {
-      return new RekorClientHttp(httpParams, uri);
+      Preconditions.checkNotNull(service);
+      return new RekorClientHttp(httpParams, service.getUrl());
     }
   }
 

@@ -37,6 +37,7 @@ import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.rekor.dsse.v0_0_1.Dsse;
 import dev.sigstore.rekor.dsse.v0_0_1.PayloadHash;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -80,7 +81,8 @@ public class KeylessVerifier {
 
     public KeylessVerifier build()
         throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
-            NoSuchAlgorithmException, IOException, InvalidKeyException {
+            NoSuchAlgorithmException, IOException, InvalidKeyException,
+            SigstoreConfigurationException {
       Preconditions.checkNotNull(trustedRootProvider);
       var trustedRoot = trustedRootProvider.get();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);

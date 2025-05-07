@@ -17,7 +17,6 @@
 package dev.sigstore.sign.work
 
 import dev.sigstore.KeylessSigner
-import dev.sigstore.bundle.Bundle
 import dev.sigstore.oidc.client.OidcClient
 import dev.sigstore.oidc.client.OidcClients
 import dev.sigstore.sign.OidcClientConfiguration

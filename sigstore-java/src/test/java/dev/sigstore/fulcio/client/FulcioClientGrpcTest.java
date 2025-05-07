@@ -23,6 +23,7 @@ import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
 import dev.sigstore.testing.grpc.GrpcTypes;
+import dev.sigstore.trustroot.LegacySigningConfig;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import org.junit.jupiter.api.Assertions;
@@ -50,7 +51,7 @@ public class FulcioClientGrpcTest {
     var client =
         FulcioClientGrpc.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setUri(fulcioWrapper.getGrpcURI2())
+            .setService(fulcioWrapper.getGrpcService())
             .build();
 
     var sc = client.signingCertificate(cReq);
@@ -80,7 +81,7 @@ public class FulcioClientGrpcTest {
     var client =
         FulcioClientGrpc.builder()
             .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
-            .setUri(fulcioWrapper.getGrpcURI2())
+            .setService(fulcioWrapper.getGrpcService())
             .build();
     var ex =
         Assertions.assertThrows(CertificateException.class, () -> client.signingCertificate(cReq));
@@ -94,7 +95,11 @@ public class FulcioClientGrpcTest {
             Resources.toString(
                 Resources.getResource("dev/sigstore/samples/fulcio-response/valid/certWithSct.pem"),
                 StandardCharsets.UTF_8));
-    var signingCert = FulcioClientGrpc.builder().build().decodeCerts(certs);
+    var signingCert =
+        FulcioClientGrpc.builder()
+            .setService(LegacySigningConfig.PUBLIC_GOOD.getCas().get(0))
+            .build()
+            .decodeCerts(certs);
     Assertions.assertTrue(
         Certificates.getEmbeddedSCTs(Certificates.getLeaf(signingCert)).isPresent());
     Assertions.assertEquals(3, signingCert.getCertificates().size());
