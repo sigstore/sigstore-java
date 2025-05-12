@@ -152,7 +152,10 @@ public class SigstoreTufClient {
    * defined on the client.
    */
   public void update()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
+      throws IOException,
+          NoSuchAlgorithmException,
+          InvalidKeySpecException,
+          InvalidKeyException,
           CertificateException {
     if (lastUpdate == null
         || Duration.between(lastUpdate, Instant.now()).compareTo(cacheValidity) > 0) {
@@ -162,7 +165,10 @@ public class SigstoreTufClient {
 
   /** Force an update, ignoring any cache validity. */
   public void forceUpdate()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException,
+      throws IOException,
+          NoSuchAlgorithmException,
+          InvalidKeySpecException,
+          InvalidKeyException,
           CertificateException {
     updater.update();
     lastUpdate = Instant.now();

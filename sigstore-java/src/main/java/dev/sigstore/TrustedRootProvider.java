@@ -34,8 +34,12 @@ import java.security.spec.InvalidKeySpecException;
 public interface TrustedRootProvider {
 
   SigstoreTrustedRoot get()
-      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, IOException, InvalidKeyException;
+      throws InvalidAlgorithmParameterException,
+          CertificateException,
+          InvalidKeySpecException,
+          NoSuchAlgorithmException,
+          IOException,
+          InvalidKeyException;
 
   static TrustedRootProvider from(SigstoreTufClient.Builder tufClientBuilder) {
     Preconditions.checkNotNull(tufClientBuilder);

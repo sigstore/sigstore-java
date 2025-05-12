@@ -49,7 +49,9 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
  */
 public class CertGenerator {
   public static Certificate newCert(PublicKey publicKey)
-      throws OperatorCreationException, CertificateException, IOException,
+      throws OperatorCreationException,
+          CertificateException,
+          IOException,
           NoSuchAlgorithmException {
 
     // generate a keypair for signing this certificate

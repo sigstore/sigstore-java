@@ -51,14 +51,18 @@ public class FulcioVerifier {
   private final CTVerifier ctVerifier;
 
   public static FulcioVerifier newFulcioVerifier(SigstoreTrustedRoot trustRoot)
-      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
+      throws InvalidAlgorithmParameterException,
+          CertificateException,
+          InvalidKeySpecException,
           NoSuchAlgorithmException {
     return newFulcioVerifier(trustRoot.getCAs(), trustRoot.getCTLogs());
   }
 
   public static FulcioVerifier newFulcioVerifier(
       List<CertificateAuthority> cas, List<TransparencyLog> ctLogs)
-      throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+      throws InvalidKeySpecException,
+          NoSuchAlgorithmException,
+          InvalidAlgorithmParameterException,
           CertificateException {
     List<CTLogInfo> logs = new ArrayList<>();
     for (var ctLog : ctLogs) {

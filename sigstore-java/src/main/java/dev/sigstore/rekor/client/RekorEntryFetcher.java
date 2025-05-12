@@ -45,28 +45,44 @@ public class RekorEntryFetcher {
   private final List<RekorClient> rekorClients;
 
   public static RekorEntryFetcher sigstoreStaging()
-      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, IOException, InvalidKeyException {
+      throws InvalidAlgorithmParameterException,
+          CertificateException,
+          InvalidKeySpecException,
+          NoSuchAlgorithmException,
+          IOException,
+          InvalidKeyException {
     var sigstoreTufClientBuilder = SigstoreTufClient.builder().useStagingInstance();
     return fromTrustedRoot(TrustedRootProvider.from(sigstoreTufClientBuilder));
   }
 
   public static RekorEntryFetcher sigstorePublicGood()
-      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, IOException, InvalidKeyException {
+      throws InvalidAlgorithmParameterException,
+          CertificateException,
+          InvalidKeySpecException,
+          NoSuchAlgorithmException,
+          IOException,
+          InvalidKeyException {
     var sigstoreTufClientBuilder = SigstoreTufClient.builder().usePublicGoodInstance();
     return fromTrustedRoot(TrustedRootProvider.from(sigstoreTufClientBuilder));
   }
 
   public static RekorEntryFetcher fromTrustedRoot(Path trustedRoot)
-      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, IOException, InvalidKeyException {
+      throws InvalidAlgorithmParameterException,
+          CertificateException,
+          InvalidKeySpecException,
+          NoSuchAlgorithmException,
+          IOException,
+          InvalidKeyException {
     return fromTrustedRoot(TrustedRootProvider.from(trustedRoot));
   }
 
   public static RekorEntryFetcher fromTrustedRoot(TrustedRootProvider trustedRootProvider)
-      throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
-          NoSuchAlgorithmException, IOException, InvalidKeyException {
+      throws InvalidAlgorithmParameterException,
+          CertificateException,
+          InvalidKeySpecException,
+          NoSuchAlgorithmException,
+          IOException,
+          InvalidKeyException {
     var trustedRoot = trustedRootProvider.get();
     var rekorClients =
         trustedRoot.getTLogs().stream()
