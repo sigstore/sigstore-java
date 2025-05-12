@@ -16,17 +16,10 @@
 package dev.sigstore.rekor.client;
 
 import com.google.common.io.Resources;
-import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.proto.trustroot.v1.TrustedRoot;
-import dev.sigstore.trustroot.ImmutableLogId;
-import dev.sigstore.trustroot.ImmutablePublicKey;
-import dev.sigstore.trustroot.ImmutableTransparencyLog;
-import dev.sigstore.trustroot.ImmutableValidFor;
-import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.trustroot.*;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -57,15 +50,10 @@ public class RekorVerifierTest {
   }
 
   @BeforeAll
-  public static void initTrustRoot() throws IOException, CertificateException {
-    var json =
-        Resources.toString(
-            Resources.getResource("dev/sigstore/trustroot/staging_trusted_root.json"),
-            StandardCharsets.UTF_8);
-    var builder = TrustedRoot.newBuilder();
-    JsonFormat.parser().merge(json, builder);
-
-    trustRoot = SigstoreTrustedRoot.from(builder.build());
+  public static void initTrustRoot() throws IOException, SigstoreConfigurationException {
+    trustRoot =
+        SigstoreTrustedRoot.from(
+            Resources.getResource("dev/sigstore/trustroot/staging_trusted_root.json").openStream());
   }
 
   @Test

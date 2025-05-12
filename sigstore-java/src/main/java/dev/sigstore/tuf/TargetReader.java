@@ -16,6 +16,7 @@
 package dev.sigstore.tuf;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /** Interface that defines reading targets from local storage. */
 public interface TargetReader {
@@ -29,6 +30,18 @@ public interface TargetReader {
    * @throws IOException if an error occurs
    */
   byte[] readTarget(String targetName) throws IOException;
+
+  /**
+   * Returns an input stream to a TUF target file in the local TUF store. Target names may include
+   * path elements and the storage engine should be consistent when handling writing and reading
+   * these.
+   *
+   * @param targetName the name of the target file to read (e.g. ctfe.pub)
+   * @return an input steam to the target file in the local store, the consumer must close the input
+   *     stream
+   * @throws IOException if an error occurs
+   */
+  InputStream getTargetInputSteam(String targetName) throws IOException;
 
   /**
    * Checks if the local TUF store actually contains a target file with name.

@@ -17,21 +17,20 @@ package dev.sigstore.tuf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
+import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.Instant;
+import javax.annotation.Nullable;
 
 /**
  * Wrapper around {@link dev.sigstore.tuf.Updater} that provides access to sigstore specific
@@ -40,6 +39,7 @@ import java.time.Instant;
 public class SigstoreTufClient {
 
   @VisibleForTesting static final String TRUST_ROOT_FILENAME = "trusted_root.json";
+  @VisibleForTesting static final String SIGNING_CONFIG_FILENAME = "signing_config.v0.2.json";
 
   public static final String PUBLIC_GOOD_ROOT_RESOURCE =
       "dev/sigstore/tuf/sigstore-tuf-root/root.json";
@@ -48,6 +48,9 @@ public class SigstoreTufClient {
   private final Updater updater;
   private Instant lastUpdate;
   private SigstoreTrustedRoot sigstoreTrustedRoot;
+  // this is nullable because we expect all future sigstore tuf repos to contain a signing config
+  // but while we transition, we need to handle the null case.
+  @Nullable private SigstoreSigningConfig sigstoreSigningConfig;
   private final Duration cacheValidity;
 
   @VisibleForTesting
@@ -65,8 +68,8 @@ public class SigstoreTufClient {
     Path tufCacheLocation =
         Path.of(System.getProperty("user.home")).resolve(".sigstore-java").resolve("root");
 
-    URL remoteMirror;
-    RootProvider trustedRoot;
+    private URL remoteMirror;
+    private RootProvider trustedRoot;
 
     public Builder usePublicGoodInstance() {
       if (remoteMirror != null || trustedRoot != null) {
@@ -151,12 +154,7 @@ public class SigstoreTufClient {
    * Update the tuf metadata if the cache has not been updated for at least {@code cacheValidity}
    * defined on the client.
    */
-  public void update()
-      throws IOException,
-          NoSuchAlgorithmException,
-          InvalidKeySpecException,
-          InvalidKeyException,
-          CertificateException {
+  public void update() throws SigstoreConfigurationException {
     if (lastUpdate == null
         || Duration.between(lastUpdate, Instant.now()).compareTo(cacheValidity) > 0) {
       this.forceUpdate();
@@ -164,24 +162,46 @@ public class SigstoreTufClient {
   }
 
   /** Force an update, ignoring any cache validity. */
-  public void forceUpdate()
-      throws IOException,
-          NoSuchAlgorithmException,
-          InvalidKeySpecException,
-          InvalidKeyException,
-          CertificateException {
-    updater.update();
+  public void forceUpdate() throws SigstoreConfigurationException {
+    try {
+      updater.update();
+    } catch (IOException
+        | NoSuchAlgorithmException
+        | InvalidKeySpecException
+        | InvalidKeyException ex) {
+      throw new SigstoreConfigurationException("TUF repo failed to update", ex);
+    }
     lastUpdate = Instant.now();
-    var trustedRootBuilder = TrustedRoot.newBuilder();
-    JsonFormat.parser()
-        .merge(
-            new String(
-                updater.getTargetStore().readTarget(TRUST_ROOT_FILENAME), StandardCharsets.UTF_8),
-            trustedRootBuilder);
-    sigstoreTrustedRoot = SigstoreTrustedRoot.from(trustedRootBuilder.build());
+    try {
+      sigstoreTrustedRoot =
+          SigstoreTrustedRoot.from(
+              updater.getTargetStore().getTargetInputSteam(TRUST_ROOT_FILENAME));
+    } catch (IOException ex) {
+      throw new SigstoreConfigurationException("Failed to read trusted root from target store", ex);
+    }
+    try {
+      if (updater.getTargetStore().hasTarget(SIGNING_CONFIG_FILENAME)) {
+        sigstoreSigningConfig =
+            SigstoreSigningConfig.from(
+                updater.getTargetStore().getTargetInputSteam(SIGNING_CONFIG_FILENAME));
+      } else {
+        sigstoreSigningConfig = null;
+        // TODO: Remove when prod and staging TUF repos have fully configured signing configs, but
+        // right now
+        // sigstore tuf repos not having sigstoreSigningConfig is a valid state.
+      }
+    } catch (IOException ex) {
+      throw new SigstoreConfigurationException(
+          "Failed to read signing config from target store", ex);
+    }
   }
 
   public SigstoreTrustedRoot getSigstoreTrustedRoot() {
     return sigstoreTrustedRoot;
+  }
+
+  @Nullable
+  public SigstoreSigningConfig getSigstoreSigningConfig() {
+    return sigstoreSigningConfig;
   }
 }

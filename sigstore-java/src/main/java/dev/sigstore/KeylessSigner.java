@@ -46,6 +46,7 @@ import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.net.URI;
@@ -218,7 +219,8 @@ public class KeylessSigner implements AutoCloseable {
             NoSuchAlgorithmException,
             InvalidKeySpecException,
             InvalidKeyException,
-            InvalidAlgorithmParameterException {
+            InvalidAlgorithmParameterException,
+            SigstoreConfigurationException {
       Preconditions.checkNotNull(trustedRootProvider);
       var trustedRoot = trustedRootProvider.get();
       Preconditions.checkNotNull(fulcioUri);

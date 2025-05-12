@@ -16,7 +16,13 @@
 package dev.sigstore.trustroot;
 
 import com.google.api.client.util.Lists;
+import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import dev.sigstore.proto.trustroot.v1.TrustedRootOrBuilder;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,20 +31,37 @@ import org.immutables.value.Value.Immutable;
 @Immutable
 public interface SigstoreTrustedRoot {
 
-  /** A list of certificate authorities associated with this trustroot. */
+  /** A list of certificate authorities associated with this trustedroot. */
   List<CertificateAuthority> getCAs();
 
-  /** A list of binary transparency logs associated with this trustroot. */
+  /** A list of binary transparency logs associated with this trustedroot. */
   List<TransparencyLog> getTLogs();
 
-  /** A list of certificate transparency logs associated with this trustroot. */
+  /** A list of certificate transparency logs associated with this trustedroot. */
   List<TransparencyLog> getCTLogs();
 
-  /** Create an instance from a parsed proto definition of a trustroot. */
-  static SigstoreTrustedRoot from(TrustedRoot proto) throws CertificateException {
+  /** Create an instance from an input stream of a json representation of a trustedroot. */
+  static SigstoreTrustedRoot from(InputStream json) throws SigstoreConfigurationException {
+    var trustedRootBuilder = TrustedRoot.newBuilder();
+    try (var reader = new InputStreamReader(json, StandardCharsets.UTF_8)) {
+      JsonFormat.parser().merge(reader, trustedRootBuilder);
+    } catch (IOException ex) {
+      throw new SigstoreConfigurationException("Could not parse trusted root", ex);
+    }
+    return from(trustedRootBuilder);
+  }
+
+  /** Create an instance from a parsed proto definition of a trustedroot. */
+  static SigstoreTrustedRoot from(TrustedRootOrBuilder proto)
+      throws SigstoreConfigurationException {
     List<CertificateAuthority> cas = Lists.newArrayList();
     for (var certAuthority : proto.getCertificateAuthoritiesList()) {
-      cas.add(CertificateAuthority.from(certAuthority));
+      try {
+        cas.add(CertificateAuthority.from(certAuthority));
+      } catch (CertificateException ce) {
+        throw new SigstoreConfigurationException(
+            "Could not parse certificates in trusted root", ce);
+      }
     }
 
     List<TransparencyLog> tlogs =
