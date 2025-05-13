@@ -79,8 +79,12 @@ public class KeylessVerifier {
     private TrustedRootProvider trustedRootProvider;
 
     public KeylessVerifier build()
-        throws InvalidAlgorithmParameterException, CertificateException, InvalidKeySpecException,
-            NoSuchAlgorithmException, IOException, InvalidKeyException {
+        throws InvalidAlgorithmParameterException,
+            CertificateException,
+            InvalidKeySpecException,
+            NoSuchAlgorithmException,
+            IOException,
+            InvalidKeyException {
       Preconditions.checkNotNull(trustedRootProvider);
       var trustedRoot = trustedRootProvider.get();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);

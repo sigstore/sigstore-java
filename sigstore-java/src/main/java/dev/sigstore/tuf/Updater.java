@@ -142,8 +142,13 @@ public class Updater {
 
   // https://theupdateframework.github.io/specification/latest/#detailed-client-workflow
   void updateRoot()
-      throws IOException, RoleExpiredException, NoSuchAlgorithmException, InvalidKeySpecException,
-          FileExceedsMaxLengthException, RollbackVersionException, SignatureVerificationException {
+      throws IOException,
+          RoleExpiredException,
+          NoSuchAlgorithmException,
+          InvalidKeySpecException,
+          FileExceedsMaxLengthException,
+          RollbackVersionException,
+          SignatureVerificationException {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);
@@ -319,7 +324,10 @@ public class Updater {
   }
 
   void updateTimestamp()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, FileNotFoundException,
+      throws IOException,
+          NoSuchAlgorithmException,
+          InvalidKeySpecException,
+          FileNotFoundException,
           SignatureVerificationException {
     // 1) download the timestamp.json bytes.
     var timestamp =
@@ -352,8 +360,12 @@ public class Updater {
   }
 
   void updateSnapshot()
-      throws IOException, FileNotFoundException, InvalidHashesException,
-          SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException {
+      throws IOException,
+          FileNotFoundException,
+          InvalidHashesException,
+          SignatureVerificationException,
+          NoSuchAlgorithmException,
+          InvalidKeySpecException {
     // 1) download the snapshot.json bytes up to timestamp's snapshot length.
     int timestampSnapshotVersion =
         trustedMetaStore.getTimestamp().getSignedMeta().getSnapshotMeta().getVersion();
@@ -441,8 +453,12 @@ public class Updater {
   }
 
   void updateTargets()
-      throws IOException, FileNotFoundException, InvalidHashesException,
-          SignatureVerificationException, NoSuchAlgorithmException, InvalidKeySpecException,
+      throws IOException,
+          FileNotFoundException,
+          InvalidHashesException,
+          SignatureVerificationException,
+          NoSuchAlgorithmException,
+          InvalidKeySpecException,
           FileExceedsMaxLengthException {
     // 1) download the targets.json up to targets.json length in bytes.
     SnapshotMeta.SnapshotTarget targetMeta =

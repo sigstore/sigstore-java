@@ -213,8 +213,12 @@ public class KeylessSigner implements AutoCloseable {
 
     @CheckReturnValue
     public KeylessSigner build()
-        throws CertificateException, IOException, NoSuchAlgorithmException, InvalidKeySpecException,
-            InvalidKeyException, InvalidAlgorithmParameterException {
+        throws CertificateException,
+            IOException,
+            NoSuchAlgorithmException,
+            InvalidKeySpecException,
+            InvalidKeyException,
+            InvalidAlgorithmParameterException {
       Preconditions.checkNotNull(trustedRootProvider);
       var trustedRoot = trustedRootProvider.get();
       Preconditions.checkNotNull(fulcioUri);
@@ -361,9 +365,16 @@ public class KeylessSigner implements AutoCloseable {
   }
 
   private void renewSigningCertificate()
-      throws InterruptedException, CertificateException, IOException, UnsupportedAlgorithmException,
-          NoSuchAlgorithmException, InvalidKeyException, SignatureException,
-          FulcioVerificationException, OidcException, KeylessSignerException {
+      throws InterruptedException,
+          CertificateException,
+          IOException,
+          UnsupportedAlgorithmException,
+          NoSuchAlgorithmException,
+          InvalidKeyException,
+          SignatureException,
+          FulcioVerificationException,
+          OidcException,
+          KeylessSignerException {
     // Check if the certificate is still valid
     lock.readLock().lock();
     try {

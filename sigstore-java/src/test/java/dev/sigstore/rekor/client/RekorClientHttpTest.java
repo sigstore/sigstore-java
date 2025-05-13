@@ -160,8 +160,12 @@ public class RekorClientHttpTest {
 
   @NotNull
   private static HashedRekordRequest createdRekorRequest()
-      throws NoSuchAlgorithmException, InvalidKeyException, SignatureException,
-          OperatorCreationException, CertificateException, IOException {
+      throws NoSuchAlgorithmException,
+          InvalidKeyException,
+          SignatureException,
+          OperatorCreationException,
+          CertificateException,
+          IOException {
     // the data we want to sign
     var data = "some data " + UUID.randomUUID();
 
