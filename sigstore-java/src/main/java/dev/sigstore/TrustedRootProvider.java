@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
 @FunctionalInterface
@@ -41,7 +42,8 @@ public interface TrustedRootProvider {
       } catch (IOException
           | NoSuchAlgorithmException
           | InvalidKeySpecException
-          | InvalidKeyException ex) {
+          | InvalidKeyException
+          | CertificateException ex) {
         throw new SigstoreConfigurationException(ex);
       }
     };
@@ -52,7 +54,7 @@ public interface TrustedRootProvider {
     return () -> {
       try (var is = Files.newInputStream(trustedRoot)) {
         return SigstoreTrustedRoot.from(is);
-      } catch (IOException ex) {
+      } catch (IOException | CertificateException ex) {
         throw new SigstoreConfigurationException(ex);
       }
     };

@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.Instant;
@@ -153,6 +154,7 @@ public class SigstoreTufClient {
    */
   public void update()
       throws SigstoreConfigurationException,
+          CertificateException,
           IOException,
           NoSuchAlgorithmException,
           InvalidKeySpecException,
@@ -166,6 +168,7 @@ public class SigstoreTufClient {
   /** Force an update, ignoring any cache validity. */
   public void forceUpdate()
       throws SigstoreConfigurationException,
+          CertificateException,
           IOException,
           NoSuchAlgorithmException,
           InvalidKeySpecException,

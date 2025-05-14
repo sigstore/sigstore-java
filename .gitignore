@@ -31,3 +31,6 @@
 # except this icon
 !/.idea/icon.png
 
+# vscode java output directories
+/bin/=
+/**/bin
