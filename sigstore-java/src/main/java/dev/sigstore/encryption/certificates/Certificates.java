@@ -21,7 +21,11 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.*;
+import java.security.cert.CertPath;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -140,6 +144,12 @@ public class Certificates {
   public static CertPath toCertPath(Certificate certificate) throws CertificateException {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     return cf.generateCertPath(Collections.singletonList(certificate));
+  }
+
+  /** Converts a list of X509Certificates to a {@link CertPath}. */
+  public static CertPath toCertPath(List<Certificate> certificate) throws CertificateException {
+    CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    return cf.generateCertPath(certificate);
   }
 
   /** Appends an CertPath to another {@link CertPath} as children. */
