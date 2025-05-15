@@ -21,8 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.io.Resources;
-import java.io.IOException;
-import java.security.cert.CertificateException;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.bouncycastle.util.encoders.Base64;
@@ -34,7 +32,7 @@ class SigstoreTrustedRootTest {
   private static SigstoreTrustedRoot trustRoot;
 
   @BeforeAll
-  public static void initTrustRoot() throws IOException, CertificateException {
+  public static void initTrustRoot() throws Exception {
     trustRoot =
         SigstoreTrustedRoot.from(
             Resources.getResource("dev/sigstore/trustroot/trusted_root.json").openStream());

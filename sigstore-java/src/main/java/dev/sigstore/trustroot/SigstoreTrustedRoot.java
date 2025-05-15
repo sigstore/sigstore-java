@@ -41,19 +41,27 @@ public interface SigstoreTrustedRoot {
   List<TransparencyLog> getCTLogs();
 
   /** Create an instance from an input stream of a json representation of a trustedroot. */
-  static SigstoreTrustedRoot from(InputStream json) throws IOException, CertificateException {
+  static SigstoreTrustedRoot from(InputStream json) throws SigstoreConfigurationException {
     var trustedRootBuilder = TrustedRoot.newBuilder();
     try (var reader = new InputStreamReader(json, StandardCharsets.UTF_8)) {
       JsonFormat.parser().merge(reader, trustedRootBuilder);
+    } catch (IOException ex) {
+      throw new SigstoreConfigurationException("Could not parse trusted root", ex);
     }
     return from(trustedRootBuilder);
   }
 
   /** Create an instance from a parsed proto definition of a trustedroot. */
-  static SigstoreTrustedRoot from(TrustedRootOrBuilder proto) throws CertificateException {
+  static SigstoreTrustedRoot from(TrustedRootOrBuilder proto)
+      throws SigstoreConfigurationException {
     List<CertificateAuthority> cas = Lists.newArrayList();
     for (var certAuthority : proto.getCertificateAuthoritiesList()) {
-      cas.add(CertificateAuthority.from(certAuthority));
+      try {
+        cas.add(CertificateAuthority.from(certAuthority));
+      } catch (CertificateException ce) {
+        throw new SigstoreConfigurationException(
+            "Could not parse certificates in trusted root", ce);
+      }
     }
 
     List<TransparencyLog> tlogs =

@@ -18,18 +18,14 @@ package dev.sigstore.rekor.client;
 import dev.sigstore.KeylessVerificationException;
 import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.TransparencyLog;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
 import java.sql.Date;
 import java.util.List;
 import java.util.Optional;
@@ -44,45 +40,23 @@ public class RekorEntryFetcher {
   // a client per remote trusted log
   private final List<RekorClient> rekorClients;
 
-  public static RekorEntryFetcher sigstoreStaging()
-      throws InvalidAlgorithmParameterException,
-          CertificateException,
-          InvalidKeySpecException,
-          NoSuchAlgorithmException,
-          IOException,
-          InvalidKeyException {
+  public static RekorEntryFetcher sigstoreStaging() throws SigstoreConfigurationException {
     var sigstoreTufClientBuilder = SigstoreTufClient.builder().useStagingInstance();
     return fromTrustedRoot(TrustedRootProvider.from(sigstoreTufClientBuilder));
   }
 
-  public static RekorEntryFetcher sigstorePublicGood()
-      throws InvalidAlgorithmParameterException,
-          CertificateException,
-          InvalidKeySpecException,
-          NoSuchAlgorithmException,
-          IOException,
-          InvalidKeyException {
+  public static RekorEntryFetcher sigstorePublicGood() throws SigstoreConfigurationException {
     var sigstoreTufClientBuilder = SigstoreTufClient.builder().usePublicGoodInstance();
     return fromTrustedRoot(TrustedRootProvider.from(sigstoreTufClientBuilder));
   }
 
   public static RekorEntryFetcher fromTrustedRoot(Path trustedRoot)
-      throws InvalidAlgorithmParameterException,
-          CertificateException,
-          InvalidKeySpecException,
-          NoSuchAlgorithmException,
-          IOException,
-          InvalidKeyException {
+      throws SigstoreConfigurationException {
     return fromTrustedRoot(TrustedRootProvider.from(trustedRoot));
   }
 
   public static RekorEntryFetcher fromTrustedRoot(TrustedRootProvider trustedRootProvider)
-      throws InvalidAlgorithmParameterException,
-          CertificateException,
-          InvalidKeySpecException,
-          NoSuchAlgorithmException,
-          IOException,
-          InvalidKeyException {
+      throws SigstoreConfigurationException {
     var trustedRoot = trustedRootProvider.get();
     var rekorClients =
         trustedRoot.getTLogs().stream()
