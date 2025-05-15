@@ -16,12 +16,9 @@
 package dev.sigstore;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidAlgorithmParameterException;
@@ -53,10 +50,9 @@ public interface TrustedRootProvider {
   static TrustedRootProvider from(Path trustedRoot) {
     Preconditions.checkNotNull(trustedRoot);
     return () -> {
-      var trustedRootBuilder = TrustedRoot.newBuilder();
-      JsonFormat.parser()
-          .merge(Files.readString(trustedRoot, StandardCharsets.UTF_8), trustedRootBuilder);
-      return SigstoreTrustedRoot.from(trustedRootBuilder.build());
+      try (var is = Files.newInputStream(trustedRoot)) {
+        return SigstoreTrustedRoot.from(is);
+      }
     };
   }
 }
