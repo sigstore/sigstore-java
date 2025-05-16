@@ -16,34 +16,34 @@
 package dev.sigstore;
 
 import com.google.common.base.Preconditions;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
 @FunctionalInterface
 public interface TrustedRootProvider {
 
-  SigstoreTrustedRoot get()
-      throws InvalidAlgorithmParameterException,
-          CertificateException,
-          InvalidKeySpecException,
-          NoSuchAlgorithmException,
-          IOException,
-          InvalidKeyException;
+  SigstoreTrustedRoot get() throws SigstoreConfigurationException;
 
   static TrustedRootProvider from(SigstoreTufClient.Builder tufClientBuilder) {
     Preconditions.checkNotNull(tufClientBuilder);
     return () -> {
-      var tufClient = tufClientBuilder.build();
-      tufClient.update();
-      return tufClient.getSigstoreTrustedRoot();
+      try {
+        var tufClient = tufClientBuilder.build();
+        tufClient.update();
+        return tufClient.getSigstoreTrustedRoot();
+      } catch (IOException
+          | NoSuchAlgorithmException
+          | InvalidKeySpecException
+          | InvalidKeyException ex) {
+        throw new SigstoreConfigurationException(ex);
+      }
     };
   }
 
@@ -52,6 +52,8 @@ public interface TrustedRootProvider {
     return () -> {
       try (var is = Files.newInputStream(trustedRoot)) {
         return SigstoreTrustedRoot.from(is);
+      } catch (IOException ex) {
+        throw new SigstoreConfigurationException(ex);
       }
     };
   }

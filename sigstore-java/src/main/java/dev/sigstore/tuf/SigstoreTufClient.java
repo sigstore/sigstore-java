@@ -19,6 +19,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -28,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.Instant;
@@ -152,11 +152,11 @@ public class SigstoreTufClient {
    * defined on the client.
    */
   public void update()
-      throws IOException,
+      throws SigstoreConfigurationException,
+          IOException,
           NoSuchAlgorithmException,
           InvalidKeySpecException,
-          InvalidKeyException,
-          CertificateException {
+          InvalidKeyException {
     if (lastUpdate == null
         || Duration.between(lastUpdate, Instant.now()).compareTo(cacheValidity) > 0) {
       this.forceUpdate();
@@ -165,11 +165,11 @@ public class SigstoreTufClient {
 
   /** Force an update, ignoring any cache validity. */
   public void forceUpdate()
-      throws IOException,
+      throws SigstoreConfigurationException,
+          IOException,
           NoSuchAlgorithmException,
           InvalidKeySpecException,
-          InvalidKeyException,
-          CertificateException {
+          InvalidKeyException {
     updater.update();
     lastUpdate = Instant.now();
     var trustedRootBuilder = TrustedRoot.newBuilder();

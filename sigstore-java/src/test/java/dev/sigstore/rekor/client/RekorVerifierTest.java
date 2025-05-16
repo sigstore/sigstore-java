@@ -24,7 +24,6 @@ import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -55,7 +54,7 @@ public class RekorVerifierTest {
   }
 
   @BeforeAll
-  public static void initTrustRoot() throws IOException, CertificateException {
+  public static void initTrustRoot() throws Exception {
     trustRoot =
         SigstoreTrustedRoot.from(
             Resources.getResource("dev/sigstore/trustroot/staging_trusted_root.json").openStream());
