@@ -1,6 +1,6 @@
 plugins {
     id("java-base")
-    id("org.jetbrains.dokka")
+    id("org.jetbrains.dokka-javadoc")
     id("build-logic.build-params")
 }
 
@@ -14,7 +14,7 @@ java {
 val dokkaJar by tasks.registering(Jar::class) {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Assembles a jar archive containing javadoc"
-    from(tasks.dokkaJavadoc)
+    from(tasks.dokkaGeneratePublicationJavadoc)
     archiveClassifier.set("javadoc")
 }
 
