@@ -43,6 +43,7 @@ class SigstoreTrustedRootTest {
     assertEquals(2, trustRoot.getCAs().size());
     assertEquals(1, trustRoot.getTLogs().size());
     assertEquals(2, trustRoot.getCTLogs().size());
+    assertEquals(1, trustRoot.getTSAs().size());
 
     var oldCA = trustRoot.getCAs().get(0);
     assertEquals("sigstore", oldCA.getSubject().getCommonName());
@@ -116,6 +117,22 @@ class SigstoreTrustedRootTest {
     assertEquals(
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEiPSlFi0CmFTfEjCUqF9HuCEcYXNKAaYalIJmBZ8yyezPjTqhxrKBpMnaocVtLJBI1eM3uXnQzQGAJdJ4gs9Fyw==",
         Base64.toBase64String(currCTLog.getPublicKey().toJavaPublicKey().getEncoded()));
+
+    var tsa = trustRoot.getTSAs().get(0);
+    assertEquals("https://timestamp.sigstore.dev", tsa.getUri().toString());
+    assertEquals("sigstore-tsa", tsa.getSubject().getCommonName());
+    assertEquals("sigstore.dev", tsa.getSubject().getOrganization());
+    assertEquals(
+        ZonedDateTime.parse("2025-04-08T06:59:43Z").toInstant(), tsa.getValidFor().getStart());
+    assertEquals(
+        ZonedDateTime.parse("2035-04-08T06:59:43Z").toInstant(), tsa.getValidFor().getEnd().get());
+    assertNotNull(tsa.getCertPath());
+    assertEquals(
+        "MIICEDCCAZagAwIBAgIUOhNULwyQYe68wUMvy4qOiyojiwwwCgYIKoZIzj0EAwMwOTEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MSAwHgYDVQQDExdzaWdzdG9yZS10c2Etc2VsZnNpZ25lZDAeFw0yNTA0MDgwNjU5NDNaFw0zNTA0MDYwNjU5NDNaMC4xFTATBgNVBAoTDHNpZ3N0b3JlLmRldjEVMBMGA1UEAxMMc2lnc3RvcmUtdHNhMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE4ra2Z8hKNig2T9kFjCAToGG30jky+WQv3BzL+mKvh1SKNR/UwuwsfNCg4sryoYAd8E6isovVA3M4aoNdm9QDi50Z8nTEyvqgfDPtTIwXItfiW/AFf1V7uwkbkAoj0xxco2owaDAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFIn9eUOHz9BlRsMCRscsc1t9tOsDMB8GA1UdIwQYMBaAFJjsAe9/u1H/1JUeb4qImFMHic6/MBYGA1UdJQEB/wQMMAoGCCsGAQUFBwMIMAoGCCqGSM49BAMDA2gAMGUCMDtpsV/6KaO0qyF/UMsX2aSUXKQFdoGTptQGc0ftq1csulHPGG6dsmyMNd3JB+G3EQIxAOajvBcjpJmKb4Nv+2Taoj8Uc5+b6ih6FXCCKraSqupe07zqswMcXJTe1cExvHvvlw==",
+        Base64.toBase64String(tsa.getCertPath().getCertificates().get(0).getEncoded()));
+    assertEquals(
+        "MIIB9zCCAXygAwIBAgIUV7f0GLDOoEzIh8LXSW80OJiUp14wCgYIKoZIzj0EAwMwOTEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MSAwHgYDVQQDExdzaWdzdG9yZS10c2Etc2VsZnNpZ25lZDAeFw0yNTA0MDgwNjU5NDNaFw0zNTA0MDYwNjU5NDNaMDkxFTATBgNVBAoTDHNpZ3N0b3JlLmRldjEgMB4GA1UEAxMXc2lnc3RvcmUtdHNhLXNlbGZzaWduZWQwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAAQUQNtfRT/ou3YATa6wB/kKTe70cfJwyRIBovMnt8RcJph/COE82uyS6FmppLLL1VBPGcPfpQPYJNXzWwi8icwhKQ6W/Qe2h3oebBb2FHpwNJDqo+TMaC/tdfkv/ElJB72jRTBDMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBSY7AHvf7tR/9SVHm+KiJhTB4nOvzAKBggqhkjOPQQDAwNpADBmAjEAwGEGrfGZR1cen1R8/DTVMI943LssZmJRtDp/i7SfGHmGRP6gRbuj9vOK3b67Z0QQAjEAuT2H673LQEaHTcyQSZrkp4mX7WwkmF+sVbkYY5mXN+RMH13KUEHHOqASaemYWK/E",
+        Base64.toBase64String(tsa.getCertPath().getCertificates().get(1).getEncoded()));
   }
 
   @Test
@@ -208,6 +225,28 @@ class SigstoreTrustedRootTest {
         CertificateAuthority.find(
                 trustRoot.getCAs(), ZonedDateTime.parse("2015-03-14T00:00:00.000Z").toInstant())
             .size());
+  }
+
+  @Test
+  public void getTSA_isPresent() {
+    var startTime = ZonedDateTime.parse("2025-04-08T06:59:43Z").toInstant();
+    var timeAfterStart = startTime.plusSeconds(60);
+    var endTime = ZonedDateTime.parse("2035-04-08T06:59:43Z").toInstant();
+    var timeBeforeEnd = endTime.minusSeconds(60);
+
+    assertEquals(1, CertificateAuthority.find(trustRoot.getTSAs(), startTime).size());
+    assertEquals(1, CertificateAuthority.find(trustRoot.getTSAs(), timeAfterStart).size());
+    assertEquals(1, CertificateAuthority.find(trustRoot.getTSAs(), endTime).size());
+    assertEquals(1, CertificateAuthority.find(trustRoot.getTSAs(), timeBeforeEnd).size());
+  }
+
+  @Test
+  public void getTSA_isNotPresent() {
+    var timeBeforeStart = ZonedDateTime.parse("2025-04-08T06:59:43Z").toInstant().minusSeconds(60);
+    var timeAfterEnd = ZonedDateTime.parse("2035-04-08T06:59:43Z").toInstant().plusSeconds(60);
+
+    assertEquals(0, CertificateAuthority.find(trustRoot.getTSAs(), timeBeforeStart).size());
+    assertEquals(0, CertificateAuthority.find(trustRoot.getTSAs(), timeAfterEnd).size());
   }
 
   private void assertTLogEntryIsPresent(
