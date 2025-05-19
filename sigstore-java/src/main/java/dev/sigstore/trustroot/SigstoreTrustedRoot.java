@@ -40,6 +40,9 @@ public interface SigstoreTrustedRoot {
   /** A list of certificate transparency logs associated with this trustedroot. */
   List<TransparencyLog> getCTLogs();
 
+  /** A list of timestamping authorities associated with this trustroot. */
+  List<CertificateAuthority> getTSAs();
+
   /** Create an instance from an input stream of a json representation of a trustedroot. */
   static SigstoreTrustedRoot from(InputStream json) throws SigstoreConfigurationException {
     var trustedRootBuilder = TrustedRoot.newBuilder();
@@ -70,6 +73,20 @@ public interface SigstoreTrustedRoot {
     List<TransparencyLog> ctlogs =
         proto.getCtlogsList().stream().map(TransparencyLog::from).collect(Collectors.toList());
 
-    return ImmutableSigstoreTrustedRoot.builder().cAs(cas).tLogs(tlogs).cTLogs(ctlogs).build();
+    List<CertificateAuthority> tsas = Lists.newArrayList();
+    for (var timestampAuthority : proto.getTimestampAuthoritiesList()) {
+      try {
+        tsas.add(CertificateAuthority.from(timestampAuthority));
+      } catch (CertificateException ce) {
+        throw new SigstoreConfigurationException("Could not parse TSAs in trusted root", ce);
+      }
+    }
+
+    return ImmutableSigstoreTrustedRoot.builder()
+        .cAs(cas)
+        .tLogs(tlogs)
+        .cTLogs(ctlogs)
+        .tSAs(tsas)
+        .build();
   }
 }
