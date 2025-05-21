@@ -22,10 +22,6 @@ import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.spec.InvalidKeySpecException;
 
 @FunctionalInterface
 public interface TrustedRootProvider {
@@ -39,11 +35,7 @@ public interface TrustedRootProvider {
         var tufClient = tufClientBuilder.build();
         tufClient.update();
         return tufClient.getSigstoreTrustedRoot();
-      } catch (IOException
-          | NoSuchAlgorithmException
-          | InvalidKeySpecException
-          | InvalidKeyException
-          | CertificateException ex) {
+      } catch (IOException ex) {
         throw new SigstoreConfigurationException(ex);
       }
     };

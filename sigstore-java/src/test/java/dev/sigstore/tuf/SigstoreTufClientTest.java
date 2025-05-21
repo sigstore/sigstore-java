@@ -17,15 +17,20 @@ package dev.sigstore.tuf;
 
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
+import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 
 class SigstoreTufClientTest {
 
@@ -44,12 +49,34 @@ class SigstoreTufClientTest {
   }
 
   @Test
+  public void testUpdate_publicGoodNoSigningConfigV02() throws Exception {
+    var client =
+        SigstoreTufClient.builder()
+            .usePublicGoodInstance()
+            .tufCacheLocation(localStorePath)
+            .build();
+    client.forceUpdate();
+
+    // TODO: change this when we publish new signing config to public good
+    Assertions.assertNull(client.getSigstoreSigningConfig());
+  }
+
+  @Test
   public void testUpdate_stagingHasTrustedRootJson() throws Exception {
     var client =
         SigstoreTufClient.builder().useStagingInstance().tufCacheLocation(localStorePath).build();
     client.forceUpdate();
 
     assertTrustedRootValid(client.getSigstoreTrustedRoot());
+  }
+
+  @Test
+  public void testUpdate_stagingHasSigningConfigV02() throws Exception {
+    var client =
+        SigstoreTufClient.builder().useStagingInstance().tufCacheLocation(localStorePath).build();
+    client.forceUpdate();
+
+    assertSigningConfigValid(client.getSigstoreSigningConfig());
   }
 
   private void assertTrustedRootValid(SigstoreTrustedRoot trustedRoot) {
@@ -62,6 +89,15 @@ class SigstoreTufClientTest {
     for (var ctlog : trustedRoot.getCTLogs()) {
       Assertions.assertDoesNotThrow(() -> ctlog.getPublicKey().toJavaPublicKey());
     }
+  }
+
+  private void assertSigningConfigValid(SigstoreSigningConfig signingConfig) {
+    Assertions.assertNotNull(signingConfig);
+
+    assertNonEmpty(signingConfig.getCas());
+    assertNonEmpty(signingConfig.getTsas());
+    assertNonEmpty(signingConfig.getTLogs());
+    assertNonEmpty(signingConfig.getOidcProviders());
   }
 
   @Test
@@ -90,10 +126,15 @@ class SigstoreTufClientTest {
         JsonFormat.printer().print(TrustedRoot.newBuilder()).getBytes(StandardCharsets.UTF_8);
     var mockUpdater = Mockito.mock(Updater.class);
     var mockTargetStore = Mockito.mock(TargetStore.class);
-    Mockito.when(mockTargetStore.readTarget(SigstoreTufClient.TRUST_ROOT_FILENAME))
-        .thenReturn(trustRootBytes);
+    Mockito.when(mockTargetStore.getTargetInputSteam(SigstoreTufClient.TRUST_ROOT_FILENAME))
+        .thenAnswer((Answer<InputStream>) invocation -> new ByteArrayInputStream(trustRootBytes));
     Mockito.when(mockUpdater.getTargetStore()).thenReturn(mockTargetStore);
 
     return mockUpdater;
+  }
+
+  private <T> void assertNonEmpty(List<T> list) {
+    Assertions.assertNotNull(list);
+    Assertions.assertFalse(list.isEmpty());
   }
 }
