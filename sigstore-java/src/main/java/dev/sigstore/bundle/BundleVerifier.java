@@ -21,6 +21,7 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.bundle.v1.Bundle;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,7 @@ import java.util.Map;
 
 /** Implements Sigstore Bundle verification. */
 public class BundleVerifier {
-  static final JsonFormat.Parser JSON_PARSER = JsonFormat.parser();
+  static final JsonFormat.Parser JSON_PARSER = ProtoJson.parser();
 
   /**
    * Parses Sigstore Bundle JSON into protobuf.

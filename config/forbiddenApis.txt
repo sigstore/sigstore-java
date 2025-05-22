@@ -1,0 +1,1 @@
+com.google.protobuf.util.JsonFormat#parser() @ Use dev.sigstore.json.ProtoJson#parser() instead

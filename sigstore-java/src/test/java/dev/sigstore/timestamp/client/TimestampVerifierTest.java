@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.io.Resources;
-import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
@@ -93,7 +93,7 @@ public class TimestampVerifierTest {
             Resources.getResource("dev/sigstore/trustroot/trusted_root.json"),
             StandardCharsets.UTF_8);
     var builder = TrustedRoot.newBuilder();
-    JsonFormat.parser().merge(json, builder);
+    ProtoJson.parser().merge(json, builder);
 
     trustedRoot = SigstoreTrustedRoot.from(builder.build());
 
@@ -102,7 +102,7 @@ public class TimestampVerifierTest {
             Resources.getResource("dev/sigstore/trustroot/trusted_root_with_outdated_tsa.json"),
             StandardCharsets.UTF_8);
     builder = TrustedRoot.newBuilder();
-    JsonFormat.parser().merge(json, builder);
+    ProtoJson.parser().merge(json, builder);
 
     trustedRootWithOutdatedTsa = SigstoreTrustedRoot.from(builder.build());
 
@@ -111,7 +111,7 @@ public class TimestampVerifierTest {
             Resources.getResource("dev/sigstore/trustroot/trusted_root_with_multiple_tsas.json"),
             StandardCharsets.UTF_8);
     builder = TrustedRoot.newBuilder();
-    JsonFormat.parser().merge(json, builder);
+    ProtoJson.parser().merge(json, builder);
 
     trustedRootWithMultipleTsas = SigstoreTrustedRoot.from(builder.build());
   }

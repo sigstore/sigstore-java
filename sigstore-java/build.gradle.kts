@@ -116,6 +116,13 @@ jsonSchema2Pojo {
     }
 }
 
+forbiddenApis {
+    // Don't allow sigstore-java developers to directly call JsonFormat.parser(), use our wrapper instead
+    // which allows for ignored fields.
+    signaturesFiles = files("$rootDir/config/forbiddenApis.txt")
+    suppressAnnotations = setOf("dev.sigstore.forbidden.SuppressForbidden")
+}
+
 // TODO: keep until these code gen plugins explicitly declare dependencies
 tasks.named("sourcesJar") {
     dependsOn("generateJsonSchema2DataClassConfigRekor")

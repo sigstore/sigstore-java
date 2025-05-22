@@ -16,7 +16,7 @@
 package dev.sigstore.trustroot;
 
 import com.google.api.client.util.Lists;
-import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.proto.trustroot.v1.TrustedRootOrBuilder;
 import java.io.IOException;
@@ -47,7 +47,7 @@ public interface SigstoreTrustedRoot {
   static SigstoreTrustedRoot from(InputStream json) throws SigstoreConfigurationException {
     var trustedRootBuilder = TrustedRoot.newBuilder();
     try (var reader = new InputStreamReader(json, StandardCharsets.UTF_8)) {
-      JsonFormat.parser().merge(reader, trustedRootBuilder);
+      ProtoJson.parser().merge(reader, trustedRootBuilder);
     } catch (IOException ex) {
       throw new SigstoreConfigurationException("Could not parse trusted root", ex);
     }
