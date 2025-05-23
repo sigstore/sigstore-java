@@ -36,7 +36,8 @@ public interface TrustedRootProvider {
         tufClient.update();
         return tufClient.getSigstoreTrustedRoot();
       } catch (IOException ex) {
-        throw new SigstoreConfigurationException(ex);
+        throw new SigstoreConfigurationException(
+            "Could not initialize trusted root from provided tuf client", ex);
       }
     };
   }
@@ -47,7 +48,8 @@ public interface TrustedRootProvider {
       try (var is = Files.newInputStream(trustedRoot)) {
         return SigstoreTrustedRoot.from(is);
       } catch (IOException ex) {
-        throw new SigstoreConfigurationException(ex);
+        throw new SigstoreConfigurationException(
+            "Could not initialize trusted root from " + trustedRoot, ex);
       }
     };
   }
