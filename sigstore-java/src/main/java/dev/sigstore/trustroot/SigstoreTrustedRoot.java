@@ -16,6 +16,7 @@
 package dev.sigstore.trustroot;
 
 import com.google.api.client.util.Lists;
+import com.google.common.base.Strings;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.proto.trustroot.v1.TrustedRootOrBuilder;
@@ -43,7 +44,7 @@ public interface SigstoreTrustedRoot {
   /** A list of timestamping authorities associated with this trustroot. */
   List<CertificateAuthority> getTSAs();
 
-  /** Create an instance from an input stream of a json representation of a trustedroot. */
+  /** Parse the trusted root from an input stream and close the stream */
   static SigstoreTrustedRoot from(InputStream json) throws SigstoreConfigurationException {
     var trustedRootBuilder = TrustedRoot.newBuilder();
     try (var reader = new InputStreamReader(json, StandardCharsets.UTF_8)) {
@@ -57,13 +58,19 @@ public interface SigstoreTrustedRoot {
   /** Create an instance from a parsed proto definition of a trustedroot. */
   static SigstoreTrustedRoot from(TrustedRootOrBuilder proto)
       throws SigstoreConfigurationException {
+    if (!Strings.isNullOrEmpty(proto.getMediaType())
+        && !proto
+            .getMediaType()
+            .equals("application/vnd.dev.sigstore.trustedroot+json;version=0.1")) {
+      throw new SigstoreConfigurationException(
+          "Unsupported trusted root mediaType: " + proto.getMediaType());
+    }
     List<CertificateAuthority> cas = Lists.newArrayList();
     for (var certAuthority : proto.getCertificateAuthoritiesList()) {
       try {
         cas.add(CertificateAuthority.from(certAuthority));
       } catch (CertificateException ce) {
-        throw new SigstoreConfigurationException(
-            "Could not parse certificates in trusted root", ce);
+        throw new SigstoreConfigurationException("Could not parse certificate in trusted root", ce);
       }
     }
 

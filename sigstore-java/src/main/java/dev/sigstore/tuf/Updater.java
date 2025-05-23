@@ -144,8 +144,6 @@ public class Updater {
   void updateRoot()
       throws IOException,
           RoleExpiredException,
-          NoSuchAlgorithmException,
-          InvalidKeySpecException,
           FileExceedsMaxLengthException,
           RollbackVersionException,
           SignatureVerificationException {
