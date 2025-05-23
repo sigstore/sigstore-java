@@ -16,7 +16,7 @@
 package dev.sigstore.bundle;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
 import dev.sigstore.rekor.client.ImmutableInclusionProof;
@@ -36,7 +36,7 @@ class BundleReader {
   static Bundle readBundle(Reader jsonReader) throws BundleParseException {
     var protoBundleBuilder = dev.sigstore.proto.bundle.v1.Bundle.newBuilder();
     try {
-      JsonFormat.parser().merge(jsonReader, protoBundleBuilder);
+      ProtoJson.parser().merge(jsonReader, protoBundleBuilder);
     } catch (IOException ioe) {
       throw new BundleParseException("Could not process bundle json", ioe);
     }

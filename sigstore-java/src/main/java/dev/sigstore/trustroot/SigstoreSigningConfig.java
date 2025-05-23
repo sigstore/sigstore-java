@@ -15,7 +15,7 @@
  */
 package dev.sigstore.trustroot;
 
-import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.trustroot.v1.SigningConfig;
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,7 +66,7 @@ public interface SigstoreSigningConfig {
   static SigstoreSigningConfig from(InputStream json) throws SigstoreConfigurationException {
     var signingConfigBuilder = SigningConfig.newBuilder();
     try (var reader = new InputStreamReader(json, StandardCharsets.UTF_8)) {
-      JsonFormat.parser().merge(reader, signingConfigBuilder);
+      ProtoJson.parser().merge(reader, signingConfigBuilder);
     } catch (IOException ex) {
       throw new SigstoreConfigurationException("Could not parse signing configuration", ex);
     }
