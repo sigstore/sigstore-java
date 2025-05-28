@@ -21,11 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.api.client.http.HttpRequestFactory;
-import dev.sigstore.http.HttpClients;
-import dev.sigstore.http.HttpParams;
-import dev.sigstore.http.ImmutableHttpParams;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import okhttp3.mockwebserver.MockResponse;
@@ -36,19 +31,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class TimestampClientHttpTest {
-  private static HttpRequestFactory requestFactory;
-  private static HttpParams httpParams;
   private static TimestampRequest tsReq;
 
   private static final byte[] INVALID_TS_RESP_BYTES = new byte[14];
-  private static final URI SIGSTORE_TSA_URI =
-      URI.create("https://timestamp.sigstage.dev/api/v1/timestamp");
 
   @BeforeAll
   public static void setup() throws Exception {
-    httpParams = ImmutableHttpParams.builder().build();
-    requestFactory = HttpClients.newRequestFactory(httpParams);
-
     var digest = MessageDigest.getInstance("SHA-256");
     var artifactHashBytes = digest.digest("test".getBytes(StandardCharsets.UTF_8));
     tsReq =
@@ -60,7 +48,7 @@ public class TimestampClientHttpTest {
 
   @Test
   public void timestamp_success() throws Exception {
-    var client = new TimestampClientHttp(requestFactory, SIGSTORE_TSA_URI);
+    var client = TimestampClientHttp.builder().build();
 
     var tsResp = client.timestamp(tsReq);
 
@@ -92,7 +80,7 @@ public class TimestampClientHttpTest {
             .nonce(tsReq.getNonce())
             .build();
 
-    var client = new TimestampClientHttp(requestFactory, SIGSTORE_TSA_URI);
+    var client = TimestampClientHttp.builder().build();
 
     var tse =
         assertThrows(
@@ -112,7 +100,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = new TimestampClientHttp(requestFactory, tsaUri);
+      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
 
       var tse =
           assertThrows(
@@ -134,7 +122,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = new TimestampClientHttp(requestFactory, tsaUri);
+      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
 
       var tse =
           assertThrows(
@@ -156,7 +144,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = new TimestampClientHttp(requestFactory, tsaUri);
+      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
 
       var tse =
           assertThrows(
@@ -180,7 +168,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = new TimestampClientHttp(requestFactory, tsaUri);
+      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
 
       var tse =
           assertThrows(

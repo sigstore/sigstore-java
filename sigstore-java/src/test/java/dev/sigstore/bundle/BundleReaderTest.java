@@ -87,6 +87,11 @@ class BundleReaderTest {
     Assertions.assertEquals("https://slsa.dev/provenance/v1", intotoPayload.getPredicateType());
   }
 
+  @Test
+  public void readBundle_timestamp() throws Exception {
+    readBundle("dev/sigstore/samples/bundles/bundle-with-timestamp.sigstore");
+  }
+
   private Bundle readBundle(String resourcePath) throws Exception {
     try (var reader =
         new InputStreamReader(

@@ -15,8 +15,13 @@
  */
 package dev.sigstore.timestamp.client;
 
+import java.net.URI;
+
 /** A client to communicate with a timestamp service instance. */
 public interface TimestampClient {
+  URI PUBLIC_GOOD_URI = URI.create("https://timestamp.sigstore.dev");
+  URI STAGING_URI = URI.create("https://timestamp.sigstage.dev");
+
   /**
    * Request a timestanp for a timestamp authority.
    *

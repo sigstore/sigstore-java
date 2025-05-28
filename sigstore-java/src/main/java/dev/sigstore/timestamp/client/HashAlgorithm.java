@@ -39,4 +39,13 @@ public enum HashAlgorithm {
   public ASN1ObjectIdentifier getOid() {
     return oid;
   }
+
+  public static HashAlgorithm from(ASN1ObjectIdentifier oid) throws TimestampException {
+    for (HashAlgorithm value : values()) {
+      if (value.getOid().equals(oid)) {
+        return value;
+      }
+    }
+    throw new TimestampException("Unsupported hash algorithm: " + oid.getId());
+  }
 }

@@ -18,7 +18,8 @@ package dev.sigstore.tuf;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.annotations.VisibleForTesting;
-import dev.sigstore.tuf.model.*;
+import dev.sigstore.tuf.model.SignedTufMeta;
+import dev.sigstore.tuf.model.TufMeta;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,8 +97,8 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   }
 
   @Override
-  public <T extends SignedTufMeta<?>> Optional<T> readMeta(String roleName, Class<T> tClass)
-      throws IOException {
+  public <T extends SignedTufMeta<? extends TufMeta>> Optional<T> readMeta(
+      String roleName, Class<T> tClass) throws IOException {
     Path roleFile = repoBaseDir.resolve(roleName + ".json");
     if (!roleFile.toFile().exists()) {
       return Optional.empty();

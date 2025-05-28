@@ -34,8 +34,7 @@ import org.bouncycastle.tsp.TimeStampResponse;
 
 /** A client to communicate with a timestamp service instance. */
 public class TimestampClientHttp implements TimestampClient {
-  private static final URI SIGSTORE_TSA_URI =
-      URI.create("https://timestamp.sigstage.dev/api/v1/timestamp");
+  private static final String SIGSTORE_TSA_PATH = "/api/v1/timestamp";
   private static final String CONTENT_TYPE_TIMESTAMP_QUERY = "application/timestamp-query";
   private static final String ACCEPT_TYPE_TIMESTAMP_REPLY = "application/timestamp-reply";
 
@@ -54,7 +53,7 @@ public class TimestampClientHttp implements TimestampClient {
 
   public static class Builder {
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
-    private URI uri = SIGSTORE_TSA_URI;
+    private URI uri = TimestampClient.STAGING_URI;
 
     private Builder() {}
 
@@ -78,6 +77,7 @@ public class TimestampClientHttp implements TimestampClient {
 
   @Override
   public TimestampResponse timestamp(TimestampRequest tsReq) throws TimestampException {
+    URI tsPostEndpoint = uri.resolve(SIGSTORE_TSA_PATH);
     TimeStampRequestGenerator bcTsReqGen = new TimeStampRequestGenerator();
 
     // Prepare and send the timestamp request
@@ -90,7 +90,7 @@ public class TimestampClientHttp implements TimestampClient {
     try {
       bcTsReq = bcTsReqGen.generate(bcAlgorithmOid, artifactHashBytes, nonce);
       var requestBytes = bcTsReq.getEncoded();
-      httpTsResp = sendTimestampRequest(uri, requestBytes);
+      httpTsResp = sendTimestampRequest(tsPostEndpoint, requestBytes);
     } catch (IOException e) {
       throw new TimestampException("Timestamp request failed: " + e.getMessage(), e);
     }

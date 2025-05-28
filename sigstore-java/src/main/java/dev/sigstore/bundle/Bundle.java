@@ -185,7 +185,7 @@ public abstract class Bundle {
   @Immutable
   public interface Timestamp {
 
-    /** Raw bytes of an rfc31616 timestamp */
+    /** Raw bytes of an rfc3161 timestamp */
     byte[] getRfc3161Timestamp();
   }
 
