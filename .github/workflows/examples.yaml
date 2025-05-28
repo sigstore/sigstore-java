@@ -14,8 +14,12 @@ concurrency:
 
 jobs:
   examples:
-    name: Build and run examples
-    runs-on: ubuntu-latest
+    name: Build and run examples on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     permissions:
       id-token: write
@@ -36,6 +40,7 @@ jobs:
 
     - name: run examples against released sigstore
       working-directory: examples/hello-world
+      shell: bash
       run: ./test.sh
 
     - name: install sigstore java development jars into mavenLocal
@@ -43,12 +48,14 @@ jobs:
 
     - name: calculate development version
       id: dev_version
+      shell: bash
       run: |
         set -Exeo pipefail
         echo "version=$(grep "^version=" gradle.properties | cut -d'=' -f2)" >> $GITHUB_OUTPUT
 
     - name: run examples against development version
       working-directory: examples/hello-world
+      shell: bash
       env:
         VERSION: ${{ steps.dev_version.outputs.version }}
       run: ./test.sh -Dsigstore.version=${VERSION}
