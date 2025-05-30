@@ -48,7 +48,7 @@ public class Certificates {
       pemWriter.writeObject(cert);
       pemWriter.flush();
     }
-    return certWriter.toString();
+    return certWriter.toString().replaceAll("\r\n", "\n");
   }
 
   /** Convert a certificate to a PEM encoded certificate. */
@@ -94,7 +94,7 @@ public class Certificates {
       }
       pemWriter.flush();
     }
-    return certWriter.toString();
+    return certWriter.toString().replaceAll("\r\n", "\n");
   }
 
   /** Convert a CertPath to a PEM encoded certificate chain. */
