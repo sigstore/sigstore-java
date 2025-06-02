@@ -177,7 +177,9 @@ class BundleReader {
               .getTimestampVerificationData()
               .getRfc3161TimestampsList()) {
         bundleBuilder.addTimestamps(
-            ImmutableTimestamp.builder().rfc3161Timestamp(timestamp.toByteArray()).build());
+            ImmutableTimestamp.builder()
+                .rfc3161Timestamp(timestamp.getSignedTimestamp().toByteArray())
+                .build());
       }
     }
 
