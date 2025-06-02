@@ -15,6 +15,7 @@
  */
 package dev.sigstore.timestamp.client;
 
+import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.trustroot.CertificateAuthority;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
@@ -32,6 +33,7 @@ import java.security.cert.PKIXParameters;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -83,10 +85,12 @@ public class TimestampVerifier {
    *
    * @param tsResp The timestamp response object containing the raw bytes of the RFC 3161
    *     TimeStampResponse.
+   * @param artifact The artifact that was timestamped.
    * @throws TimestampVerificationException if any verification step fails (e.g., no token,
    *     certificate path validation failure, signature validation failure).
    */
-  public void verify(TimestampResponse tsResp) throws TimestampVerificationException {
+  public void verify(TimestampResponse tsResp, byte[] artifact)
+      throws TimestampVerificationException {
     // Parse the timestamp response
     TimeStampResponse bcTsResp;
     try {
@@ -133,16 +137,37 @@ public class TimestampVerifier {
       tsaVerificationFailure.put(
           tsa.getUri().toString(),
           "Timestamp generation time is not within TSA's validity period.");
-    } else {
-      return;
+      String errors =
+          tsaVerificationFailure.entrySet().stream()
+              .map(entry -> entry.getKey() + " (" + entry.getValue() + ")")
+              .collect(Collectors.joining("\n"));
+      throw new TimestampVerificationException(
+          "Certificate was not verifiable against TSAs\n" + errors);
     }
 
-    String errors =
-        tsaVerificationFailure.entrySet().stream()
-            .map(entry -> entry.getKey() + " (" + entry.getValue() + ")")
-            .collect(Collectors.joining("\n"));
-    throw new TimestampVerificationException(
-        "Certificate was not verifiable against TSAs\n" + errors);
+    // Validate the message imprint digest in the token
+    var oid = tsToken.getTimeStampInfo().getMessageImprintAlgOID();
+    HashAlgorithm hashAlgorithm;
+    try {
+      hashAlgorithm = HashAlgorithm.from(oid);
+    } catch (UnsupportedHashAlgorithmException e) {
+      throw new TimestampVerificationException(e);
+    }
+    byte[] artifactDigest;
+    switch (hashAlgorithm) {
+      case SHA256:
+        artifactDigest = Hashing.sha256().hashBytes(artifact).asBytes();
+        break;
+      case SHA384:
+        artifactDigest = Hashing.sha384().hashBytes(artifact).asBytes();
+        break;
+      case SHA512:
+        artifactDigest = Hashing.sha512().hashBytes(artifact).asBytes();
+        break;
+      default:
+        throw new IllegalStateException(); // We shouldn't be here.
+    }
+    validateTokenMessageImprintDigest(tsToken, artifactDigest);
   }
 
   /** Validates the signature of the TimeStampToken using the provided signing certificate. */
@@ -156,6 +181,19 @@ public class TimestampVerifier {
       throw new TimestampVerificationException("Failed to build SignerInformationVerifier", oce);
     } catch (TSPException tspe) {
       throw new TimestampVerificationException("Failed to validate TimeStampToken", tspe);
+    }
+  }
+
+  /**
+   * Validates that the message imprint digest in the timestamp token matches the provided artifact
+   * digest.
+   */
+  private void validateTokenMessageImprintDigest(TimeStampToken token, byte[] artifactDigest)
+      throws TimestampVerificationException {
+    var messageImprintDigest = token.getTimeStampInfo().getMessageImprintDigest();
+    if (!Arrays.equals(messageImprintDigest, artifactDigest)) {
+      throw new TimestampVerificationException(
+          "Timestamp message imprint digest does not match artifact hash");
     }
   }
 
