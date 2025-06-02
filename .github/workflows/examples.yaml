@@ -23,6 +23,9 @@ jobs:
     permissions:
       id-token: write
 
+    # TODO: enable after next release, v1.3.0 fails on windows
+    if: ${{ matrix.os != 'windows-latest' }}
+    
     steps:
     - name: Enable long paths in Git
       if: runner.os == 'Windows'
