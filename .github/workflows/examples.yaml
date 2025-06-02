@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest] # TODO: add back in windows-latest after new release (v1.3.0 broken on windows)
     name: Build and run release examples on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     concurrency:
@@ -22,9 +22,6 @@ jobs:
 
     permissions:
       id-token: write
-
-    # TODO: enable after next release, v1.3.0 fails on windows
-    if: ${{ matrix.os != 'windows-latest' }}
     
     steps:
     - name: Enable long paths in Git
