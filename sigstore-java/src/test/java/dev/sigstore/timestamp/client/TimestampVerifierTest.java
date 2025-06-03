@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.io.Resources;
 import dev.sigstore.json.ProtoJson;
@@ -34,8 +35,9 @@ import org.junit.jupiter.api.Test;
 
 public class TimestampVerifierTest {
   private static SigstoreTrustedRoot trustedRoot;
+  private static SigstoreTrustedRoot trustedRootWithOneTsa;
   private static SigstoreTrustedRoot trustedRootWithOutdatedTsa;
-  private static SigstoreTrustedRoot trustedRootWithMultipleTsas;
+  private static byte[] artifact;
   private static byte[] trustedTsRespBytesWithEmbeddedCerts;
   private static byte[] trustedTsRespBytesWithoutEmbeddedCerts;
   private static byte[] invalidTsRespBytes;
@@ -43,10 +45,11 @@ public class TimestampVerifierTest {
 
   @BeforeAll
   public static void loadResources() throws Exception {
-    // Response from Sigstore TSA (in trusted root) with embedded certs
+    artifact = "test\n".getBytes(StandardCharsets.UTF_8);
+
     try (var is =
         Resources.getResource(
-                "dev/sigstore/samples/timestamp-response/valid/sigstore_tsa_response_with_embedded_certs.tsr")
+                "dev/sigstore/samples/timestamp-response/valid/sigstage_tsa_response_with_embedded_certs.tsr")
             .openStream()) {
       trustedTsRespBytesWithEmbeddedCerts = is.readAllBytes();
     }
@@ -54,11 +57,11 @@ public class TimestampVerifierTest {
     // Response from Sigstore TSA (in trusted root) without embedded certs
     try (var is =
         Resources.getResource(
-                "dev/sigstore/samples/timestamp-response/valid/sigstore_tsa_response_without_embedded_certs.tsr")
+                "dev/sigstore/samples/timestamp-response/valid/sigstage_tsa_response_without_embedded_certs.tsr")
             .openStream()) {
       if (is == null) {
         throw new IOException(
-            "dev/sigstore/samples/timestamp-response/valid/sigstore_tsa_response_without_embedded_certs.tsr");
+            "dev/sigstore/samples/timestamp-response/valid/sigstage_tsa_response_without_embedded_certs.tsr");
       }
       trustedTsRespBytesWithoutEmbeddedCerts = is.readAllBytes();
     }
@@ -90,7 +93,7 @@ public class TimestampVerifierTest {
   public static void initTrustRoot() throws Exception {
     var json =
         Resources.toString(
-            Resources.getResource("dev/sigstore/trustroot/trusted_root.json"),
+            Resources.getResource("dev/sigstore/trustroot/staging_trusted_root.json"),
             StandardCharsets.UTF_8);
     var builder = TrustedRoot.newBuilder();
     ProtoJson.parser().merge(json, builder);
@@ -99,50 +102,33 @@ public class TimestampVerifierTest {
 
     json =
         Resources.toString(
-            Resources.getResource("dev/sigstore/trustroot/trusted_root_with_outdated_tsa.json"),
+            Resources.getResource("dev/sigstore/trustroot/staging_trusted_root_with_one_tsa.json"),
+            StandardCharsets.UTF_8);
+    builder = TrustedRoot.newBuilder();
+    ProtoJson.parser().merge(json, builder);
+
+    trustedRootWithOneTsa = SigstoreTrustedRoot.from(builder.build());
+    trustedRootWithOneTsa = SigstoreTrustedRoot.from(builder.build());
+
+    json =
+        Resources.toString(
+            Resources.getResource(
+                "dev/sigstore/trustroot/staging_trusted_root_with_outdated_tsa.json"),
             StandardCharsets.UTF_8);
     builder = TrustedRoot.newBuilder();
     ProtoJson.parser().merge(json, builder);
 
     trustedRootWithOutdatedTsa = SigstoreTrustedRoot.from(builder.build());
-
-    json =
-        Resources.toString(
-            Resources.getResource("dev/sigstore/trustroot/trusted_root_with_multiple_tsas.json"),
-            StandardCharsets.UTF_8);
-    builder = TrustedRoot.newBuilder();
-    ProtoJson.parser().merge(json, builder);
-
-    trustedRootWithMultipleTsas = SigstoreTrustedRoot.from(builder.build());
-  }
-
-  @Test
-  public void verify_success_validResponseWithEmbeddedCerts() throws Exception {
-    var tsResp =
-        ImmutableTimestampResponse.builder().encoded(trustedTsRespBytesWithEmbeddedCerts).build();
-    var verifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
-
-    assertDoesNotThrow(() -> verifier.verify(tsResp));
-  }
-
-  @Test
-  public void verify_success_validResponseWithoutEmbeddedCerts() throws Exception {
-    var tsResp =
-        ImmutableTimestampResponse.builder()
-            .encoded(trustedTsRespBytesWithoutEmbeddedCerts)
-            .build();
-    var verifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
-
-    assertDoesNotThrow(() -> verifier.verify(tsResp));
+    trustedRootWithOutdatedTsa = SigstoreTrustedRoot.from(builder.build());
   }
 
   @Test
   public void verify_success_validResponseWithEmbeddedCerts_multipleTsas() throws Exception {
     var tsResp =
         ImmutableTimestampResponse.builder().encoded(trustedTsRespBytesWithEmbeddedCerts).build();
-    var verifier = TimestampVerifier.newTimestampVerifier(trustedRootWithMultipleTsas);
+    var verifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
 
-    assertDoesNotThrow(() -> verifier.verify(tsResp));
+    assertDoesNotThrow(() -> verifier.verify(tsResp, artifact));
   }
 
   @Test
@@ -151,9 +137,29 @@ public class TimestampVerifierTest {
         ImmutableTimestampResponse.builder()
             .encoded(trustedTsRespBytesWithoutEmbeddedCerts)
             .build();
-    var verifier = TimestampVerifier.newTimestampVerifier(trustedRootWithMultipleTsas);
+    var verifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
 
-    assertDoesNotThrow(() -> verifier.verify(tsResp));
+    assertDoesNotThrow(() -> verifier.verify(tsResp, artifact));
+  }
+
+  @Test
+  public void verify_success_validResponseWithEmbeddedCerts_oneTsa() throws Exception {
+    var tsResp =
+        ImmutableTimestampResponse.builder().encoded(trustedTsRespBytesWithEmbeddedCerts).build();
+    var verifier = TimestampVerifier.newTimestampVerifier(trustedRootWithOneTsa);
+
+    assertDoesNotThrow(() -> verifier.verify(tsResp, artifact));
+  }
+
+  @Test
+  public void verify_success_validResponseWithoutEmbeddedCerts_oneTsa() throws Exception {
+    var tsResp =
+        ImmutableTimestampResponse.builder()
+            .encoded(trustedTsRespBytesWithoutEmbeddedCerts)
+            .build();
+    var verifier = TimestampVerifier.newTimestampVerifier(trustedRootWithOneTsa);
+
+    assertDoesNotThrow(() -> verifier.verify(tsResp, artifact));
   }
 
   @Test
@@ -161,7 +167,8 @@ public class TimestampVerifierTest {
     var tsResp = ImmutableTimestampResponse.builder().encoded(invalidTsRespBytes).build();
     var verifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
 
-    var tsve = assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp));
+    var tsve =
+        assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp, artifact));
     assertEquals("Failed to parse TimeStampResponse", tsve.getMessage());
   }
 
@@ -172,10 +179,13 @@ public class TimestampVerifierTest {
 
     var verifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
 
-    var tsve = assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp));
-    assertEquals(
-        "Certificates in token were not verifiable against TSAs\nhttps://timestamp.sigstore.dev (Embedded leaf certificate does not match this trusted TSA's leaf.)",
-        tsve.getMessage());
+    var tsve =
+        assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp, artifact));
+    assertTrue(
+        tsve.getMessage().startsWith("Certificates in token were not verifiable against TSAs"));
+    assertTrue(
+        tsve.getMessage()
+            .contains("Embedded leaf certificate does not match this trusted TSA's leaf."));
   }
 
   @Test
@@ -186,9 +196,10 @@ public class TimestampVerifierTest {
 
     var verifier = TimestampVerifier.newTimestampVerifier(trustedRootWithOutdatedTsa);
 
-    var tsve = assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp));
+    var tsve =
+        assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp, artifact));
     assertEquals(
-        "Certificate was not verifiable against TSAs\nhttps://timestamp.sigstore.dev (Timestamp generation time is not within TSA's validity period.)",
+        "Certificate was not verifiable against TSAs\nhttps://timestamp.sigstage.dev/api/v1/timestamp (Timestamp generation time is not within TSA's validity period.)",
         tsve.getMessage());
   }
 
@@ -205,7 +216,8 @@ public class TimestampVerifierTest {
     var tsResp = ImmutableTimestampResponse.builder().encoded(failResponseBytes).build();
     var verifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
 
-    var tsve = assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp));
+    var tsve =
+        assertThrows(TimestampVerificationException.class, () -> verifier.verify(tsResp, artifact));
     assertEquals("No TimeStampToken found in response", tsve.getMessage());
   }
 }
