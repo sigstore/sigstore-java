@@ -37,6 +37,10 @@ import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.rekor.dsse.v0_0_1.Dsse;
 import dev.sigstore.rekor.dsse.v0_0_1.PayloadHash;
+import dev.sigstore.timestamp.client.ImmutableTimestampResponse;
+import dev.sigstore.timestamp.client.TimestampException;
+import dev.sigstore.timestamp.client.TimestampVerificationException;
+import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
@@ -51,9 +55,9 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.sql.Date;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -65,10 +69,15 @@ public class KeylessVerifier {
 
   private final FulcioVerifier fulcioVerifier;
   private final RekorVerifier rekorVerifier;
+  private final TimestampVerifier timestampVerifier;
 
-  private KeylessVerifier(FulcioVerifier fulcioVerifier, RekorVerifier rekorVerifier) {
+  private KeylessVerifier(
+      FulcioVerifier fulcioVerifier,
+      RekorVerifier rekorVerifier,
+      TimestampVerifier timestampVerifier) {
     this.fulcioVerifier = fulcioVerifier;
     this.rekorVerifier = rekorVerifier;
+    this.timestampVerifier = timestampVerifier;
   }
 
   public static KeylessVerifier.Builder builder() {
@@ -89,7 +98,8 @@ public class KeylessVerifier {
       var trustedRoot = trustedRootProvider.get();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
-      return new KeylessVerifier(fulcioVerifier, rekorVerifier);
+      var timestampVerifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
+      return new KeylessVerifier(fulcioVerifier, rekorVerifier, timestampVerifier);
     }
 
     public Builder sigstorePublicDefaults() {
@@ -148,11 +158,6 @@ public class KeylessVerifier {
           "Bundle verification expects 1 entry, but found " + bundle.getEntries().size());
     }
 
-    if (!bundle.getTimestamps().isEmpty()) {
-      throw new KeylessVerificationException(
-          "Cannot verify bundles with timestamp verification material");
-    }
-
     var signingCert = bundle.getCertPath();
     var leafCert = Certificates.getLeaf(signingCert);
 
@@ -188,11 +193,43 @@ public class KeylessVerifier {
       throw new KeylessVerificationException("Signing time was after certificate expiry", e);
     }
 
+    byte[] signature;
     if (bundle.getMessageSignature().isPresent()) { // hashedrekord
-      checkMessageSignature(
-          bundle.getMessageSignature().get(), rekorEntry, artifactDigest, leafCert);
+      var messageSignature = bundle.getMessageSignature().get();
+      checkMessageSignature(messageSignature, rekorEntry, artifactDigest, leafCert);
+      signature = messageSignature.getSignature();
     } else { // dsse
-      checkDsseEnvelope(rekorEntry, bundle.getDsseEnvelope().get(), artifactDigest, leafCert);
+      var dsseEnvelope = bundle.getDsseEnvelope().get();
+      checkDsseEnvelope(rekorEntry, dsseEnvelope, artifactDigest, leafCert);
+      signature = dsseEnvelope.getSignature();
+    }
+
+    verifyTimestamps(leafCert, bundle.getTimestamps(), signature);
+  }
+
+  private void verifyTimestamps(
+      X509Certificate leafCert, List<Bundle.Timestamp> timestamps, byte[] signature)
+      throws KeylessVerificationException {
+    if (timestamps == null || timestamps.isEmpty()) {
+      return;
+    }
+    for (Bundle.Timestamp timestamp : timestamps) {
+      byte[] tsBytes = timestamp.getRfc3161Timestamp();
+      if (tsBytes == null || tsBytes.length == 0) {
+        throw new KeylessVerificationException(
+            "Found an empty or null RFC3161 timestamp in bundle");
+      }
+      try {
+        var tsResp = ImmutableTimestampResponse.builder().encoded(tsBytes).build();
+        timestampVerifier.verify(tsResp, signature);
+        leafCert.checkValidity(tsResp.getGenTime());
+      } catch (TimestampException
+          | CertificateNotYetValidException
+          | CertificateExpiredException
+          | TimestampVerificationException e) {
+        throw new KeylessVerificationException(
+            "RFC3161 timestamp verification failed: " + e.getMessage(), e);
+      }
     }
   }
 

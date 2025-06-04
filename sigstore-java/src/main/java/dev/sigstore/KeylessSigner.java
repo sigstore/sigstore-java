@@ -26,6 +26,7 @@ import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.Bundle.HashAlgorithm;
 import dev.sigstore.bundle.Bundle.MessageSignature;
 import dev.sigstore.bundle.ImmutableBundle;
+import dev.sigstore.bundle.ImmutableTimestamp;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -46,6 +47,13 @@ import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.timestamp.client.ImmutableTimestampRequest;
+import dev.sigstore.timestamp.client.TimestampClient;
+import dev.sigstore.timestamp.client.TimestampClientHttp;
+import dev.sigstore.timestamp.client.TimestampException;
+import dev.sigstore.timestamp.client.TimestampResponse;
+import dev.sigstore.timestamp.client.TimestampVerificationException;
+import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
@@ -89,6 +97,8 @@ public class KeylessSigner implements AutoCloseable {
   private final FulcioVerifier fulcioVerifier;
   private final RekorClient rekorClient;
   private final RekorVerifier rekorVerifier;
+  private final TimestampClient timestampClient;
+  private final TimestampVerifier timestampVerifier;
   private final OidcClients oidcClients;
   private final List<OidcTokenMatcher> oidcIdentities;
   private final Signer signer;
@@ -114,6 +124,8 @@ public class KeylessSigner implements AutoCloseable {
       FulcioVerifier fulcioVerifier,
       RekorClient rekorClient,
       RekorVerifier rekorVerifier,
+      TimestampClient timestampClient,
+      TimestampVerifier timestampVerifier,
       OidcClients oidcClients,
       List<OidcTokenMatcher> oidcIdentities,
       Signer signer,
@@ -122,6 +134,8 @@ public class KeylessSigner implements AutoCloseable {
     this.fulcioVerifier = fulcioVerifier;
     this.rekorClient = rekorClient;
     this.rekorVerifier = rekorVerifier;
+    this.timestampClient = timestampClient;
+    this.timestampVerifier = timestampVerifier;
     this.oidcClients = oidcClients;
     this.oidcIdentities = oidcIdentities;
     this.signer = signer;
@@ -152,6 +166,7 @@ public class KeylessSigner implements AutoCloseable {
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
     private URI fulcioUri;
     private URI rekorUri;
+    private URI timestampUri;
 
     @CanIgnoreReturnValue
     public Builder fulcioUrl(URI uri) {
@@ -162,6 +177,12 @@ public class KeylessSigner implements AutoCloseable {
     @CanIgnoreReturnValue
     public Builder rekorUrl(URI uri) {
       this.rekorUri = uri;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder timestampUrl(URI uri) {
+      this.timestampUri = uri;
       return this;
     }
 
@@ -233,11 +254,19 @@ public class KeylessSigner implements AutoCloseable {
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
       var rekorClient = RekorClientHttp.builder().setUri(rekorUri).build();
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
+      TimestampClient timestampClient = null;
+      TimestampVerifier timestampVerifier = null;
+      if (timestampUri != null) { // Building with staging defaults
+        timestampClient = TimestampClientHttp.builder().setUri(timestampUri).build();
+        timestampVerifier = TimestampVerifier.newTimestampVerifier(trustedRoot);
+      }
       return new KeylessSigner(
           fulcioClient,
           fulcioVerifier,
           rekorClient,
           rekorVerifier,
+          timestampClient,
+          timestampVerifier,
           oidcClients,
           oidcIdentities,
           signer,
@@ -270,6 +299,7 @@ public class KeylessSigner implements AutoCloseable {
       trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
       fulcioUri = FulcioClient.STAGING_URI;
       rekorUri = RekorClient.STAGING_URI;
+      timestampUri = TimestampClient.STAGING_URI;
       oidcClients(OidcClients.STAGING);
       signer(Signers.newEcdsaSigner());
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
@@ -355,13 +385,43 @@ public class KeylessSigner implements AutoCloseable {
         throw new KeylessSignerException("Failed to validate rekor response after signing", ex);
       }
 
-      result.add(
+      var bundleBuilder =
           ImmutableBundle.builder()
               .certPath(signingCert)
               .addEntries(rekorResponse.getEntry())
               .messageSignature(
-                  MessageSignature.of(HashAlgorithm.SHA2_256, artifactDigest, signature))
-              .build());
+                  MessageSignature.of(HashAlgorithm.SHA2_256, artifactDigest, signature));
+
+      // Timestamp functionality only enabled if timestampUri is provided
+      if (timestampClient != null && timestampVerifier != null) {
+        var signatureDigest = Hashing.sha256().hashBytes(signature).asBytes();
+
+        var tsReq =
+            ImmutableTimestampRequest.builder()
+                .hashAlgorithm(dev.sigstore.timestamp.client.HashAlgorithm.SHA256)
+                .hash(signatureDigest)
+                .build();
+
+        TimestampResponse tsResp;
+        try {
+          tsResp = timestampClient.timestamp(tsReq);
+        } catch (TimestampException ex) {
+          throw new KeylessSignerException("Failed to generate timestamp", ex);
+        }
+
+        try {
+          timestampVerifier.verify(tsResp, signature);
+        } catch (TimestampVerificationException ex) {
+          throw new KeylessSignerException("Returned timestamp was invalid", ex);
+        }
+
+        Bundle.Timestamp timestamp =
+            ImmutableTimestamp.builder().rfc3161Timestamp(tsResp.getEncoded()).build();
+
+        bundleBuilder.addTimestamps(timestamp);
+      }
+
+      result.add(bundleBuilder.build());
     }
     return result.build();
   }

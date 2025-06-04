@@ -20,6 +20,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.strings.StringMatcher;
 import dev.sigstore.testing.CertGenerator;
@@ -287,5 +288,97 @@ public class KeylessVerifierTest {
         ex.getMessage(),
         CoreMatchers.startsWith(
             "Provided artifact digest does not match any subject sha256 digests in DSSE payload"));
+  }
+
+  @Test
+  public void testVerify_validRfc3161Timestamp() throws Exception {
+    var artifactUrl = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt");
+    var artifactBytes = Resources.toByteArray(artifactUrl);
+    var artifactDigest = Hashing.sha256().hashBytes(artifactBytes).asBytes();
+
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle-with-timestamp.sigstore"),
+            StandardCharsets.UTF_8);
+    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+
+    Assertions.assertDoesNotThrow(
+        () ->
+            verifier.verify(
+                artifactDigest,
+                Bundle.from(new StringReader(bundleFile)),
+                VerificationOptions.empty()));
+  }
+
+  @Test
+  public void testVerify_invalidRfc3161Timestamp() throws Exception {
+    var tsRespBytesInvalid =
+        Resources.toByteArray(
+            Resources.getResource(
+                "dev/sigstore/samples/timestamp-response/invalid/sigstore_tsa_response_invalid.tsr"));
+
+    var artifactUrl = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt");
+    var artifactBytes = Resources.toByteArray(artifactUrl);
+    var artifactDigest = Hashing.sha256().hashBytes(artifactBytes).asBytes();
+
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.v3.sigstore"),
+            StandardCharsets.UTF_8);
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+
+    var baseBundle = Bundle.from(new StringReader(bundleFile));
+    var testBundle =
+        ImmutableBundle.builder()
+            .from(baseBundle)
+            .timestamps(List.of(createTimestamp(tsRespBytesInvalid)))
+            .build();
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () -> verifier.verify(artifactDigest, testBundle, VerificationOptions.empty()));
+    MatcherAssert.assertThat(
+        ex.getMessage(),
+        CoreMatchers.equalTo(
+            "RFC3161 timestamp verification failed: Failed to parse TimeStampResponse"));
+  }
+
+  @Test
+  public void testVerify_invalidTimestampGenTime() throws Exception {
+    var tsRespBytesInvalidGenTime =
+        Resources.toByteArray(
+            Resources.getResource(
+                "dev/sigstore/samples/timestamp-response/valid/sigstore_tsa_response_with_embedded_certs.tsr"));
+
+    var artifactResourcePath = "dev/sigstore/samples/bundles/artifact.txt";
+    var artifactBytes = Resources.toByteArray(Resources.getResource(artifactResourcePath));
+    var artifactDigest = Hashing.sha256().hashBytes(artifactBytes).asBytes();
+
+    var bundleFileContent =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.v3.sigstore"),
+            StandardCharsets.UTF_8);
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+
+    var baseBundle = Bundle.from(new StringReader(bundleFileContent));
+    var testBundle =
+        ImmutableBundle.builder()
+            .from(baseBundle)
+            .timestamps(List.of(createTimestamp(tsRespBytesInvalidGenTime)))
+            .build();
+
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () -> verifier.verify(artifactDigest, testBundle, VerificationOptions.empty()));
+    MatcherAssert.assertThat(
+        ex.getMessage(),
+        CoreMatchers.startsWith(
+            "RFC3161 timestamp verification failed: Certificates in token were not verifiable against TSAs"));
+  }
+
+  private Bundle.Timestamp createTimestamp(byte[] rfc3161Bytes) {
+    return () -> rfc3161Bytes;
   }
 }
