@@ -20,10 +20,12 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.ProtoMutators;
+import dev.sigstore.proto.bundle.v1.TimestampVerificationData;
 import dev.sigstore.proto.bundle.v1.VerificationMaterial;
 import dev.sigstore.proto.common.v1.HashOutput;
 import dev.sigstore.proto.common.v1.LogId;
 import dev.sigstore.proto.common.v1.MessageSignature;
+import dev.sigstore.proto.common.v1.RFC3161SignedTimestamp;
 import dev.sigstore.proto.common.v1.X509Certificate;
 import dev.sigstore.proto.rekor.v1.Checkpoint;
 import dev.sigstore.proto.rekor.v1.InclusionPromise;
@@ -34,6 +36,7 @@ import dev.sigstore.rekor.client.RekorEntry;
 import java.security.cert.CertificateEncodingException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 class BundleWriter {
@@ -110,6 +113,8 @@ class BundleWriter {
           "Exactly 1 rekor entry must be present in the signing result");
     }
     builder.addTlogEntries(buildTlogEntries(bundle.getEntries().get(0)));
+    buildTimestampVerificationData(bundle.getTimestamps())
+        .ifPresent(data -> builder.setTimestampVerificationData(data));
     return builder;
   }
 
@@ -147,5 +152,24 @@ class BundleWriter {
                     .map(ByteString::fromHex)
                     .collect(Collectors.toList()))
             .setCheckpoint(Checkpoint.newBuilder().setEnvelope(inclusionProof.getCheckpoint())));
+  }
+
+  private static Optional<TimestampVerificationData> buildTimestampVerificationData(
+      List<Bundle.Timestamp> bundleTimestamps) {
+    if (bundleTimestamps == null || bundleTimestamps.isEmpty()) {
+      return Optional.empty();
+    }
+    TimestampVerificationData.Builder tsvBuilder = TimestampVerificationData.newBuilder();
+    for (Bundle.Timestamp ts : bundleTimestamps) {
+      byte[] tsBytes = ts.getRfc3161Timestamp();
+      if (tsBytes != null && tsBytes.length > 0) {
+        tsvBuilder.addRfc3161Timestamps(
+            RFC3161SignedTimestamp.newBuilder().setSignedTimestamp(ByteString.copyFrom(tsBytes)));
+      }
+    }
+    if (tsvBuilder.getRfc3161TimestampsCount() > 0) {
+      return Optional.of(tsvBuilder.build());
+    }
+    return Optional.empty();
   }
 }
