@@ -15,10 +15,25 @@
  */
 package dev.sigstore.timestamp.client;
 
+import java.io.IOException;
+import java.util.Date;
+import org.bouncycastle.tsp.TSPException;
+import org.bouncycastle.tsp.TimeStampResponse;
 import org.immutables.value.Value.Immutable;
+import org.immutables.value.Value.Lazy;
 
 @Immutable
 public interface TimestampResponse {
   /** The ASN.1 encoded representation of the timestamp response. */
   byte[] getEncoded();
+
+  @Lazy
+  default Date getGenTime() throws TimestampException {
+    try {
+      var bcTsResp = new TimeStampResponse(getEncoded());
+      return bcTsResp.getTimeStampToken().getTimeStampInfo().getGenTime();
+    } catch (TSPException | IOException e) {
+      throw new TimestampException("Failed to retrieve timestamp generation time", e);
+    }
+  }
 }
