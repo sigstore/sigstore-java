@@ -61,11 +61,9 @@ class PluginSmokeTest : BaseGradleTest() {
                 oidcClient {
                     // Note: the code is red in IDEA because it does not understand
                     // there's sam-with-receiver plugin for Action<.>
-                    gitHub {
-                        audience.set("sigstore-test")
-                    }
+                    gitHub {}
                     web {
-                        clientId.set("sigstore-test")
+                        issuer.set("https://sigstore-test.example.com")
                     }
                 }
             }

@@ -19,10 +19,12 @@ import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
+import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Locale;
@@ -52,7 +54,7 @@ public class TimestampClientHttp implements TimestampClient {
 
   public static class Builder {
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
-    private URI uri = TimestampClient.STAGING_URI;
+    private Service service;
 
     private Builder() {}
 
@@ -63,14 +65,15 @@ public class TimestampClientHttp implements TimestampClient {
     }
 
     /** Base url of the timestamp authority. */
-    public Builder setUri(URI uri) {
-      this.uri = uri;
+    public Builder setService(Service service) {
+      this.service = service;
       return this;
     }
 
     public TimestampClientHttp build() throws IOException {
+      Preconditions.checkNotNull(service);
       var requestFactory = HttpClients.newRequestFactory(httpParams);
-      return new TimestampClientHttp(requestFactory, uri);
+      return new TimestampClientHttp(requestFactory, service.getUrl());
     }
   }
 

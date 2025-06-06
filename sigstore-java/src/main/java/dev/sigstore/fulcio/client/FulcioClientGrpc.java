@@ -17,6 +17,7 @@ package dev.sigstore.fulcio.client;
 
 import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.SIGNED_CERTIFICATE_DETACHED_SCT;
 
+import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import dev.sigstore.fulcio.v2.CAGrpc;
@@ -28,6 +29,7 @@ import dev.sigstore.fulcio.v2.PublicKeyRequest;
 import dev.sigstore.http.GrpcChannels;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.trustroot.Service;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.security.cert.CertPath;
@@ -55,7 +57,7 @@ public class FulcioClientGrpc implements FulcioClient {
   }
 
   public static class Builder {
-    private URI uri = FulcioClient.PUBLIC_GOOD_URI;
+    private Service service;
     private HttpParams httpParams = ImmutableHttpParams.builder().build();
 
     private Builder() {}
@@ -67,13 +69,14 @@ public class FulcioClientGrpc implements FulcioClient {
     }
 
     /** Base url of the remote fulcio instance. */
-    public Builder setUri(URI uri) {
-      this.uri = uri;
+    public Builder setService(Service service) {
+      this.service = service;
       return this;
     }
 
     public FulcioClientGrpc build() {
-      return new FulcioClientGrpc(httpParams, uri);
+      Preconditions.checkNotNull(service);
+      return new FulcioClientGrpc(httpParams, service.getUrl());
     }
   }
 

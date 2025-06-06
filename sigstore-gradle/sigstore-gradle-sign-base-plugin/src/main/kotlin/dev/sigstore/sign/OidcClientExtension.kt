@@ -50,12 +50,8 @@ abstract class OidcClientExtension @Inject constructor(
         if (actionsOidcAvailable) {
             clients.register<GitHubActionsOidc>(GITHUB_ACTIONS_CLIENT_NAME)
         }
-
-        client.convention(
-            clients.named(
-                if (actionsOidcAvailable) GITHUB_ACTIONS_CLIENT_NAME else WEB_CLIENT_NAME
-            )
-        )
+        // do not assign a default convention for client, that is delegated to KeylessSigner in
+        // the default case.
     }
 
     private inline fun <reified T : OidcClientConfiguration> setup(

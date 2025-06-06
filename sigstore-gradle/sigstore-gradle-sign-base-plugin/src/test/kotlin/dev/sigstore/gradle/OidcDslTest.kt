@@ -27,6 +27,8 @@ class OidcDslTest: BaseGradleTest() {
     fun `configure GitHub OIDC client explicitly`(gradle: TestedGradle) {
         writeBuildGradle(
             """
+            import dev.sigstore.sign.GitHubActionsOidc
+
             plugins {
                 id("java")
                 id("dev.sigstore.sign-base")
@@ -35,11 +37,15 @@ class OidcDslTest: BaseGradleTest() {
             sigstoreSign {
                 oidcClient {
                     gitHub()
+                    client.set(gitHub)
                 }
             }
-            tasks.create('printConfig') {
+            tasks.create('checkConfig') {
                 def oidcClient = project.sigstoreSign.oidcClient.client
                 doLast {
+                    if (!oidcClient.isPresent()) {
+                        throw GradleException("oidc client was unexpectadly not present")
+                    }
                     println("s: ${'$'}{oidcClient.get()}")
                 }
             }
@@ -47,7 +53,32 @@ class OidcDslTest: BaseGradleTest() {
         )
         enableConfigurationCache(gradle)
         enableProjectIsolation(gradle)
-        prepare(gradle.version, "printConfig", "-s")
+        prepare(gradle.version, "checkConfig", "-s")
+            .build()
+    }
+    @ParameterizedTest
+    @MethodSource("gradleVersionAndSettings")
+    fun `unconfigured GitHub OIDC client is empty`(gradle: TestedGradle) {
+        writeBuildGradle(
+            """
+            plugins {
+                id("java")
+                id("dev.sigstore.sign-base")
+            }
+            group = "dev.sigstore.test"
+            tasks.create('checkConfig') {
+                def oidcClient = project.sigstoreSign.oidcClient.client
+                doLast {
+                    if (oidcClient.isPresent()) {
+                        throw GradleException("gradle specific oidc client configured, when it should be delegating to lib:sigstore-java")
+                    }
+                }
+            }
+            """.trimIndent()
+        )
+        enableConfigurationCache(gradle)
+        enableProjectIsolation(gradle)
+        prepare(gradle.version, "checkConfig", "-s")
             .build()
     }
 }

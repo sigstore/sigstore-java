@@ -17,9 +17,13 @@
 package dev.sigstore.sign
 
 import dev.sigstore.oidc.client.WebOidcClient
+import dev.sigstore.trustroot.ImmutableService
+import dev.sigstore.trustroot.ImmutableValidFor
 import org.gradle.api.provider.Property
 import org.gradle.util.GradleVersion
 import java.io.Serializable
+import java.net.URI
+import java.time.Instant
 import javax.inject.Inject
 
 abstract class WebOidc @Inject constructor() : OidcClientConfiguration, Serializable {
@@ -30,7 +34,7 @@ abstract class WebOidc @Inject constructor() : OidcClientConfiguration, Serializ
     init {
         try {
             clientId.convention("sigstore")
-            issuer.convention(WebOidcClient.PUBLIC_DEX_ISSUER)
+            issuer.convention("https://oauth2.sigstore.dev/auth")
         } catch (e: NullPointerException) {
             // NPE here means Gradle tries to isolate WebOidc for passing it to WorkerAction parameters
             // Gradle 7.5.1 does not have such an issue, so rethrow unexpected NPEs
@@ -43,7 +47,13 @@ abstract class WebOidc @Inject constructor() : OidcClientConfiguration, Serializ
     override fun build(): Any =
         WebOidcClient.builder()
             .setClientId(clientId.get())
-            .setIssuer(issuer.get())
+            .setIssuer(
+                ImmutableService.builder().apiVersion(1).url(URI.create(issuer.get())).validFor(
+                    ImmutableValidFor.builder().start(
+                        Instant.now()
+                    ).build()
+                ).build()
+            )
             .build()
 
     override fun key(): Any = Pair(clientId.get(), issuer.get())

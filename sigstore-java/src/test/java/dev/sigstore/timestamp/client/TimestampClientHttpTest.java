@@ -21,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.sigstore.trustroot.LegacySigningConfig;
+import dev.sigstore.trustroot.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import okhttp3.mockwebserver.MockResponse;
@@ -48,7 +50,10 @@ public class TimestampClientHttpTest {
 
   @Test
   public void timestamp_success() throws Exception {
-    var client = TimestampClientHttp.builder().build();
+    var client =
+        TimestampClientHttp.builder()
+            .setService(LegacySigningConfig.STAGING.getTsas().get(0))
+            .build();
 
     var tsResp = client.timestamp(tsReq);
 
@@ -80,7 +85,10 @@ public class TimestampClientHttpTest {
             .nonce(tsReq.getNonce())
             .build();
 
-    var client = TimestampClientHttp.builder().build();
+    var client =
+        TimestampClientHttp.builder()
+            .setService(LegacySigningConfig.STAGING.getTsas().get(0))
+            .build();
 
     var tse =
         assertThrows(
@@ -100,7 +108,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
+      var client = TimestampClientHttp.builder().setService(Service.of(tsaUri, 1)).build();
 
       var tse =
           assertThrows(
@@ -122,7 +130,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
+      var client = TimestampClientHttp.builder().setService(Service.of(tsaUri, 1)).build();
 
       var tse =
           assertThrows(
@@ -144,7 +152,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
+      var client = TimestampClientHttp.builder().setService(Service.of(tsaUri, 1)).build();
 
       var tse =
           assertThrows(
@@ -168,7 +176,7 @@ public class TimestampClientHttpTest {
       server.start();
 
       var tsaUri = server.url("/v1/timestamp/").uri();
-      var client = TimestampClientHttp.builder().setUri(tsaUri).build();
+      var client = TimestampClientHttp.builder().setService(Service.of(tsaUri, 1)).build();
 
       var tse =
           assertThrows(

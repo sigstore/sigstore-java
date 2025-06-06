@@ -53,6 +53,9 @@ dependencies {
 
 sigstoreSign {
     oidcClient {
+        // oidcClient configuration should very rarely be configured, it should be
+        // inferred from a sigstore deployment's config obtained from a TUF repository
+        // with a default set of ambient credential providers
         gitHub {
             audience.set("sigstore")
         }
@@ -60,8 +63,7 @@ sigstoreSign {
             clientId.set("sigstore")
             issuer.set("https://oauth2.sigstore.dev/auth")
         }
-        // By default, gitHub client is used if ACTIONS_ID_TOKEN_REQUEST_URL environment variable exists
-        // This setting would enforce web OIDC client
+        // override the client config to a specific provider
         client.set(web)
         // or
         client(web)
