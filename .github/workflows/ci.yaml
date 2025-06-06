@@ -15,19 +15,19 @@ on:
   pull_request: {}
   workflow_call: {} # allow this workflow to be called by other workflows
 
-concurrency:
-  # On master/release, we don't want any jobs cancelled
-  # On PR branches, we cancel the job if new commits are pushed
-  # More info: https://stackoverflow.com/a/70972844/1261287
-  group: ${{ github.ref }}-ci
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
-
 jobs:
   build:
     strategy:
       matrix:
         java-version: [11, 17]
       fail-fast: false
+
+    concurrency:
+      # On main/release, we don't want any jobs cancelled
+      # On PR branches, we cancel the job if new commits are pushed
+      # More info: https://stackoverflow.com/a/70972844/1261287
+      group: ${{ github.workflow }}-${{ github.github.ref }}-${{ matrix.java-version }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
     runs-on: ubuntu-latest
     permissions:
