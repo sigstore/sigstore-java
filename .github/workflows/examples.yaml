@@ -2,11 +2,8 @@ name: Examples
 
 on:
   push:
-    branches:
-      - '*'
-  pull_request:
-    branches:
-      - main
+    branches: [main]
+  pull_request: {}
 
 jobs:
   examples-release:
@@ -22,13 +19,13 @@ jobs:
 
     permissions:
       id-token: write
-    
+
     steps:
     - name: Enable long paths in Git
       if: runner.os == 'Windows'
       run: git config --system core.longpaths true
       shell: bash
-      
+
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         persist-credentials: false
@@ -46,13 +43,13 @@ jobs:
       working-directory: examples/hello-world
       shell: bash
       run: ./test.sh
-      
+
   examples-dev:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        
+
     name: Build and run dev examples on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     concurrency:
@@ -67,7 +64,7 @@ jobs:
       if: runner.os == 'Windows'
       run: git config --system core.longpaths true
       shell: bash
-      
+
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         persist-credentials: false
@@ -96,4 +93,4 @@ jobs:
       shell: bash
       env:
         VERSION: ${{ steps.dev_version.outputs.version }}
-      run: ./test.sh -Dsigstore.version=${VERSION}      
+      run: ./test.sh -Dsigstore.version=${VERSION}

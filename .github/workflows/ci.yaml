@@ -11,12 +11,9 @@ name: Test
 
 on:
   push:
-    branches:
-      - '*'
-  pull_request:
-    branches:
-      - main
-  workflow_call: # allow this workflow to be called by other workflows
+    branches: [main]
+  pull_request: {}
+  workflow_call: {} # allow this workflow to be called by other workflows
 
 concurrency:
   # On master/release, we don't want any jobs cancelled

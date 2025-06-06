@@ -2,10 +2,9 @@ name: TUF Conformance Tests
 
 on:
   push:
-    branches:
-      - '**'
-  pull_request:
-  workflow_dispatch:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
   # TODO: add cron
 
 jobs:
