@@ -41,6 +41,9 @@ public abstract class PublicKey {
     if (getKeyDetails().equals("PKCS1_RSA_PKCS1V5")) {
       return Keys.parseRsaPkcs1(getRawBytes());
     }
+    if (getKeyDetails().equals("PKIX_ED25519")) {
+      return Keys.parseEd25519(getRawBytes());
+    }
     throw new InvalidKeySpecException("Unsupported key algorithm: " + getKeyDetails());
   }
 
