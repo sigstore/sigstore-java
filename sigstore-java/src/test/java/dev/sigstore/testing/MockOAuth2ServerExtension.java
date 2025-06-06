@@ -21,10 +21,8 @@ import com.google.common.io.Resources;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.WebOidcClient;
-import dev.sigstore.trustroot.ImmutableService;
-import dev.sigstore.trustroot.ImmutableValidFor;
+import dev.sigstore.trustroot.Service;
 import java.io.IOException;
-import java.time.Instant;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
 import org.junit.jupiter.api.extension.*;
@@ -69,12 +67,7 @@ public class MockOAuth2ServerExtension
     try (var webClient = new WebClient()) {
       var oidcClient =
           WebOidcClient.builder()
-              .setIssuer(
-                  ImmutableService.builder()
-                      .url(mockOAuthServer.issuerUrl(OAUTH_ISSUER_ID).uri())
-                      .apiVersion(1)
-                      .validFor(ImmutableValidFor.builder().start(Instant.now()).build())
-                      .build())
+              .setIssuer(Service.of(mockOAuthServer.issuerUrl(OAUTH_ISSUER_ID).uri(), 1))
               .setBrowser(webClient::getPage)
               .build();
 

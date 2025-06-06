@@ -17,12 +17,10 @@ package dev.sigstore.oidc.client;
 
 import com.gargoylesoftware.htmlunit.WebClient;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
-import dev.sigstore.trustroot.ImmutableService;
-import dev.sigstore.trustroot.ImmutableValidFor;
 import dev.sigstore.trustroot.LegacySigningConfig;
+import dev.sigstore.trustroot.Service;
 import io.github.netmikey.logunit.api.LogCapturer;
 import java.net.URI;
-import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -42,12 +40,7 @@ public class WebOidcClientTest {
     try (var webClient = new WebClient()) {
       var oidcClient =
           WebOidcClient.builder()
-              .setIssuer(
-                  ImmutableService.builder()
-                      .url(URI.create(server.getIssuer()))
-                      .apiVersion(1)
-                      .validFor(ImmutableValidFor.builder().start(Instant.now()).build())
-                      .build())
+              .setIssuer(Service.of(URI.create(server.getIssuer()), 1))
               .setBrowser(webClient::getPage)
               .build();
 
