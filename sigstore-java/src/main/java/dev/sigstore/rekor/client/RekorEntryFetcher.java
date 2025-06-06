@@ -18,10 +18,7 @@ package dev.sigstore.rekor.client;
 import dev.sigstore.KeylessVerificationException;
 import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.encryption.certificates.Certificates;
-import dev.sigstore.trustroot.ImmutableService;
-import dev.sigstore.trustroot.ImmutableValidFor;
-import dev.sigstore.trustroot.SigstoreConfigurationException;
-import dev.sigstore.trustroot.TransparencyLog;
+import dev.sigstore.trustroot.*;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -29,7 +26,6 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.sql.Date;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -65,16 +61,7 @@ public class RekorEntryFetcher {
         trustedRoot.getTLogs().stream()
             .map(TransparencyLog::getBaseUrl)
             .distinct()
-            .map(
-                uri ->
-                    RekorClientHttp.builder()
-                        .setService(
-                            ImmutableService.builder()
-                                .url(uri)
-                                .apiVersion(1)
-                                .validFor(ImmutableValidFor.builder().start(Instant.now()).build())
-                                .build())
-                        .build())
+            .map(uri -> RekorClientHttp.builder().setService(Service.of(uri, 1)).build())
             .collect(Collectors.<RekorClient>toList());
     return new RekorEntryFetcher(rekorClients);
   }

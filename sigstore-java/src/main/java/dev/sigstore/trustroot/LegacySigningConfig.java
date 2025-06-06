@@ -47,13 +47,11 @@ public class LegacySigningConfig {
         ImmutableSigstoreSigningConfig.builder()
             .tLogConfig(anySelector)
             .tsaConfig(anySelector)
-            .addCas(ImmutableService.builder().apiVersion(1).url(fulcioUrl).validFor(now).build())
-            .addTLogs(ImmutableService.builder().apiVersion(1).url(rekorUrl).validFor(now).build())
-            .addOidcProviders(
-                ImmutableService.builder().apiVersion(1).url(dexUrl).validFor(now).build());
+            .addCas(Service.of(fulcioUrl, 1))
+            .addTLogs(Service.of(rekorUrl, 1))
+            .addOidcProviders(Service.of(dexUrl, 1));
     if (tsaUrl != null) {
-      signingConfigBuilder.addTsas(
-          ImmutableService.builder().apiVersion(1).url(tsaUrl).validFor(now).build());
+      signingConfigBuilder.addTsas(Service.of(tsaUrl, 1));
     }
     return signingConfigBuilder.build();
   }
