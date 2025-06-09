@@ -34,6 +34,8 @@ public interface TransparencyLog {
 
   PublicKey getPublicKey();
 
+  // TODO (https://github.com/sigstore/sigstore-java/issues/987) move off of log_id
+  @SuppressWarnings("deprecation")
   static TransparencyLog from(TransparencyLogInstance proto) {
     return ImmutableTransparencyLog.builder()
         .baseUrl(URI.create(proto.getBaseUrl()))
