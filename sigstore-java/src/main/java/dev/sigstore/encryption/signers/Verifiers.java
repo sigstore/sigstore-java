@@ -28,9 +28,13 @@ public class Verifiers {
     if (publicKey.getAlgorithm().equals("EC") || publicKey.getAlgorithm().equals("ECDSA")) {
       return new EcdsaVerifier(publicKey);
     }
+    // EdDSA is the family, Ed25519 is a specific curve/algorithm instance.
+    if (publicKey.getAlgorithm().equals("Ed25519")) {
+      return new Ed25519Verifier(publicKey);
+    }
     throw new NoSuchAlgorithmException(
         "Cannot verify signatures for key type '"
             + publicKey.getAlgorithm()
-            + "', this client only supports RSA and ECDSA verification");
+            + "', this client only supports RSA, ECDSA, and Ed25519 verification");
   }
 }
