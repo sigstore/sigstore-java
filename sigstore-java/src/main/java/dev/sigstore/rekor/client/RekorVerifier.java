@@ -17,6 +17,8 @@ package dev.sigstore.rekor.client;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.encryption.signers.Verifiers;
+import dev.sigstore.merkle.InclusionProofVerificationException;
+import dev.sigstore.merkle.InclusionProofVerifier;
 import dev.sigstore.rekor.client.RekorEntry.Checkpoint;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import dev.sigstore.trustroot.TransparencyLog;
@@ -25,6 +27,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -92,49 +95,31 @@ public class RekorVerifier {
 
   /** Verify that a Rekor Entry is in the log by checking inclusion proof. */
   private void verifyInclusionProof(RekorEntry entry) throws RekorVerificationException {
-
     var inclusionProof = entry.getVerification().getInclusionProof();
 
     var leafHash =
         Hashing.sha256()
-            .hashBytes(combineBytes(new byte[] {0x00}, Base64.getDecoder().decode(entry.getBody())))
+            .hashBytes(
+                InclusionProofVerifier.combineBytes(
+                    new byte[] {0x00}, Base64.getDecoder().decode(entry.getBody())))
             .asBytes();
 
-    // see: https://datatracker.ietf.org/doc/rfc9162/ section 2.1.3.2
-
-    // nodeIndex and totalNodes represent values for a specific level in the tree
-    // starting at the leafs and moving up to the root.
-    var nodeIndex = inclusionProof.getLogIndex();
-    var totalNodes = inclusionProof.getTreeSize() - 1;
-
-    var currentHash = leafHash;
-    var hashes = inclusionProof.getHashes();
-
-    for (var hash : hashes) {
-      byte[] p = Hex.decode(hash);
-      if (totalNodes == 0) {
-        throw new RekorVerificationException("Inclusion proof failed, ended prematurely");
-      }
-      if (nodeIndex == totalNodes || nodeIndex % 2 == 1) {
-        currentHash = hashChildren(p, currentHash);
-        while (nodeIndex % 2 == 0) {
-          nodeIndex = nodeIndex >> 1;
-          totalNodes = totalNodes >> 1;
-        }
-      } else {
-        currentHash = hashChildren(currentHash, p);
-      }
-      nodeIndex = nodeIndex >> 1;
-      totalNodes = totalNodes >> 1;
+    List<byte[]> hashes = new ArrayList<>();
+    for (String hash : inclusionProof.getHashes()) {
+      hashes.add(Hex.decode(hash));
     }
 
-    var calcuatedRootHash = Hex.toHexString(currentHash);
-    if (!calcuatedRootHash.equals(inclusionProof.getRootHash())) {
-      throw new RekorVerificationException(
-          "Calculated inclusion proof root hash does not match provided root hash\n"
-              + calcuatedRootHash
-              + "\n"
-              + inclusionProof.getRootHash());
+    byte[] expectedRootHash = Hex.decode(inclusionProof.getRootHash());
+
+    try {
+      InclusionProofVerifier.verify(
+          leafHash,
+          inclusionProof.getLogIndex(),
+          inclusionProof.getTreeSize(),
+          hashes,
+          expectedRootHash);
+    } catch (InclusionProofVerificationException e) {
+      throw new RekorVerificationException("Inclusion proof verification failed", e);
     }
   }
 
@@ -176,19 +161,5 @@ public class RekorVerifier {
         | InvalidKeyException ex) {
       throw new RekorVerificationException("Could not verify checkpoint signature", ex);
     }
-  }
-
-  private static byte[] combineBytes(byte[] first, byte[] second) {
-    byte[] result = new byte[first.length + second.length];
-    System.arraycopy(first, 0, result, 0, first.length);
-    System.arraycopy(second, 0, result, first.length, second.length);
-    return result;
-  }
-
-  // hash the concatination of 0x01, left and right
-  private static byte[] hashChildren(byte[] left, byte[] right) {
-    return Hashing.sha256()
-        .hashBytes(combineBytes(new byte[] {0x01}, combineBytes(left, right)))
-        .asBytes();
   }
 }
