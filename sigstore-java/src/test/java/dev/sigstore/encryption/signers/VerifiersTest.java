@@ -31,7 +31,7 @@ public class VerifiersTest {
             NoSuchAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
     Assertions.assertEquals(
         exception.getMessage(),
-        "Cannot verify signatures for key type 'DSA', this client only supports RSA and ECDSA verification");
+        "Cannot verify signatures for key type 'DSA', this client only supports RSA, ECDSA, and Ed25519 verification");
   }
 
   @Test
@@ -42,6 +42,6 @@ public class VerifiersTest {
             NoSuchAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
     Assertions.assertEquals(
         exception.getMessage(),
-        "Cannot verify signatures for key type 'DSA', this client only supports RSA and ECDSA verification");
+        "Cannot verify signatures for key type 'DSA', this client only supports RSA, ECDSA, and Ed25519 verification");
   }
 }
