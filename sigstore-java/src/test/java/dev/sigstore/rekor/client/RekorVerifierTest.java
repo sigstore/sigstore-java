@@ -29,8 +29,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,11 +92,7 @@ public class RekorVerifierTest {
     var thrown =
         Assertions.assertThrows(
             RekorVerificationException.class, () -> verifier.verifyEntry(entry));
-
-    MatcherAssert.assertThat(
-        thrown.getMessage(),
-        CoreMatchers.startsWith(
-            "Calculated inclusion proof root hash does not match provided root hash"));
+    Assertions.assertEquals("Inclusion proof verification failed", thrown.getMessage());
   }
 
   @Test
