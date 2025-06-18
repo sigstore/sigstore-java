@@ -25,6 +25,10 @@
     {
       "matchPackagePrefixes": ["io.github.netmikey.logunit"],
       "groupName": "logunit"
+    },
+    {
+      "matchPackagePrefixes": ["org.apache.maven"],
+      "groupName": "maven"
     }
   ]
 }
