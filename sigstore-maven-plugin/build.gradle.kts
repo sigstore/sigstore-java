@@ -3,7 +3,7 @@ plugins {
     id("build-logic.test-junit5")
     id("build-logic.depends-on-local-sigstore-java-repo")
     id("build-logic.depends-on-local-sigstore-maven-plugin-repo")
-    id("de.benediktritter.maven-plugin-development") version "0.4.3"
+    id("org.gradlex.maven-plugin-development") version "1.0.2"
 }
 
 description = "A Maven plugin for signing with Sigstore"
@@ -11,7 +11,7 @@ description = "A Maven plugin for signing with Sigstore"
 dependencies {
     compileOnly("org.apache.maven:maven-plugin-api:3.9.9")
     compileOnly("org.apache.maven:maven-core:3.9.10")
-    compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations:3.14.0")
+    compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations:3.15.1")
 
     implementation(project(":sigstore-java"))
     implementation("org.bouncycastle:bcutil-jdk18on:1.80")
