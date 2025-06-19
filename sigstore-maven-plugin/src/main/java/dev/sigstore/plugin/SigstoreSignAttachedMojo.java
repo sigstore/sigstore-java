@@ -22,10 +22,10 @@ import java.io.File;
 import java.security.cert.X509Certificate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import javax.inject.Inject;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -59,7 +59,7 @@ public class SigstoreSignAttachedMojo extends AbstractMojo {
   private MavenProject project;
 
   /** Maven ProjectHelper */
-  @Component private MavenProjectHelper projectHelper;
+  @Inject private MavenProjectHelper projectHelper;
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
