@@ -22,6 +22,7 @@ import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.protobuf.ByteString;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.Bundle.HashAlgorithm;
 import dev.sigstore.bundle.Bundle.MessageSignature;
@@ -40,13 +41,21 @@ import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.OidcTokenMatcher;
+import dev.sigstore.proto.common.v1.PublicKeyDetails;
+import dev.sigstore.proto.common.v1.X509Certificate;
+import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
+import dev.sigstore.proto.rekor.v2.Signature;
+import dev.sigstore.proto.rekor.v2.Verifier;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorClient;
 import dev.sigstore.rekor.client.RekorClientHttp;
+import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.rekor.client.RekorResponse;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
+import dev.sigstore.rekor.v2.client.RekorV2Client;
+import dev.sigstore.rekor.v2.client.RekorV2ClientHttp;
 import dev.sigstore.timestamp.client.ImmutableTimestampRequest;
 import dev.sigstore.timestamp.client.TimestampClient;
 import dev.sigstore.timestamp.client.TimestampClientHttp;
@@ -69,6 +78,7 @@ import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -97,6 +107,7 @@ public class KeylessSigner implements AutoCloseable {
   private final FulcioClient fulcioClient;
   private final FulcioVerifier fulcioVerifier;
   private final RekorClient rekorClient;
+  private final RekorV2Client rekorV2Client;
   private final RekorVerifier rekorVerifier;
   private final TimestampClient timestampClient;
   private final TimestampVerifier timestampVerifier;
@@ -111,12 +122,20 @@ public class KeylessSigner implements AutoCloseable {
   private CertPath signingCert;
 
   /**
-   * Representation {@link #signingCert} in PEM bytes format. This is used to avoid serializing the
-   * certificate for each use.
+   * Representation of {@link #signingCert} in PEM bytes format. This is used to avoid serializing
+   * the certificate for each use.
    */
   @GuardedBy("lock")
   @Nullable
   private byte[] signingCertPemBytes;
+
+  /**
+   * Representation of {@link #signingCert} in DER encoded bytes. his is used to avoid serializing
+   * the certificate for each use.
+   */
+  @GuardedBy("lock")
+  @Nullable
+  private byte[] encodedCert;
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -124,6 +143,7 @@ public class KeylessSigner implements AutoCloseable {
       FulcioClient fulcioClient,
       FulcioVerifier fulcioVerifier,
       RekorClient rekorClient,
+      RekorV2Client rekorV2Client,
       RekorVerifier rekorVerifier,
       TimestampClient timestampClient,
       TimestampVerifier timestampVerifier,
@@ -134,6 +154,7 @@ public class KeylessSigner implements AutoCloseable {
     this.fulcioClient = fulcioClient;
     this.fulcioVerifier = fulcioVerifier;
     this.rekorClient = rekorClient;
+    this.rekorV2Client = rekorV2Client;
     this.rekorVerifier = rekorVerifier;
     this.timestampClient = timestampClient;
     this.timestampVerifier = timestampVerifier;
@@ -149,6 +170,7 @@ public class KeylessSigner implements AutoCloseable {
     try {
       signingCert = null;
       signingCertPemBytes = null;
+      encodedCert = null;
     } finally {
       lock.writeLock().unlock();
     }
@@ -166,6 +188,7 @@ public class KeylessSigner implements AutoCloseable {
     private List<OidcTokenMatcher> oidcIdentities = Collections.emptyList();
     private Signer signer;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
+    private boolean enableRekorV2 = false;
 
     @CanIgnoreReturnValue
     public Builder trustedRootProvider(TrustedRootProvider trustedRootProvider) {
@@ -176,6 +199,12 @@ public class KeylessSigner implements AutoCloseable {
     @CanIgnoreReturnValue
     public Builder signingConfigProvider(SigningConfigProvider signingConfigProvider) {
       this.signingConfigProvider = signingConfigProvider;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder enableRekorV2(boolean enableRekorV2) {
+      this.enableRekorV2 = enableRekorV2;
       return this;
     }
 
@@ -257,12 +286,22 @@ public class KeylessSigner implements AutoCloseable {
       var fulcioClient = FulcioClientGrpc.builder().setService(fulcioService.get()).build();
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
 
-      var rekorService = Service.select(signingConfig.getTLogs(), List.of(1));
+      var rekorService =
+          Service.select(signingConfig.getTLogs(), enableRekorV2 ? List.of(1) : List.of(1, 2));
       if (rekorService.isEmpty()) {
         throw new SigstoreConfigurationException(
             "No suitable rekor target was found in signing config");
       }
-      var rekorClient = RekorClientHttp.builder().setService(rekorService.get()).build();
+
+      RekorClient rekorClient = null;
+      RekorV2Client rekorV2Client = null;
+
+      if (rekorService.get().getApiVersion() == 1) {
+        rekorClient = RekorClientHttp.builder().setService(rekorService.get()).build();
+      } else {
+        rekorV2Client = RekorV2ClientHttp.builder().setService(rekorService.get()).build();
+      }
+
       var rekorVerifier = RekorVerifier.newRekorVerifier(trustedRoot);
 
       TimestampClient timestampClient = null;
@@ -293,6 +332,7 @@ public class KeylessSigner implements AutoCloseable {
           fulcioClient,
           fulcioVerifier,
           rekorClient,
+          rekorV2Client,
           rekorVerifier,
           timestampClient,
           timestampVerifier,
@@ -378,10 +418,12 @@ public class KeylessSigner implements AutoCloseable {
 
       CertPath signingCert;
       byte[] signingCertPemBytes;
+      byte[] encodedCert;
       lock.readLock().lock();
       try {
         signingCert = this.signingCert;
         signingCertPemBytes = this.signingCertPemBytes;
+        encodedCert = this.encodedCert;
         if (signingCert == null) {
           throw new IllegalStateException("Signing certificate is null");
         }
@@ -389,38 +431,18 @@ public class KeylessSigner implements AutoCloseable {
         lock.readLock().unlock();
       }
 
-      var rekorRequest =
-          HashedRekordRequest.newHashedRekordRequest(
-              artifactDigest, signingCertPemBytes, signature);
-
-      RekorResponse rekorResponse;
-      try {
-        rekorResponse = rekorClient.putEntry(rekorRequest);
-      } catch (RekorParseException | IOException ex) {
-        throw new KeylessSignerException("Failed to put entry in rekor", ex);
-      }
-
-      var calculatedHashedRekord =
-          Base64.toBase64String(rekorRequest.toJsonPayload().getBytes(StandardCharsets.UTF_8));
-      if (!Objects.equals(calculatedHashedRekord, rekorResponse.getEntry().getBody())) {
-        throw new KeylessSignerException("Returned log entry was inconsistent with request");
-      }
-
-      try {
-        rekorVerifier.verifyEntry(rekorResponse.getEntry());
-      } catch (RekorVerificationException ex) {
-        throw new KeylessSignerException("Failed to validate rekor response after signing", ex);
-      }
-
       var bundleBuilder =
           ImmutableBundle.builder()
               .certPath(signingCert)
-              .addEntries(rekorResponse.getEntry())
               .messageSignature(
                   MessageSignature.of(HashAlgorithm.SHA2_256, artifactDigest, signature));
 
-      // Timestamp functionality only enabled if timestampUri is provided
-      if (timestampClient != null && timestampVerifier != null) {
+      if (rekorV2Client != null) { // Using Rekor v2 and a TSA
+        Preconditions.checkNotNull(
+            timestampClient, "Timestamp client must be configured for Rekor v2");
+        Preconditions.checkNotNull(
+            timestampVerifier, "Timestamp verifier must be configured for Rekor v2");
+
         var signatureDigest = Hashing.sha256().hashBytes(signature).asBytes();
 
         var tsReq =
@@ -446,6 +468,74 @@ public class KeylessSigner implements AutoCloseable {
             ImmutableTimestamp.builder().rfc3161Timestamp(tsResp.getEncoded()).build();
 
         bundleBuilder.addTimestamps(timestamp);
+
+        var verifier =
+            Verifier.newBuilder()
+                .setX509Certificate(
+                    X509Certificate.newBuilder()
+                        .setRawBytes(ByteString.copyFrom(encodedCert))
+                        .build())
+                .setKeyDetails(PublicKeyDetails.PKIX_ECDSA_P256_SHA_256)
+                .build();
+
+        var reqSignature =
+            Signature.newBuilder()
+                .setContent(ByteString.copyFrom(signature))
+                .setVerifier(verifier)
+                .build();
+
+        var hashedRekordRequest =
+            HashedRekordRequestV002.newBuilder()
+                .setDigest(ByteString.copyFrom(artifactDigest))
+                .setSignature(reqSignature)
+                .build();
+
+        RekorEntry entry;
+        try {
+          entry = rekorV2Client.putEntry(hashedRekordRequest);
+        } catch (IOException | RekorParseException ex) {
+          throw new KeylessSignerException("Failed to put entry in rekor", ex);
+        }
+
+        try {
+          List<Instant> timestamps = new ArrayList<>();
+          timestamps.add(tsResp.getGenTime().toInstant());
+          if (entry.getIntegratedTime() != 0) {
+            timestamps.add(entry.getIntegratedTimeInstant());
+          }
+          rekorVerifier.verifyEntry(entry);
+        } catch (RekorVerificationException | TimestampException ex) {
+          throw new KeylessSignerException("Failed to validate rekor entry after signing", ex);
+        }
+
+        bundleBuilder.addEntries(entry);
+      } else if (rekorClient != null) { // Using Rekor v1
+        var rekorRequest =
+            HashedRekordRequest.newHashedRekordRequest(
+                artifactDigest, signingCertPemBytes, signature);
+
+        RekorResponse rekorResponse;
+        try {
+          rekorResponse = rekorClient.putEntry(rekorRequest);
+        } catch (RekorParseException | IOException ex) {
+          throw new KeylessSignerException("Failed to put entry in rekor", ex);
+        }
+
+        var calculatedHashedRekord =
+            Base64.toBase64String(rekorRequest.toJsonPayload().getBytes(StandardCharsets.UTF_8));
+        if (!Objects.equals(calculatedHashedRekord, rekorResponse.getEntry().getBody())) {
+          throw new KeylessSignerException("Returned log entry was inconsistent with request");
+        }
+
+        try {
+          rekorVerifier.verifyEntry(rekorResponse.getEntry());
+        } catch (RekorVerificationException ex) {
+          throw new KeylessSignerException("Failed to validate rekor response after signing", ex);
+        }
+
+        bundleBuilder.addEntries(rekorResponse.getEntry());
+      } else {
+        throw new IllegalStateException("No rekor client was configured.");
       }
 
       result.add(bundleBuilder.build());
@@ -485,6 +575,7 @@ public class KeylessSigner implements AutoCloseable {
     try {
       signingCert = null;
       signingCertPemBytes = null;
+      encodedCert = null;
       OidcToken tokenInfo = oidcClients.getIDToken();
 
       // check if we have an allow list and if so, ensure the provided token is in there
@@ -510,6 +601,7 @@ public class KeylessSigner implements AutoCloseable {
       fulcioVerifier.verifySigningCertificate(trimmed);
       this.signingCert = trimmed;
       signingCertPemBytes = Certificates.toPemBytes(signingCert);
+      encodedCert = Certificates.getLeaf(signingCert).getEncoded();
     } finally {
       lock.writeLock().unlock();
     }
