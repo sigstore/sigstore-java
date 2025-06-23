@@ -18,7 +18,7 @@ package dev.sigstore.tuf;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.json.gson.GsonFactory;
 import dev.sigstore.http.HttpClients;
-import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.http.HttpParams;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -49,7 +49,7 @@ public class HttpFetcher implements Fetcher {
       throws IOException, FileExceedsMaxLengthException {
     GenericUrl fileUrl = new GenericUrl(mirror + filename);
     var req =
-        HttpClients.newHttpTransport(ImmutableHttpParams.builder().build())
+        HttpClients.newHttpTransport(HttpParams.builder().build())
             .createRequestFactory(
                 request ->
                     request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser()))

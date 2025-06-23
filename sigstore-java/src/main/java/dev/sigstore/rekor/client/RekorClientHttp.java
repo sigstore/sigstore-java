@@ -25,7 +25,6 @@ import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.util.Preconditions;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
-import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;
@@ -53,12 +52,12 @@ public class RekorClientHttp implements RekorClient {
   }
 
   public static class Builder {
-    private HttpParams httpParams = ImmutableHttpParams.builder().build();
+    private HttpParams httpParams = HttpParams.builder().build();
     private Service service;
 
     private Builder() {}
 
-    /** Configure the http properties, see {@link HttpParams}, {@link ImmutableHttpParams}. */
+    /** Configure the http properties, see {@link HttpParams}. */
     public Builder setHttpParams(HttpParams httpParams) {
       this.httpParams = httpParams;
       return this;

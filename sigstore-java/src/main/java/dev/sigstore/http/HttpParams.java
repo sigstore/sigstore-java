@@ -53,4 +53,8 @@ public abstract class HttpParams {
     Preconditions.checkState(getTimeout() > 0, "'timeout' should be greater than zero");
     Preconditions.checkState(!getUserAgent().isEmpty(), "'useragent' must not be empty");
   }
+
+  public static ImmutableHttpParams.Builder builder() {
+    return ImmutableHttpParams.builder();
+  }
 }
