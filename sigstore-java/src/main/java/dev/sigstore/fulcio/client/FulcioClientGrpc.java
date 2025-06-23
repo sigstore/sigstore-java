@@ -28,7 +28,6 @@ import dev.sigstore.fulcio.v2.PublicKey;
 import dev.sigstore.fulcio.v2.PublicKeyRequest;
 import dev.sigstore.http.GrpcChannels;
 import dev.sigstore.http.HttpParams;
-import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.trustroot.Service;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
@@ -58,7 +57,7 @@ public class FulcioClientGrpc implements FulcioClient {
 
   public static class Builder {
     private Service service;
-    private HttpParams httpParams = ImmutableHttpParams.builder().build();
+    private HttpParams httpParams = HttpParams.builder().build();
 
     private Builder() {}
 

@@ -18,7 +18,7 @@ package dev.sigstore.fulcio.client;
 import com.google.common.io.Resources;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
-import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.http.HttpParams;
 import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
@@ -50,7 +50,7 @@ public class FulcioClientGrpcTest {
     // ask fulcio for a signing cert
     var client =
         FulcioClientGrpc.builder()
-            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
+            .setHttpParams(HttpParams.builder().allowInsecureConnections(true).build())
             .setService(fulcioWrapper.getGrpcService())
             .build();
 
@@ -80,7 +80,7 @@ public class FulcioClientGrpcTest {
     // ask fulcio for a signing cert
     var client =
         FulcioClientGrpc.builder()
-            .setHttpParams(ImmutableHttpParams.builder().allowInsecureConnections(true).build())
+            .setHttpParams(HttpParams.builder().allowInsecureConnections(true).build())
             .setService(fulcioWrapper.getGrpcService())
             .build();
     var ex =

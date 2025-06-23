@@ -35,7 +35,6 @@ import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.client.util.store.MemoryDataStoreFactory;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
-import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.util.Arrays;
@@ -72,7 +71,7 @@ public class WebOidcClient implements OidcClient {
   }
 
   public static class Builder {
-    private HttpParams httpParams = ImmutableHttpParams.builder().build();
+    private HttpParams httpParams = HttpParams.builder().build();
     private String clientId = DEFAULT_CLIENT_ID;
     private Service issuer;
     private BrowserHandler browserHandler = null;

@@ -22,7 +22,6 @@ import com.google.api.client.json.webtoken.JsonWebSignature;
 import com.google.api.client.util.Key;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
-import dev.sigstore.http.ImmutableHttpParams;
 import io.grpc.Internal;
 import java.io.IOException;
 import java.util.Map;
@@ -55,7 +54,7 @@ public class GithubActionsOidcClient implements OidcClient {
   }
 
   public static class Builder {
-    private HttpParams httpParams = ImmutableHttpParams.builder().build();
+    private HttpParams httpParams = HttpParams.builder().build();
     private String audience = DEFAULT_AUDIENCE;
 
     private Builder() {}
