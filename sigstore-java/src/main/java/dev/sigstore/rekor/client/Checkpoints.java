@@ -29,10 +29,10 @@ import java.util.stream.Collectors;
  * Checkpoint helper class to parse from a string in the format described in
  * https://github.com/transparency-dev/formats/blob/12bf59947efb7ae227c12f218b4740fb17a87e50/log/README.md
  */
-class Checkpoints {
+public class Checkpoints {
   private static final Pattern SIGNATURE_BLOCK = Pattern.compile("\\u2014 (\\S+) (\\S+)");
 
-  static Checkpoint from(String encoded) throws RekorParseException {
+  public static Checkpoint from(String encoded) throws RekorParseException {
     var split = Splitter.on("\n\n").splitToList(encoded);
     if (split.size() != 2) {
       throw new RekorParseException(
