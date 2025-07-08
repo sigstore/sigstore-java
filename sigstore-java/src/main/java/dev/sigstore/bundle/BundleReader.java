@@ -73,17 +73,15 @@ class BundleReader {
                       .collect(Collectors.toList()))
               .build();
 
-      var verification =
-          ImmutableVerification.builder()
-              .signedEntryTimestamp(
-                  Base64.getEncoder()
-                      .encodeToString(
-                          bundleEntry
-                              .getInclusionPromise()
-                              .getSignedEntryTimestamp()
-                              .toByteArray()))
-              .inclusionProof(inclusionProof)
-              .build();
+      var verificationBuilder = ImmutableVerification.builder().inclusionProof(inclusionProof);
+      if (bundleEntry.hasInclusionPromise()
+          && !bundleEntry.getInclusionPromise().getSignedEntryTimestamp().isEmpty()) {
+        verificationBuilder.signedEntryTimestamp(
+            Base64.getEncoder()
+                .encodeToString(
+                    bundleEntry.getInclusionPromise().getSignedEntryTimestamp().toByteArray()));
+      }
+      var verification = verificationBuilder.build();
 
       var rekorEntry =
           ImmutableRekorEntry.builder()

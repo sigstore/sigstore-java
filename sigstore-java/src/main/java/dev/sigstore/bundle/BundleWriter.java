@@ -53,6 +53,9 @@ class BundleWriter {
     try {
       String jsonBundle = JSON_PRINTER.print(bundle);
       List<String> missingFields = BundleVerifier.findMissingFields(bundle);
+      // TODO(#1018): Update handling of integrated_time once it becomes an optional field
+      // integrated_time is a required field in the Bundle spec
+      missingFields.removeIf(f -> f.endsWith("integrated_time"));
       if (!missingFields.isEmpty()) {
         throw new IllegalStateException(
             "Some of the fields were not initialized: "
@@ -128,13 +131,15 @@ class BundleWriter {
                     .setKind(entry.getBodyDecoded().getKind())
                     .setVersion(entry.getBodyDecoded().getApiVersion()))
             .setIntegratedTime(entry.getIntegratedTime())
-            .setInclusionPromise(
-                InclusionPromise.newBuilder()
-                    .setSignedEntryTimestamp(
-                        ByteString.copyFrom(
-                            Base64.getDecoder()
-                                .decode(entry.getVerification().getSignedEntryTimestamp()))))
             .setCanonicalizedBody(ByteString.copyFrom(Base64.getDecoder().decode(entry.getBody())));
+    if (entry.getVerification().getSignedEntryTimestamp() != null) {
+      transparencyLogEntry.setInclusionPromise(
+          InclusionPromise.newBuilder()
+              .setSignedEntryTimestamp(
+                  ByteString.copyFrom(
+                      Base64.getDecoder()
+                          .decode(entry.getVerification().getSignedEntryTimestamp()))));
+    }
     addInclusionProof(transparencyLogEntry, entry);
     return transparencyLogEntry;
   }
