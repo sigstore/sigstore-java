@@ -15,8 +15,8 @@
  */
 package dev.sigstore.rekor.v2.client;
 
-import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
+import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorParseException;
 import java.io.IOException;
 
@@ -26,8 +26,8 @@ public interface RekorV2Client {
    * Put a new hashedrekord entry on the Rekor log.
    *
    * @param hashedRekordRequest the request to send to rekor
-   * @return a {@link TransparencyLogEntry} with information about the log entry
+   * @return a {@link RekorEntry} with information about the log entry
    */
-  TransparencyLogEntry putEntry(HashedRekordRequestV002 hashedRekordRequest)
+  RekorEntry putEntry(HashedRekordRequestV002 hashedRekordRequest)
       throws IOException, RekorParseException;
 }

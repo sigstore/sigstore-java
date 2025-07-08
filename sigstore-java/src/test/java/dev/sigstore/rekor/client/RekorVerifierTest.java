@@ -15,40 +15,38 @@
  */
 package dev.sigstore.rekor.client;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.google.common.io.Resources;
-import dev.sigstore.trustroot.ImmutableLogId;
-import dev.sigstore.trustroot.ImmutablePublicKey;
-import dev.sigstore.trustroot.ImmutableTransparencyLog;
-import dev.sigstore.trustroot.ImmutableValidFor;
+import com.google.protobuf.InvalidProtocolBufferException;
+import dev.sigstore.json.GsonSupplier;
+import dev.sigstore.json.ProtoJson;
+import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import org.bouncycastle.util.encoders.Base64;
-import org.bouncycastle.util.encoders.Hex;
+import java.security.SignatureException;
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class RekorVerifierTest {
-  public String rekorResponse;
-  public byte[] rekorPub;
-
   public static SigstoreTrustedRoot trustRoot;
+  public static String entryV1;
+  public static String entryV2;
 
   @BeforeEach
   public void loadResources() throws IOException {
-    rekorResponse =
+    entryV1 =
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/rekor-response/valid/entry.json"),
             StandardCharsets.UTF_8);
-    rekorPub =
-        Resources.toByteArray(
-            Resources.getResource("dev/sigstore/samples/rekor-response/valid/rekor.pub"));
+    entryV2 =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/rekor-response/valid/entry-v2.json"),
+            StandardCharsets.UTF_8);
   }
 
   @BeforeAll
@@ -59,116 +57,235 @@ public class RekorVerifierTest {
   }
 
   @Test
-  public void verifyEntry_invalid() throws Exception {
-    // change the logindex
-    var invalidResponse = rekorResponse.replace("1688", "1700");
-    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), invalidResponse);
+  public void verifyEntry_v1() throws Exception {
+    var rekorEntry = getV1RekorEntry(entryV1);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    verifier.verifyEntry(rekorEntry);
+  }
+
+  @Test
+  public void verifyEntry_v1_invalidSet() throws Exception {
+    var invalidV1Entry = entryV1.replace("\"logIndex\": 1688", "\"logIndex\": 1700");
+    var rekorEntry = getV1RekorEntry(invalidV1Entry);
     var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
     var thrown =
         Assertions.assertThrows(
-            RekorVerificationException.class, () -> verifier.verifyEntry(response.getEntry()));
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
     Assertions.assertEquals("Entry SET was not valid", thrown.getMessage());
   }
 
   @Test
-  public void verifyEntry() throws Exception {
-    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
+  public void verifyEntry_v1_unverifiableSet_badSignature() throws Exception {
+    var rekorEntry = getV1RekorEntry(entryV1);
     var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
-    var entry = response.getEntry();
-    verifier.verifyEntry(entry);
+    // create a new entry with a SET that is not a valid signature
+    var verification =
+        ImmutableVerification.builder()
+            .from(rekorEntry.getVerification())
+            .signedEntryTimestamp("aW52YWxpZCBzaWduYXR1cmU=") // "invalid signature" in base64
+            .build();
+    var entryWithInvalidSet =
+        ImmutableRekorEntry.builder().from(rekorEntry).verification(verification).build();
+
+    // The verifier should fail when trying to parse the signature
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(entryWithInvalidSet));
+    Assertions.assertTrue(thrown.getMessage().startsWith("Entry SET verification failed:"));
+    Assertions.assertInstanceOf(SignatureException.class, thrown.getCause());
   }
 
   @Test
-  public void verifyEntry_withInvalidInclusionProof() throws Exception {
-    // replace a hash in the inclusion proof to make it bad
-    var invalidResponse = rekorResponse.replace("b4439e", "aaaaaa");
-
-    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), invalidResponse);
+  public void verifyEntry_v1_invalidCheckpoint_noSignatures() throws Exception {
+    String signedData =
+        "rekor.sigstage.dev - 108574341321668964\\n14358\\n7/pPpFdfcoKQFqZOWERBID3lMyEvlHDWOlbRmS5zRl0=\\n\\n";
+    String signature =
+        "— rekor.sigstage.dev 0y8wozBFAiB8OkuzdwlL6/rDEu2CsIfqmesaH/KLfmIMvlH3YTdIYgIhAPFZeXK6+b0vbWy4GSU/YZxiTpFrrzjsVOShN4LlPdZb\\n";
+    String validEnvelope = signedData + signature;
+    var entryWithNoSignatures = entryV1.replace(validEnvelope, signedData);
+    var rekorEntry = getV1RekorEntry(entryWithNoSignatures);
     var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
-    var entry = response.getEntry();
     var thrown =
         Assertions.assertThrows(
-            RekorVerificationException.class, () -> verifier.verifyEntry(entry));
-    Assertions.assertEquals("Inclusion proof verification failed", thrown.getMessage());
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    Assertions.assertEquals("Could not parse checkpoint from envelope", thrown.getMessage());
   }
 
   @Test
-  public void verifyEntry_logIdMismatch() throws Exception {
-    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
-    var tlog =
-        ImmutableTransparencyLog.builder()
-            .logId(
-                ImmutableLogId.builder().keyId("garbage".getBytes(StandardCharsets.UTF_8)).build())
-            .publicKey(
-                ImmutablePublicKey.builder()
-                    .validFor(ImmutableValidFor.builder().start(Instant.EPOCH).build())
-                    .keyDetails("PKIX_ECDSA_P256_SHA_256")
-                    .rawBytes(
-                        Base64.decode(
-                            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDODRU688UYGuy54mNUlaEBiQdTE9nYLr0lg6RXowI/QV/RE1azBn4Eg5/2uTOMbhB1/gfcHzijzFi9Tk+g1Prg=="))
-                    .build())
-            .hashAlgorithm("ignored")
-            .baseUrl(URI.create("ignored"))
-            .build();
+  public void verifyEntry_v1_invalidCheckpoint_excessiveSignatures() throws Exception {
+    String signedData =
+        "rekor.sigstage.dev - 108574341321668964\\n14358\\n7/pPpFdfcoKQFqZOWERBID3lMyEvlHDWOlbRmS5zRl0=\\n\\n";
+    String signature =
+        "— rekor.sigstage.dev 0y8wozBFAiB8OkuzdwlL6/rDEu2CsIfqmesaH/KLfmIMvlH3YTdIYgIhAPFZeXK6+b0vbWy4GSU/YZxiTpFrrzjsVOShN4LlPdZb\\n";
+    String validEnvelope = signedData + signature;
 
-    var verifier = RekorVerifier.newRekorVerifier(List.of(tlog));
+    var excessiveEnvelopeBuilder = new StringBuilder(signedData);
+    // This constant is defined in RekorVerifier.
+    final int MAX_CHECKPOINT_SIGNATURES = 20;
+    for (int i = 0; i < MAX_CHECKPOINT_SIGNATURES + 1; i++) {
+      excessiveEnvelopeBuilder.append(signature);
+    }
+    String excessiveEnvelope = excessiveEnvelopeBuilder.toString();
 
-    // make sure the entry time is valid for the log -- so we can determine the logid is the error
-    // creator
-    Assertions.assertTrue(
-        tlog.getPublicKey()
-            .getValidFor()
-            .contains(Instant.ofEpochSecond(response.getEntry().getIntegratedTime())));
+    var entryWithExcessiveSignatures = entryV1.replace(validEnvelope, excessiveEnvelope);
+
+    var rekorEntry = getV1RekorEntry(entryWithExcessiveSignatures);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
     var thrown =
         Assertions.assertThrows(
-            RekorVerificationException.class, () -> verifier.verifyEntry(response.getEntry()));
-    Assertions.assertEquals(
-        "Log entry (logid, timestamp) does not match any provided transparency logs.",
-        thrown.getMessage());
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    assertTrue(
+        thrown.getMessage().startsWith("Checkpoint contains an excessive number of signatures"));
   }
 
   @Test
-  public void verifyEntry_logIdTimeMismatch() throws Exception {
+  public void verifyEntry_v2() throws Exception {
+    var rekorEntry = getV2RekorEntry(entryV2);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
-    var response = RekorResponse.newRekorResponse(new URI("https://somewhere"), rekorResponse);
+    verifier.verifyEntry(rekorEntry);
+  }
 
-    var tlog =
-        ImmutableTransparencyLog.builder()
-            .logId(
-                ImmutableLogId.builder()
-                    .keyId(Base64.decode("0y8wo8MtY5wrdiIFohx7sHeI5oKDpK5vQhGHI6G+pJY="))
-                    .build())
-            .publicKey(
-                ImmutablePublicKey.builder()
-                    .validFor(
-                        ImmutableValidFor.builder()
-                            .start(Instant.EPOCH)
-                            .end(Instant.EPOCH.plus(1, ChronoUnit.SECONDS))
-                            .build())
-                    .keyDetails("PKIX_ECDSA_P256_SHA_256")
-                    .rawBytes(
-                        Base64.decode(
-                            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDODRU688UYGuy54mNUlaEBiQdTE9nYLr0lg6RXowI/QV/RE1azBn4Eg5/2uTOMbhB1/gfcHzijzFi9Tk+g1Prg=="))
-                    .build())
-            .hashAlgorithm("ignored")
-            .baseUrl(URI.create("ignored"))
-            .build();
+  @Test
+  public void verifyEntry_v2_invalidLogId() throws Exception {
+    var entryMap = GsonSupplier.GSON.get().fromJson(entryV2, Map.class);
 
-    var verifier = RekorVerifier.newRekorVerifier(List.of(tlog));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> logIdMap = (Map<String, Object>) entryMap.get("logId");
+    logIdMap.put("keyId", "invalid");
 
-    // make sure logId is equal -- so we can determine the time is the error creator
-    Assertions.assertArrayEquals(
-        tlog.getLogId().getKeyId(), Hex.decode(response.getEntry().getLogID()));
+    var entryWithInvalidLogId = GsonSupplier.GSON.get().toJson(entryMap);
+
+    var rekorEntry = getV2RekorEntry(entryWithInvalidLogId);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
 
     var thrown =
         Assertions.assertThrows(
-            RekorVerificationException.class, () -> verifier.verifyEntry(response.getEntry()));
+            RekorVerificationException.class,
+            () -> {
+              verifier.verifyEntry(rekorEntry);
+            });
     Assertions.assertEquals(
-        "Log entry (logid, timestamp) does not match any provided transparency logs.",
-        thrown.getMessage());
+        "Log entry (logid) does not match any provided transparency logs.", thrown.getMessage());
+  }
+
+  @Test
+  public void verifyEntry_v2_noInclusionProof() throws Exception {
+    var entryMap = GsonSupplier.GSON.get().fromJson(entryV2, Map.class);
+    entryMap.remove("inclusionProof");
+    var entryWithNoInclusionProof = GsonSupplier.GSON.get().toJson(entryMap);
+
+    var rekorEntry = getV2RekorEntry(entryWithNoInclusionProof);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class,
+            () -> {
+              verifier.verifyEntry(rekorEntry);
+            });
+    Assertions.assertEquals("No inclusion proof in entry.", thrown.getMessage());
+  }
+
+  @Test
+  public void verifyEntry_v2_invalidCheckpoint_invalidIdentity() throws Exception {
+    var entryWithInvalidCheckpoint = entryV2.replace("sigstage", "github");
+    var rekorEntry = getV2RekorEntry(entryWithInvalidCheckpoint);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class,
+            () -> {
+              verifier.verifyEntry(rekorEntry);
+            });
+    assertTrue(
+        thrown
+            .getMessage()
+            .startsWith("No matching checkpoint signature found for transparency log"));
+  }
+
+  @Test
+  public void verifyEntry_v2_invalidCheckpoint_noSignatures() throws Exception {
+    String signedData =
+        "log2025-alpha1.rekor.sigstage.dev\\n744\\nesdDSd9WE37oIvN7WDlJVKtt/QajruODJO7PVEwwTXs=\\n\\n";
+    String signature =
+        "— log2025-alpha1.rekor.sigstage.dev 8w1amdUe0s4o19zD+N8ffKDR3+mDCYIBCOX+O8gqThpWp6Rq/07hW+UpMbOdY2i6skEjvY71RebKMx2jt+Hq9JRpJAs=\\n";
+    String validEnvelope = signedData + signature;
+    var entryWithNoSignatures = entryV2.replace(validEnvelope, signedData);
+    var rekorEntry = getV2RekorEntry(entryWithNoSignatures);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class,
+            () -> {
+              verifier.verifyEntry(rekorEntry);
+            });
+    Assertions.assertEquals("Could not parse checkpoint from envelope", thrown.getMessage());
+  }
+
+  @Test
+  public void verifyEntry_v2_invalidCheckpoint_excessiveSignatures() throws Exception {
+    String signedData =
+        "log2025-alpha1.rekor.sigstage.dev\\n744\\nesdDSd9WE37oIvN7WDlJVKtt/QajruODJO7PVEwwTXs=\\n\\n";
+    String signature =
+        "— log2025-alpha1.rekor.sigstage.dev 8w1amdUe0s4o19zD+N8ffKDR3+mDCYIBCOX+O8gqThpWp6Rq/07hW+UpMbOdY2i6skEjvY71RebKMx2jt+Hq9JRpJAs=\\n";
+    String validEnvelope = signedData + signature;
+
+    var excessiveEnvelopeBuilder = new StringBuilder(signedData);
+    // This constant is defined in RekorVerifier.
+    final int MAX_CHECKPOINT_SIGNATURES = 20;
+    for (int i = 0; i < MAX_CHECKPOINT_SIGNATURES + 1; i++) {
+      excessiveEnvelopeBuilder.append(signature);
+    }
+    String excessiveEnvelope = excessiveEnvelopeBuilder.toString();
+
+    var entryWithExcessiveSignatures = entryV2.replace(validEnvelope, excessiveEnvelope);
+
+    var rekorEntry = getV2RekorEntry(entryWithExcessiveSignatures);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class,
+            () -> {
+              verifier.verifyEntry(rekorEntry);
+            });
+    assertTrue(
+        thrown.getMessage().startsWith("Checkpoint contains an excessive number of signatures"));
+  }
+
+  @Test
+  public void verifyEntry_v2_invalidCheckpoint_invalidSignature() throws Exception {
+    var entryWithInvalidCheckpoint = entryV2.replace("+Hq9J", "+Hq9K");
+    var rekorEntry = getV2RekorEntry(entryWithInvalidCheckpoint);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class,
+            () -> {
+              verifier.verifyEntry(rekorEntry);
+            });
+    Assertions.assertEquals("Checkpoint signature was invalid", thrown.getMessage());
+  }
+
+  private RekorEntry getV2RekorEntry(String json)
+      throws InvalidProtocolBufferException, RekorParseException {
+    var transparencyLogEntryBuilder = TransparencyLogEntry.newBuilder();
+    ProtoJson.parser().merge(json, transparencyLogEntryBuilder);
+    return RekorEntry.fromTLogEntry(transparencyLogEntryBuilder.build());
+  }
+
+  private RekorEntry getV1RekorEntry(String json) throws Exception {
+    return dev.sigstore.rekor.client.RekorResponse.newRekorResponse(
+            new java.net.URI("https://not.used"), json)
+        .getEntry();
   }
 }
