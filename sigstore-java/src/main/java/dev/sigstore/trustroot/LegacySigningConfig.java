@@ -28,6 +28,7 @@ public class LegacySigningConfig {
 
   static final URI REKOR_PUBLIC_GOOD_URI = URI.create("https://rekor.sigstore.dev");
   static final URI REKOR_STAGING_URI = URI.create("https://rekor.sigstage.dev");
+  static final URI REKOR_V2_STAGING_URI = URI.create("https://log2025-alpha1.rekor.sigstage.dev");
 
   static final URI FULCIO_PUBLIC_GOOD_URI = URI.create("https://fulcio.sigstore.dev");
   static final URI FULCIO_STAGING_URI = URI.create("https://fulcio.sigstage.dev");
@@ -40,7 +41,8 @@ public class LegacySigningConfig {
   // URI.create("https://timestamp.sigstore.dev/api/v1/timestamp");
   static final URI TSA_STAGING_URI = URI.create("https://timestamp.sigstage.dev/api/v1/timestamp");
 
-  static SigstoreSigningConfig from(URI fulcioUrl, URI rekorUrl, URI dexUrl, @Nullable URI tsaUrl) {
+  static SigstoreSigningConfig from(
+      URI fulcioUrl, Service rekorService, URI dexUrl, @Nullable URI tsaUrl) {
     var anySelector = ImmutableConfig.builder().selector(Selector.ANY).build();
     var now = ImmutableValidFor.builder().start(Instant.now()).build();
     var signingConfigBuilder =
@@ -48,8 +50,9 @@ public class LegacySigningConfig {
             .tLogConfig(anySelector)
             .tsaConfig(anySelector)
             .addCas(Service.of(fulcioUrl, 1))
-            .addTLogs(Service.of(rekorUrl, 1))
+            .addTLogs(rekorService)
             .addOidcProviders(Service.of(dexUrl, 1));
+
     if (tsaUrl != null) {
       signingConfigBuilder.addTsas(Service.of(tsaUrl, 1));
     }
@@ -57,7 +60,17 @@ public class LegacySigningConfig {
   }
 
   public static final SigstoreSigningConfig PUBLIC_GOOD =
-      from(FULCIO_PUBLIC_GOOD_URI, REKOR_PUBLIC_GOOD_URI, DEX_PUBLIC_GOOD_URI, null);
+      from(FULCIO_PUBLIC_GOOD_URI, Service.of(REKOR_PUBLIC_GOOD_URI, 1), DEX_PUBLIC_GOOD_URI, null);
   public static SigstoreSigningConfig STAGING =
-      from(FULCIO_STAGING_URI, REKOR_STAGING_URI, DEX_STAGING_GOOD_URI, TSA_STAGING_URI);
+      from(
+          FULCIO_STAGING_URI,
+          Service.of(REKOR_PUBLIC_GOOD_URI, 1),
+          DEX_STAGING_GOOD_URI,
+          TSA_STAGING_URI);
+  public static SigstoreSigningConfig STAGING_REKOR_V2 =
+      from(
+          FULCIO_STAGING_URI,
+          Service.of(REKOR_V2_STAGING_URI, 2),
+          DEX_STAGING_GOOD_URI,
+          TSA_STAGING_URI);
 }
