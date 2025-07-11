@@ -27,9 +27,8 @@ import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.proto.rekor.v2.Signature;
 import dev.sigstore.proto.rekor.v2.Verifier;
 import dev.sigstore.testing.CertGenerator;
-import dev.sigstore.trustroot.Service;
+import dev.sigstore.trustroot.LegacySigningConfig;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -49,8 +48,10 @@ public class RekorV2ClientHttpTest {
 
   @BeforeAll
   public static void setupClient() throws Exception {
-    var service = Service.of(URI.create("https://log2025-alpha1.rekor.sigstage.dev/"), 2);
-    client = RekorV2ClientHttp.builder().setService(service).build();
+    client =
+        RekorV2ClientHttp.builder()
+            .setService(LegacySigningConfig.STAGING_REKOR_V2.getTLogs().get(0))
+            .build();
     req = createdRekorRequest();
     entry = client.putEntry(req);
   }
