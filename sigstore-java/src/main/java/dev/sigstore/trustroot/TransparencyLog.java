@@ -15,14 +15,13 @@
  */
 package dev.sigstore.trustroot;
 
-import static org.immutables.value.Value.*;
-
 import dev.sigstore.proto.trustroot.v1.TransparencyLogInstance;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.immutables.value.Value.Immutable;
 
 @Immutable
 public interface TransparencyLog {
@@ -43,6 +42,16 @@ public interface TransparencyLog {
         .logId(LogId.from(proto.getLogId()))
         .publicKey(PublicKey.from(proto.getPublicKey()))
         .build();
+  }
+
+  /**
+   * Find a log by logId.
+   *
+   * @param logId the logId of the log
+   * @return the first log with matching {@code logId}
+   */
+  static Optional<TransparencyLog> find(List<TransparencyLog> all, byte[] logId) {
+    return all.stream().filter(tl -> Arrays.equals(tl.getLogId().getKeyId(), logId)).findAny();
   }
 
   /**

@@ -20,24 +20,18 @@ import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.util.Preconditions;
-import com.google.gson.reflect.TypeToken;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
-import dev.sigstore.json.GsonSupplier;
-import dev.sigstore.json.ProtoJson;
-import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
+import dev.sigstore.proto.rekor.v2.CreateEntryRequest;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
+import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorParseException;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 /** A client to communicate with a rekor v2 service instance over http. */
 public class RekorV2ClientHttp implements RekorV2Client {
@@ -81,24 +75,16 @@ public class RekorV2ClientHttp implements RekorV2Client {
   }
 
   @Override
-  public TransparencyLogEntry putEntry(HashedRekordRequestV002 hashedRekordRequest)
+  public RekorEntry putEntry(HashedRekordRequestV002 hashedRekordRequest)
       throws IOException, RekorParseException {
     URI rekorPutEndpoint = uri.resolve(REKOR_ENTRIES_PATH);
 
-    String jsonPayload;
-    try {
-      String innerJson = JsonFormat.printer().print(hashedRekordRequest);
-
-      Type type = new TypeToken<Map<String, Object>>() {}.getType();
-      Map<String, Object> innerMap = GsonSupplier.GSON.get().fromJson(innerJson, type);
-
-      var requestMap = new HashMap<String, Object>();
-      requestMap.put("hashedRekordRequestV002", innerMap);
-
-      jsonPayload = GsonSupplier.GSON.get().toJson(requestMap);
-    } catch (InvalidProtocolBufferException e) {
-      throw new RekorParseException("Failed to serialize HashedRekordRequestV002 to JSON", e);
-    }
+    String jsonPayload =
+        JsonFormat.printer()
+            .print(
+                CreateEntryRequest.newBuilder()
+                    .setHashedRekordRequestV002(hashedRekordRequest)
+                    .build());
 
     HttpRequest req =
         HttpClients.newRequestFactory(httpParams)
@@ -120,12 +106,6 @@ public class RekorV2ClientHttp implements RekorV2Client {
 
     String respEntryJson = resp.parseAsString();
 
-    try {
-      TransparencyLogEntry.Builder builder = TransparencyLogEntry.newBuilder();
-      ProtoJson.parser().merge(respEntryJson, builder);
-      return builder.build();
-    } catch (InvalidProtocolBufferException e) {
-      throw new RekorParseException("Failed to parse Rekor response JSON", e);
-    }
+    return RekorEntry.fromTLogEntryJson(respEntryJson);
   }
 }

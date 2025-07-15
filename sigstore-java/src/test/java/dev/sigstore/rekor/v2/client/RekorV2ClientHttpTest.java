@@ -22,10 +22,10 @@ import com.google.protobuf.ByteString;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.proto.common.v1.PublicKeyDetails;
 import dev.sigstore.proto.common.v1.X509Certificate;
-import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.proto.rekor.v2.Signature;
 import dev.sigstore.proto.rekor.v2.Verifier;
+import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.testing.CertGenerator;
 import dev.sigstore.trustroot.LegacySigningConfig;
 import java.io.IOException;
@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
 public class RekorV2ClientHttpTest {
   private static RekorV2Client client;
   private static HashedRekordRequestV002 req;
-  private static TransparencyLogEntry entry;
+  private static RekorEntry entry;
 
   @BeforeAll
   public static void setupClient() throws Exception {
@@ -62,9 +62,9 @@ public class RekorV2ClientHttpTest {
     var entry = client.putEntry(req);
 
     assertNotNull(entry);
-    assertNotNull(entry.getInclusionProof());
+    assertNotNull(entry.getVerification().getInclusionProof());
     assertTrue(entry.getLogIndex() >= 0);
-    assertNotNull(entry.getLogId());
+    assertNotNull(entry.getLogID());
   }
 
   @NotNull

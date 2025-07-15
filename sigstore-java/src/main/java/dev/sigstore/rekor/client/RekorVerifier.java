@@ -20,6 +20,7 @@ import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.merkle.InclusionProofVerificationException;
 import dev.sigstore.merkle.InclusionProofVerifier;
 import dev.sigstore.rekor.client.RekorEntry.Checkpoint;
+import dev.sigstore.rekor.client.RekorEntry.CheckpointSignature;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import dev.sigstore.trustroot.TransparencyLog;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
@@ -50,42 +52,39 @@ public class RekorVerifier {
   }
 
   /**
-   * Verify that a Rekor Entry is signed with the rekor public key loaded into this verifier
+   * Verifies a Rekor entry by checking the inclusion proof and checkpoint against the configured
+   * transparency logs. For v1 entries, it also verifies the Signed Entry Timestamp (SET).
    *
-   * @param entry the entry to verify
-   * @throws RekorVerificationException if the entry cannot be verified
+   * @param entry The RekorEntry to verify.
+   * @throws RekorVerificationException if the entry cannot be verified for any reason, such as an
+   *     invalid proof or signature.
    */
   public void verifyEntry(RekorEntry entry) throws RekorVerificationException {
-    if (entry.getVerification() == null) {
-      throw new RekorVerificationException("No verification information in entry.");
-    }
-
-    if (entry.getVerification().getSignedEntryTimestamp() == null) {
-      throw new RekorVerificationException("No signed entry timestamp found in entry.");
+    if (entry.getVerification().getInclusionProof() == null) {
+      throw new RekorVerificationException("No inclusion proof in entry.");
     }
 
     var tlog =
-        TransparencyLog.find(tlogs, Hex.decode(entry.getLogID()), entry.getIntegratedTimeInstant())
+        TransparencyLog.find(tlogs, Hex.decode(entry.getLogID()))
             .orElseThrow(
                 () ->
                     new RekorVerificationException(
-                        "Log entry (logid, timestamp) does not match any provided transparency logs."));
+                        "Log entry (logid) does not match any provided transparency logs."));
 
-    try {
-      var verifier = Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey());
-      if (!verifier.verify(
-          entry.getSignableContent(),
-          Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
-        throw new RekorVerificationException("Entry SET was not valid");
+    if (entry.getVerification().getSignedEntryTimestamp() != null) {
+      try {
+        var verifier = Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey());
+        if (!verifier.verify(
+            entry.getSignableContent(),
+            Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
+          throw new RekorVerificationException("Entry SET was not valid");
+        }
+      } catch (InvalidKeySpecException
+          | InvalidKeyException
+          | SignatureException
+          | NoSuchAlgorithmException e) {
+        throw new RekorVerificationException("Entry SET verification failed: " + e.getMessage(), e);
       }
-    } catch (InvalidKeySpecException ike) {
-      throw new RekorVerificationException("Public Key could be parsed", ike);
-    } catch (InvalidKeyException ike) {
-      throw new RekorVerificationException("Public Key was invalid", ike);
-    } catch (SignatureException se) {
-      throw new RekorVerificationException("Signature was invalid", se);
-    } catch (NoSuchAlgorithmException nsae) {
-      throw new AssertionError("Required verification algorithm 'SHA256withECDSA' not found.");
     }
 
     // verify inclusion proof
@@ -126,34 +125,54 @@ public class RekorVerifier {
 
   private void verifyCheckpoint(RekorEntry entry, TransparencyLog tlog)
       throws RekorVerificationException {
-    Checkpoint checkpoint;
+    Checkpoint parsedCheckpoint;
     try {
-      checkpoint = entry.getVerification().getInclusionProof().parsedCheckpoint();
+      parsedCheckpoint = entry.getVerification().getInclusionProof().parsedCheckpoint();
     } catch (RekorParseException ex) {
-      throw new RekorVerificationException("Could not parse checkpoint", ex);
+      throw new RekorVerificationException("Could not parse checkpoint from envelope", ex);
+    }
+
+    final int MAX_CHECKPOINT_SIGNATURES = 20;
+    if (parsedCheckpoint.getSignatures().size() > MAX_CHECKPOINT_SIGNATURES) {
+      throw new RekorVerificationException(
+          "Checkpoint contains an excessive number of signatures ("
+              + parsedCheckpoint.getSignatures().size()
+              + "), exceeding the maximum allowed of "
+              + MAX_CHECKPOINT_SIGNATURES);
     }
 
     byte[] inclusionRootHash =
         Hex.decode(entry.getVerification().getInclusionProof().getRootHash());
-    byte[] checkpointRootHash = Base64.getDecoder().decode(checkpoint.getBase64Hash());
+    byte[] checkpointRootHash = Base64.getDecoder().decode(parsedCheckpoint.getBase64Hash());
 
     if (!Arrays.equals(inclusionRootHash, checkpointRootHash)) {
       throw new RekorVerificationException(
           "Checkpoint root hash does not match root hash provided in inclusion proof");
     }
-    var keyHash = Hashing.sha256().hashBytes(tlog.getPublicKey().getRawBytes()).asBytes();
-    // checkpoint 0 is always the log, not any of the cross signing verifiers/monitors
-    var sig = checkpoint.getSignatures().get(0);
-    for (int i = 0; i < 4; i++) {
-      if (sig.getKeyHint()[i] != keyHash[i]) {
-        throw new RekorVerificationException(
-            "Checkpoint key hint did not match provided log public key");
-      }
+
+    Optional<CheckpointSignature> matchingSig =
+        parsedCheckpoint.getSignatures().stream()
+            .filter(sig -> sig.getIdentity().equals(tlog.getBaseUrl().getHost()))
+            .findFirst();
+
+    if (!matchingSig.isPresent()) {
+      throw new RekorVerificationException(
+          "No matching checkpoint signature found for transparency log: "
+              + tlog.getBaseUrl().getHost());
     }
-    var signedData = checkpoint.getSignedData();
+
+    var keyId = tlog.getLogId().getKeyId();
+    var keyHint = Arrays.copyOfRange(keyId, 0, 4);
+    if (!Arrays.equals(matchingSig.get().getKeyHint(), keyHint)) {
+      throw new RekorVerificationException(
+          "Checkpoint key hint did not match provided log public key");
+    }
+
+    var signedData = parsedCheckpoint.getSignedData();
+
     try {
       if (!Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey())
-          .verify(signedData.getBytes(StandardCharsets.UTF_8), sig.getSignature())) {
+          .verify(signedData.getBytes(StandardCharsets.UTF_8), matchingSig.get().getSignature())) {
         throw new RekorVerificationException("Checkpoint signature was invalid");
       }
     } catch (NoSuchAlgorithmException
