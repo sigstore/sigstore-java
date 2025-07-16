@@ -21,6 +21,13 @@ import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
 import dev.sigstore.proto.common.v1.X509Certificate;
+import dev.sigstore.proto.rekor.v1.InclusionProof;
+import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
+import dev.sigstore.rekor.client.ImmutableInclusionProof;
+import dev.sigstore.rekor.client.ImmutableRekorEntry;
+import dev.sigstore.rekor.client.ImmutableVerification;
+import dev.sigstore.rekor.client.RekorEntry;
+import dev.sigstore.rekor.client.RekorParseException;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -28,7 +35,9 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import org.bouncycastle.util.encoders.Hex;
 
 public class ProtoMutators {
 
@@ -58,5 +67,42 @@ public class ProtoMutators {
       return HashAlgorithm.SHA2_256;
     }
     throw new IllegalStateException("Unknown hash algorithm: " + algorithm);
+  }
+
+  public static RekorEntry toRekorEntry(TransparencyLogEntry tle) throws RekorParseException {
+    ImmutableRekorEntry.Builder builder = ImmutableRekorEntry.builder();
+
+    builder.logIndex(tle.getLogIndex());
+    builder.logID(Hex.toHexString(tle.getLogId().getKeyId().toByteArray()));
+    builder.integratedTime(tle.getIntegratedTime());
+
+    // The body of a RekorEntry is Base64 encoded
+    builder.body(Base64.getEncoder().encodeToString(tle.getCanonicalizedBody().toByteArray()));
+
+    ImmutableVerification.Builder verificationBuilder = ImmutableVerification.builder();
+
+    // Rekor v2 entries won't have an InclusionPromise/SET
+    if (tle.hasInclusionPromise()
+        && !tle.getInclusionPromise().getSignedEntryTimestamp().isEmpty()) {
+      verificationBuilder.signedEntryTimestamp(
+          Base64.getEncoder()
+              .encodeToString(tle.getInclusionPromise().getSignedEntryTimestamp().toByteArray()));
+    }
+
+    if (tle.hasInclusionProof()) {
+      InclusionProof ipProto = tle.getInclusionProof();
+      ImmutableInclusionProof.Builder ipBuilder = ImmutableInclusionProof.builder();
+      ipBuilder.logIndex(ipProto.getLogIndex());
+      ipBuilder.rootHash(Hex.toHexString(ipProto.getRootHash().toByteArray()));
+      ipBuilder.treeSize(ipProto.getTreeSize());
+      ipBuilder.checkpoint(ipProto.getCheckpoint().getEnvelope());
+      ipProto
+          .getHashesList()
+          .forEach(hash -> ipBuilder.addHashes(Hex.toHexString(hash.toByteArray())));
+      verificationBuilder.inclusionProof(ipBuilder.build());
+    }
+    builder.verification(verificationBuilder.build());
+
+    return builder.build();
   }
 }

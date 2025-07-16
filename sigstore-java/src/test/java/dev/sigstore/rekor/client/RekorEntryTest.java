@@ -17,6 +17,7 @@ package dev.sigstore.rekor.client;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.LogId;
 import dev.sigstore.proto.rekor.v1.Checkpoint;
 import dev.sigstore.proto.rekor.v1.InclusionPromise;
@@ -60,7 +61,7 @@ public class RekorEntryTest {
                     .addHashes(ByteString.fromHex("02")))
             .build();
 
-    var entry = RekorEntry.fromTLogEntry(tle);
+    var entry = ProtoMutators.toRekorEntry(tle);
 
     Assertions.assertEquals(123, entry.getLogIndex());
     Assertions.assertEquals("abcdef", entry.getLogID());
@@ -94,7 +95,7 @@ public class RekorEntryTest {
             .setCanonicalizedBody(MOCK_BODY_BYTESTRING)
             .build();
 
-    var entry = RekorEntry.fromTLogEntry(tle);
+    var entry = ProtoMutators.toRekorEntry(tle);
     Assertions.assertEquals(123, entry.getLogIndex());
     Assertions.assertEquals("abcdef", entry.getLogID());
     Assertions.assertEquals(456, entry.getIntegratedTime());

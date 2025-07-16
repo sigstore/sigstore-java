@@ -21,6 +21,7 @@ import com.google.common.io.Resources;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dev.sigstore.json.GsonSupplier;
 import dev.sigstore.json.ProtoJson;
+import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
@@ -280,7 +281,7 @@ public class RekorVerifierTest {
       throws InvalidProtocolBufferException, RekorParseException {
     var transparencyLogEntryBuilder = TransparencyLogEntry.newBuilder();
     ProtoJson.parser().merge(json, transparencyLogEntryBuilder);
-    return RekorEntry.fromTLogEntry(transparencyLogEntryBuilder.build());
+    return ProtoMutators.toRekorEntry(transparencyLogEntryBuilder.build());
   }
 
   private RekorEntry getV1RekorEntry(String json) throws Exception {
