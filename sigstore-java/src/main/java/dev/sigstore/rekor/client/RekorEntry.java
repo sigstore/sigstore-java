@@ -20,12 +20,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import dev.sigstore.json.ProtoJson;
+import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 import javax.annotation.Nullable;
-import org.bouncycastle.util.encoders.Hex;
 import org.erdtman.jcs.JsonCanonicalizer;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
@@ -173,49 +173,9 @@ public interface RekorEntry {
     try {
       TransparencyLogEntry.Builder builder = TransparencyLogEntry.newBuilder();
       ProtoJson.parser().ignoringUnknownFields().merge(json, builder);
-      return RekorEntry.fromTLogEntry(builder.build());
+      return ProtoMutators.toRekorEntry(builder.build());
     } catch (InvalidProtocolBufferException e) {
       throw new RekorParseException("Failed to parse Rekor response JSON", e);
     }
-  }
-
-  /** Returns a RekorEntry from a TransparencyLogEntry */
-  public static RekorEntry fromTLogEntry(TransparencyLogEntry tle) throws RekorParseException {
-    ImmutableRekorEntry.Builder builder = ImmutableRekorEntry.builder();
-
-    builder.logIndex(tle.getLogIndex());
-    builder.logID(Hex.toHexString(tle.getLogId().getKeyId().toByteArray()));
-    builder.integratedTime(tle.getIntegratedTime());
-
-    // The body of a RekorEntry is Base64 encoded
-    builder.body(
-        java.util.Base64.getEncoder().encodeToString(tle.getCanonicalizedBody().toByteArray()));
-
-    ImmutableVerification.Builder verificationBuilder = ImmutableVerification.builder();
-
-    // Rekor v2 entries won't have an InclusionPromise/SET
-    if (tle.hasInclusionPromise()
-        && !tle.getInclusionPromise().getSignedEntryTimestamp().isEmpty()) {
-      verificationBuilder.signedEntryTimestamp(
-          java.util.Base64.getEncoder()
-              .encodeToString(tle.getInclusionPromise().getSignedEntryTimestamp().toByteArray()));
-    }
-
-    if (tle.hasInclusionProof()) {
-      dev.sigstore.proto.rekor.v1.InclusionProof ipProto = tle.getInclusionProof();
-      ImmutableInclusionProof.Builder ipBuilder = ImmutableInclusionProof.builder();
-      ipBuilder.logIndex(ipProto.getLogIndex());
-      ipBuilder.rootHash(
-          org.bouncycastle.util.encoders.Hex.toHexString(ipProto.getRootHash().toByteArray()));
-      ipBuilder.treeSize(ipProto.getTreeSize());
-      ipBuilder.checkpoint(ipProto.getCheckpoint().getEnvelope());
-      ipProto
-          .getHashesList()
-          .forEach(hash -> ipBuilder.addHashes(Hex.toHexString(hash.toByteArray())));
-      verificationBuilder.inclusionProof(ipBuilder.build());
-    }
-    builder.verification(verificationBuilder.build());
-
-    return builder.build();
   }
 }
