@@ -71,7 +71,8 @@ public class RekorVerifier {
                     new RekorVerificationException(
                         "Log entry (logid) does not match any provided transparency logs."));
 
-    if (entry.getVerification().getSignedEntryTimestamp() != null) {
+    var set = entry.getVerification().getSignedEntryTimestamp();
+    if (set != null && !set.isEmpty()) {
       try {
         var verifier = Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey());
         if (!verifier.verify(
