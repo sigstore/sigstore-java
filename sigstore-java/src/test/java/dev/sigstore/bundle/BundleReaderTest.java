@@ -92,6 +92,11 @@ class BundleReaderTest {
     readBundle("dev/sigstore/samples/bundles/bundle-with-timestamp.sigstore");
   }
 
+  @Test
+  public void readBundle_rekorV2Entry() throws Exception {
+    readBundle("dev/sigstore/samples/bundles/bundle-with-rekor-v2-entry.sigstore");
+  }
+
   private Bundle readBundle(String resourcePath) throws Exception {
     try (var reader =
         new InputStreamReader(
