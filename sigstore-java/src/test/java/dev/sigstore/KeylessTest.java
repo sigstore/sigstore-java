@@ -18,9 +18,6 @@ package dev.sigstore;
 import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.Bundle.HashAlgorithm;
-import dev.sigstore.encryption.certificates.Certificates;
-import dev.sigstore.rekor.client.RekorTypeException;
-import dev.sigstore.rekor.client.RekorTypes;
 import dev.sigstore.testkit.annotations.DisabledIfSkipStaging;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
@@ -30,7 +27,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -38,6 +34,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class KeylessTest {
   @TempDir public static Path testRoot;
@@ -76,11 +74,13 @@ public class KeylessTest {
     }
   }
 
-  @Test
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   @DisabledIfSkipStaging
-  public void sign_staging() throws Exception {
-    var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
+  public void sign_staging(boolean enableRekorV2) throws Exception {
+    var signer =
+        KeylessSigner.builder().sigstoreStagingDefaults().enableRekorV2(enableRekorV2).build();
     var results = signer.sign(artifactDigests);
     verifySigningResult(results);
 
@@ -91,7 +91,7 @@ public class KeylessTest {
     }
   }
 
-  private void verifySigningResult(List<Bundle> results) throws IOException, RekorTypeException {
+  private void verifySigningResult(List<Bundle> results) throws IOException {
 
     Assertions.assertEquals(artifactDigests.size(), results.size());
 
@@ -104,21 +104,12 @@ public class KeylessTest {
       Assertions.assertEquals(1, result.getEntries().size());
       Assertions.assertNotNull(result.getMessageSignature().get().getSignature());
 
-      var hr = RekorTypes.getHashedRekord(result.getEntries().get(0));
       // check if the rekor entry has the digest we sent
       Assertions.assertArrayEquals(
           artifactDigest, result.getMessageSignature().get().getMessageDigest().get().getDigest());
       Assertions.assertEquals(
           HashAlgorithm.SHA2_256,
           result.getMessageSignature().get().getMessageDigest().get().getHashAlgorithm());
-      // check if the rekor entry has the signature we sent
-      Assertions.assertArrayEquals(
-          Base64.getDecoder().decode(hr.getSignature().getContent()),
-          result.getMessageSignature().get().getSignature());
-      // check if the rekor entry has the certificate we sent
-      Assertions.assertArrayEquals(
-          Base64.getDecoder().decode(hr.getSignature().getPublicKey().getContent()),
-          Certificates.toPemBytes(result.getCertPath().getCertificates().get(0)));
       // check if required inclusion proof exists
       Assertions.assertNotNull(result.getEntries().get(0).getVerification().getInclusionProof());
     }

@@ -19,6 +19,8 @@ import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
+import com.google.gson.Gson;
+import com.google.protobuf.InvalidProtocolBufferException;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.VerificationOptions.UncheckedCertificateException;
 import dev.sigstore.bundle.Bundle;
@@ -29,6 +31,9 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
+import dev.sigstore.json.ProtoJson;
+import dev.sigstore.proto.common.v1.HashAlgorithm;
+import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorTypeException;
@@ -37,9 +42,6 @@ import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.rekor.dsse.v0_0_1.Dsse;
 import dev.sigstore.rekor.dsse.v0_0_1.PayloadHash;
-import dev.sigstore.timestamp.client.ImmutableTimestampResponse;
-import dev.sigstore.timestamp.client.TimestampException;
-import dev.sigstore.timestamp.client.TimestampVerificationException;
 import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
@@ -50,14 +52,12 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateExpiredException;
-import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -149,19 +149,9 @@ public class KeylessVerifier {
           "Bundle must contain a message signature or DSSE envelope to verify");
     }
 
-    if (bundle.getEntries().isEmpty()) {
-      throw new KeylessVerificationException("Cannot verify bundle without tlog entry");
-    }
-
-    if (bundle.getEntries().size() > 1) {
-      throw new KeylessVerificationException(
-          "Bundle verification expects 1 entry, but found " + bundle.getEntries().size());
-    }
-
     var signingCert = bundle.getCertPath();
     var leafCert = Certificates.getLeaf(signingCert);
 
-    // verify the certificate chains up to a trusted root (fulcio) and contains a valid SCT from
     // a trusted CT log
     try {
       fulcioVerifier.verifySigningCertificate(signingCert);
@@ -173,25 +163,7 @@ public class KeylessVerifier {
     // verify the certificate identity if options are present
     checkCertificateMatchers(leafCert, options.getCertificateMatchers());
 
-    RekorEntry rekorEntry = bundle.getEntries().get(0);
-
-    // verify the rekor entry is signed by the log keys
-    try {
-      rekorVerifier.verifyEntry(rekorEntry);
-    } catch (RekorVerificationException ex) {
-      throw new KeylessVerificationException("Rekor entry signature was not valid", ex);
-    }
-
-    // check if the time of entry inclusion in the log (a stand-in for signing time) is within the
-    // validity period for the certificate
-    var entryTime = Date.from(rekorEntry.getIntegratedTimeInstant());
-    try {
-      leafCert.checkValidity(entryTime);
-    } catch (CertificateNotYetValidException e) {
-      throw new KeylessVerificationException("Signing time was before certificate validity", e);
-    } catch (CertificateExpiredException e) {
-      throw new KeylessVerificationException("Signing time was after certificate expiry", e);
-    }
+    var rekorEntry = bundle.getEntries().get(0);
 
     byte[] signature;
     if (bundle.getMessageSignature().isPresent()) { // hashedrekord
@@ -204,32 +176,10 @@ public class KeylessVerifier {
       signature = dsseEnvelope.getSignature();
     }
 
-    verifyTimestamps(leafCert, bundle.getTimestamps(), signature);
-  }
-
-  private void verifyTimestamps(
-      X509Certificate leafCert, List<Bundle.Timestamp> timestamps, byte[] signature)
-      throws KeylessVerificationException {
-    if (timestamps == null || timestamps.isEmpty()) {
-      return;
-    }
-    for (Bundle.Timestamp timestamp : timestamps) {
-      byte[] tsBytes = timestamp.getRfc3161Timestamp();
-      if (tsBytes == null || tsBytes.length == 0) {
-        throw new KeylessVerificationException(
-            "Found an empty or null RFC3161 timestamp in bundle");
-      }
-      try {
-        var tsResp = ImmutableTimestampResponse.builder().encoded(tsBytes).build();
-        timestampVerifier.verify(tsResp, signature);
-        leafCert.checkValidity(tsResp.getGenTime());
-      } catch (TimestampException
-          | CertificateNotYetValidException
-          | CertificateExpiredException
-          | TimestampVerificationException e) {
-        throw new KeylessVerificationException(
-            "RFC3161 timestamp verification failed: " + e.getMessage(), e);
-      }
+    try {
+      rekorVerifier.verifyEntry(rekorEntry);
+    } catch (RekorVerificationException ex) {
+      throw new KeylessVerificationException("Transparency log entry could not be verified", ex);
     }
   }
 
@@ -282,36 +232,85 @@ public class KeylessVerifier {
           "Signature could not be processed: " + ex.getMessage(), ex);
     }
 
-    // recreate the log entry and check if it matches what was provided in the rekorEntry
-    try {
-      RekorTypes.getHashedRekord(rekorEntry);
-      var calculatedHashedRekord =
-          Base64.getEncoder()
-              .encodeToString(
-                  HashedRekordRequest.newHashedRekordRequest(
-                          artifactDigest, Certificates.toPemBytes(leafCert), signature)
-                      .toJsonPayload()
-                      .getBytes(StandardCharsets.UTF_8));
-      if (!Objects.equals(calculatedHashedRekord, rekorEntry.getBody())) {
-        throw new KeylessVerificationException(
-            "Provided verification materials are inconsistent with log entry");
+    // recreate the log entry and check if it matches what was provided in the entry
+    String version = rekorEntry.getBodyDecoded().getApiVersion();
+    if ("0.0.1".equals(version)) {
+      try {
+        RekorTypes.getHashedRekord(rekorEntry);
+        var calculatedHashedRekord =
+            HashedRekordRequest.newHashedRekordRequest(
+                    artifactDigest, Certificates.toPemBytes(leafCert), signature)
+                .toJsonPayload();
+        var body =
+            new String(Base64.getDecoder().decode(rekorEntry.getBody()), StandardCharsets.UTF_8);
+        if (!Objects.equals(calculatedHashedRekord, body)) {
+          throw new KeylessVerificationException(
+              "Provided verification materials are inconsistent with log entry");
+        }
+      } catch (IOException e) {
+        // this should be unreachable, we know leafCert is a valid certificate at this point
+        throw new RuntimeException("Unexpected IOException on valid leafCert", e);
+      } catch (RekorTypeException re) {
+        throw new KeylessVerificationException("Unexpected rekor type", re);
       }
-    } catch (IOException e) {
-      // this should be unreachable, we know leafCert is a valid certificate at this point
-      throw new RuntimeException("Unexpected IOException on valid leafCert", e);
-    } catch (RekorTypeException re) {
-      throw new KeylessVerificationException("Unexpected rekor type", re);
+    } else if ("0.0.2".equals(version)) {
+      HashedRekordLogEntryV002 logEntrySpec;
+      try {
+        HashedRekordLogEntryV002.Builder builder = HashedRekordLogEntryV002.newBuilder();
+        ProtoJson.parser()
+            .ignoringUnknownFields()
+            .merge(
+                new Gson()
+                    .toJson(
+                        rekorEntry
+                            .getBodyDecoded()
+                            .getSpec()
+                            .getAsJsonObject()
+                            .get("hashedRekordV002")),
+                builder);
+        logEntrySpec = builder.build();
+      } catch (InvalidProtocolBufferException ipbe) {
+        throw new KeylessVerificationException(
+            "Could not parse HashedRekordLogEntryV002 from log entry body");
+      }
+      if (!logEntrySpec.getData().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
+        throw new KeylessVerificationException(
+            "Unsupported digest algorithm in log entry: " + logEntrySpec.getData().getAlgorithm());
+      }
+      if (!Arrays.equals(logEntrySpec.getData().getDigest().toByteArray(), artifactDigest)) {
+        throw new KeylessVerificationException(
+            "Artifact digest does not match digest in log entry spec");
+      }
+      if (!Arrays.equals(logEntrySpec.getSignature().getContent().toByteArray(), signature)) {
+        throw new KeylessVerificationException(
+            "Signature does not match signature in log entry spec");
+      }
+      var verifier = logEntrySpec.getSignature().getVerifier();
+      if (!verifier.hasX509Certificate()) {
+        throw new KeylessVerificationException("Rekor entry verifier is missing X.509 certificate");
+      }
+      try {
+        byte[] certFromRekor = verifier.getX509Certificate().getRawBytes().toByteArray();
+        byte[] certFromBundle = leafCert.getEncoded();
+        if (!Arrays.equals(certFromRekor, certFromBundle)) {
+          throw new KeylessVerificationException(
+              "Certificate in rekor entry does not match certificate in bundle");
+        }
+      } catch (CertificateEncodingException e) {
+        throw new KeylessVerificationException(
+            "Could not encode leaf certificate for comparison", e);
+      }
+    } else {
+      throw new KeylessVerificationException("Unsupported hashedrekord version");
     }
   }
 
-  // do all dsse specific checks
   private void checkDsseEnvelope(
       RekorEntry rekorEntry,
       DsseEnvelope dsseEnvelope,
       byte[] artifactDigest,
       X509Certificate leafCert)
       throws KeylessVerificationException {
-
     // verify the artifact is in the subject list of the envelope
     if (!Objects.equals(InTotoPayload.PAYLOAD_TYPE, dsseEnvelope.getPayloadType())) {
       throw new KeylessVerificationException(
@@ -367,7 +366,7 @@ public class KeylessVerifier {
       throw new KeylessVerificationException("Signature could not be processed", se);
     }
 
-    // check if the digest over the dsse payload matches the digest in the rekorEntry
+    // check if the digest over the dsse payload matches the digest in the transparency log entry
     Dsse rekorDsse;
     try {
       rekorDsse = RekorTypes.getDsse(rekorEntry);
