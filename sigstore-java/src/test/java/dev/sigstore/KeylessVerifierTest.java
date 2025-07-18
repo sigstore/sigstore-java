@@ -586,6 +586,20 @@ public class KeylessVerifierTest {
   }
 
   @Test
+  public void testVerify_dsseBundle_rekorV2() throws Exception {
+    var artifact =
+        Resources.getResource("dev/sigstore/samples/bundles/a.dsse.staging-rekor.txt").getPath();
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.rekor-v2.sigstore"),
+            StandardCharsets.UTF_8);
+
+    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    verifier.verify(
+        Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
+  }
+
+  @Test
   public void testVerify_noRfc3161Timestamps_rekorV2() throws Exception {
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
     var bundleFile =
