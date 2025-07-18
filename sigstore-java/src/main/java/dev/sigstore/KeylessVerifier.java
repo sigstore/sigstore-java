@@ -33,7 +33,9 @@ import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
+import dev.sigstore.proto.rekor.v2.DSSELogEntryV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
+import dev.sigstore.proto.rekor.v2.Signature;
 import dev.sigstore.rekor.client.HashedRekordRequest;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorTypeException;
@@ -306,18 +308,22 @@ public class KeylessVerifier {
         throw new KeylessVerificationException(
             "Could not parse HashedRekordLogEntryV002 from log entry body");
       }
+
       if (!logEntrySpec.getData().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
         throw new KeylessVerificationException(
             "Unsupported digest algorithm in log entry: " + logEntrySpec.getData().getAlgorithm());
       }
+
       if (!Arrays.equals(logEntrySpec.getData().getDigest().toByteArray(), artifactDigest)) {
         throw new KeylessVerificationException(
             "Artifact digest does not match digest in log entry spec");
       }
+
       if (!Arrays.equals(logEntrySpec.getSignature().getContent().toByteArray(), signature)) {
         throw new KeylessVerificationException(
             "Signature does not match signature in log entry spec");
       }
+
       var verifier = logEntrySpec.getSignature().getVerifier();
       if (!verifier.hasX509Certificate()) {
         throw new KeylessVerificationException("Rekor entry verifier is missing X.509 certificate");
@@ -399,46 +405,108 @@ public class KeylessVerifier {
       throw new KeylessVerificationException("Signature could not be processed", se);
     }
 
-    // check if the digest over the dsse payload matches the digest in the transparency log entry
-    Dsse rekorDsse;
-    try {
-      rekorDsse = RekorTypes.getDsse(rekorEntry);
-    } catch (RekorTypeException re) {
-      throw new KeylessVerificationException("Unexpected rekor type", re);
-    }
+    String version = rekorEntry.getBodyDecoded().getApiVersion();
+    if ("0.0.1".equals(version)) {
+      Dsse rekorDsse;
+      try {
+        rekorDsse = RekorTypes.getDsse(rekorEntry);
+      } catch (RekorTypeException re) {
+        throw new KeylessVerificationException("Unexpected rekor type", re);
+      }
 
-    var algorithm = rekorDsse.getPayloadHash().getAlgorithm();
-    if (algorithm != PayloadHash.Algorithm.SHA_256) {
-      throw new KeylessVerificationException(
-          "Cannot process DSSE entry with hashing algorithm " + algorithm.toString());
-    }
+      var algorithm = rekorDsse.getPayloadHash().getAlgorithm();
+      if (algorithm != PayloadHash.Algorithm.SHA_256) {
+        throw new KeylessVerificationException(
+            "Cannot process DSSE entry with hashing algorithm " + algorithm.toString());
+      }
 
-    byte[] payloadDigest;
-    try {
-      payloadDigest = Hex.decode(rekorDsse.getPayloadHash().getValue());
-    } catch (DecoderException de) {
-      throw new KeylessVerificationException(
-          "Could not decode hex sha256 artifact hash in hashrekord", de);
-    }
+      // check if the digest over the dsse payload matches the digest in the transparency log entry
+      byte[] payloadDigest;
+      try {
+        payloadDigest = Hex.decode(rekorDsse.getPayloadHash().getValue());
+      } catch (DecoderException de) {
+        throw new KeylessVerificationException(
+            "Could not decode hex sha256 artifact hash in hashrekord", de);
+      }
 
-    byte[] calculatedDigest = Hashing.sha256().hashBytes(dsseEnvelope.getPayload()).asBytes();
-    if (!Arrays.equals(calculatedDigest, payloadDigest)) {
-      throw new KeylessVerificationException(
-          "Digest of DSSE payload in bundle does not match DSSE payload digest in log entry");
-    }
+      byte[] calculatedDigest = Hashing.sha256().hashBytes(dsseEnvelope.getPayload()).asBytes();
+      if (!Arrays.equals(calculatedDigest, payloadDigest)) {
+        throw new KeylessVerificationException(
+            "Digest of DSSE payload in bundle does not match DSSE payload digest in log entry");
+      }
 
-    // check if the signature over the dsse payload matches the signature in the rekorEntry
-    if (rekorDsse.getSignatures().size() != 1) {
-      throw new KeylessVerificationException(
-          "DSSE log entry must have exactly 1 signature, but found: "
-              + rekorDsse.getSignatures().size());
-    }
+      // check if the signature over the dsse payload matches the signature in the rekorEntry
+      if (rekorDsse.getSignatures().size() != 1) {
+        throw new KeylessVerificationException(
+            "DSSE log entry must have exactly 1 signature, but found: "
+                + rekorDsse.getSignatures().size());
+      }
 
-    if (!Base64.getEncoder()
-        .encodeToString(dsseEnvelope.getSignature())
-        .equals(rekorDsse.getSignatures().get(0).getSignature())) {
-      throw new KeylessVerificationException(
-          "Provided DSSE signature materials are inconsistent with DSSE log entry");
+      if (!Base64.getEncoder()
+          .encodeToString(dsseEnvelope.getSignature())
+          .equals(rekorDsse.getSignatures().get(0).getSignature())) {
+        throw new KeylessVerificationException(
+            "Provided DSSE signature materials are inconsistent with DSSE log entry");
+      }
+    } else if ("0.0.2".equals(version)) {
+      DSSELogEntryV002 logEntrySpec;
+      try {
+        DSSELogEntryV002.Builder builder = DSSELogEntryV002.newBuilder();
+        ProtoJson.parser()
+            .merge(
+                new Gson()
+                    .toJson(
+                        rekorEntry.getBodyDecoded().getSpec().getAsJsonObject().get("dsseV002")),
+                builder);
+        logEntrySpec = builder.build();
+      } catch (InvalidProtocolBufferException ipbe) {
+        throw new KeylessVerificationException(
+            "Could not parse DSSELogEntryV002 from log entry body", ipbe);
+      }
+
+      if (!logEntrySpec.getPayloadHash().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
+        throw new KeylessVerificationException(
+            "Unsupported digest algorithm in log entry: "
+                + logEntrySpec.getPayloadHash().getAlgorithm());
+      }
+
+      // check if the digest over the dsse payload matches the digest in the transparency log entry
+      byte[] calculatedDigest = Hashing.sha256().hashBytes(dsseEnvelope.getPayload()).asBytes();
+      if (!Arrays.equals(
+          logEntrySpec.getPayloadHash().getDigest().toByteArray(), calculatedDigest)) {
+        throw new KeylessVerificationException(
+            "Digest of DSSE payload in bundle does not match DSSE payload digest in log entry");
+      }
+
+      // check if the signature over the dsse payload matches the signature in the rekorEntry
+      if (logEntrySpec.getSignaturesCount() != 1) {
+        throw new KeylessVerificationException(
+            "Log entry spec must have exactly 1 signature, but found: "
+                + logEntrySpec.getSignaturesCount());
+      }
+
+      Signature logSignature = logEntrySpec.getSignatures(0);
+      if (!Arrays.equals(dsseEnvelope.getSignature(), logSignature.getContent().toByteArray())) {
+        throw new KeylessVerificationException(
+            "Signature in DSSE envelope does not match signature in log entry spec");
+      }
+
+      var verifier = logSignature.getVerifier();
+      if (!verifier.hasX509Certificate()) {
+        throw new KeylessVerificationException(
+            "Rekor entry DSSE verifier is missing X.509 certificate");
+      }
+      try {
+        byte[] certFromRekor = verifier.getX509Certificate().getRawBytes().toByteArray();
+        byte[] certFromBundle = leafCert.getEncoded();
+        if (!Arrays.equals(certFromRekor, certFromBundle)) {
+          throw new KeylessVerificationException(
+              "Certificate in rekor entry does not match certificate in bundle");
+        }
+      } catch (CertificateEncodingException e) {
+        throw new KeylessVerificationException(
+            "Could not encode leaf certificate for comparison", e);
+      }
     }
   }
 }
