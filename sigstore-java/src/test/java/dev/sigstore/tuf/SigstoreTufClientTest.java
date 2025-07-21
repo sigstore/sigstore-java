@@ -49,7 +49,7 @@ class SigstoreTufClientTest {
   }
 
   @Test
-  public void testUpdate_publicGoodNoSigningConfigV02() throws Exception {
+  public void testUpdate_publicGoodHashSigningConfigV02() throws Exception {
     var client =
         SigstoreTufClient.builder()
             .usePublicGoodInstance()
@@ -57,8 +57,7 @@ class SigstoreTufClientTest {
             .build();
     client.forceUpdate();
 
-    // TODO: change this when we publish new signing config to public good
-    Assertions.assertNull(client.getSigstoreSigningConfig());
+    assertSigningConfigValid(client.getSigstoreSigningConfig());
   }
 
   @Test
