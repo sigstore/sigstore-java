@@ -15,15 +15,18 @@
  */
 package dev.sigstore.encryption.signers;
 
+import dev.sigstore.AlgorithmRegistry;
 import java.security.*;
 
-/** ECDSA signer, use {@link Signers#newEcdsaSigner()} to instantiate}. */
+/** ECDSA signer, use {@link Signers} to instantiate}. */
 public class EcdsaSigner implements Signer {
 
   private final KeyPair keyPair;
+  private final AlgorithmRegistry.HashAlgorithm hashAlgorithm;
 
-  EcdsaSigner(KeyPair keyPair) {
+  EcdsaSigner(KeyPair keyPair, AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
     this.keyPair = keyPair;
+    this.hashAlgorithm = hashAlgorithm;
   }
 
   @Override
@@ -34,7 +37,7 @@ public class EcdsaSigner implements Signer {
   @Override
   public byte[] sign(byte[] artifact)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    Signature signature = Signature.getInstance("SHA256withECDSA");
+    Signature signature = Signature.getInstance(hashAlgorithm + "withECDSA");
     signature.initSign(keyPair.getPrivate());
     signature.update(artifact);
     return signature.sign();
@@ -43,8 +46,9 @@ public class EcdsaSigner implements Signer {
   @Override
   public byte[] signDigest(byte[] artifactDigest)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    if (artifactDigest.length > 64) {
-      throw new SignatureException("Artifact digest cannot be longer than 64 bytes for this mode");
+    if (artifactDigest.length != hashAlgorithm.getLength()) {
+      throw new SignatureException(
+          "Artifact digest must be " + hashAlgorithm.getLength() + " bytes");
     }
     Signature signature = Signature.getInstance("NONEwithECDSA");
     signature.initSign(keyPair.getPrivate());

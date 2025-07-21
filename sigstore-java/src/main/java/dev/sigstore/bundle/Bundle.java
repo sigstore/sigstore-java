@@ -16,6 +16,7 @@
 package dev.sigstore.bundle;
 
 import com.google.common.base.Preconditions;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.rekor.client.RekorEntry;
 import java.io.IOException;
 import java.io.Reader;
@@ -39,10 +40,6 @@ import org.immutables.value.Value.Lazy;
  */
 @Immutable
 public abstract class Bundle {
-
-  public enum HashAlgorithm {
-    SHA2_256
-  }
 
   static final String BUNDLE_V_0_1 = "application/vnd.dev.sigstore.bundle+json;version=0.1";
   static final String BUNDLE_V_0_2 = "application/vnd.dev.sigstore.bundle+json;version=0.2";
@@ -112,7 +109,8 @@ public abstract class Bundle {
     /** Signature over an artifact. */
     byte[] getSignature();
 
-    static MessageSignature of(HashAlgorithm algorithm, byte[] digest, byte[] signature) {
+    static MessageSignature of(
+        AlgorithmRegistry.HashAlgorithm algorithm, byte[] digest, byte[] signature) {
       return ImmutableMessageSignature.builder()
           .signature(signature)
           .messageDigest(
@@ -125,7 +123,7 @@ public abstract class Bundle {
   public interface MessageDigest {
 
     /** The algorithm used to compute the digest. */
-    HashAlgorithm getHashAlgorithm();
+    AlgorithmRegistry.HashAlgorithm getHashAlgorithm();
 
     /**
      * The raw bytes of the digest computer using the hashing algorithm described by {@link

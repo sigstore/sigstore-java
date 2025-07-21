@@ -16,6 +16,7 @@
 package dev.sigstore.encryption.signers;
 
 import com.google.common.hash.Hashing;
+import dev.sigstore.AlgorithmRegistry;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.stream.Stream;
@@ -30,10 +31,17 @@ public class SignerTest {
   private static final byte[] CONTENT_DIGEST = Hashing.sha256().hashBytes(CONTENT).asBytes();
 
   static Stream<Arguments> signerProvider() throws NoSuchAlgorithmException {
-    var rsaSigner = Signers.newRsaSigner();
-    var ecdsaSigner = Signers.newEcdsaSigner();
+    var rsaSigner2048 =
+        Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_RSA_PKCS1V15_2048_SHA256);
+    var rsaSigner3072 =
+        Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_RSA_PKCS1V15_3072_SHA256);
+    var rsaSigner4096 =
+        Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_RSA_PKCS1V15_4096_SHA256);
+    var ecdsaSigner = Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256);
     return Stream.of(
-        Arguments.arguments(rsaSigner, Verifiers.newVerifier(rsaSigner.getPublicKey())),
+        Arguments.arguments(rsaSigner2048, Verifiers.newVerifier(rsaSigner2048.getPublicKey())),
+        Arguments.arguments(rsaSigner3072, Verifiers.newVerifier(rsaSigner3072.getPublicKey())),
+        Arguments.arguments(rsaSigner4096, Verifiers.newVerifier(rsaSigner4096.getPublicKey())),
         Arguments.arguments(ecdsaSigner, Verifiers.newVerifier(ecdsaSigner.getPublicKey())));
   }
 

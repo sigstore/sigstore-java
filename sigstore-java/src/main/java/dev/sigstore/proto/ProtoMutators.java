@@ -15,11 +15,14 @@
  */
 package dev.sigstore.proto;
 
+import static dev.sigstore.proto.common.v1.HashAlgorithm.*;
+
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
-import dev.sigstore.bundle.Bundle;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
+import dev.sigstore.proto.common.v1.PublicKeyDetails;
 import dev.sigstore.proto.common.v1.X509Certificate;
 import dev.sigstore.proto.rekor.v1.InclusionProof;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
@@ -27,7 +30,6 @@ import dev.sigstore.rekor.client.ImmutableInclusionProof;
 import dev.sigstore.rekor.client.ImmutableRekorEntry;
 import dev.sigstore.rekor.client.ImmutableVerification;
 import dev.sigstore.rekor.client.RekorEntry;
-import dev.sigstore.rekor.client.RekorParseException;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -37,6 +39,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import org.bouncycastle.util.encoders.Hex;
 
 public class ProtoMutators {
@@ -62,14 +65,28 @@ public class ProtoMutators {
     return X509Certificate.newBuilder().setRawBytes(ByteString.copyFrom(encoded)).build();
   }
 
-  public static HashAlgorithm from(Bundle.HashAlgorithm algorithm) {
-    if (algorithm == Bundle.HashAlgorithm.SHA2_256) {
-      return HashAlgorithm.SHA2_256;
+  public static HashAlgorithm toProtoHashAlgorithm(AlgorithmRegistry.HashAlgorithm algorithm) {
+    if (Objects.requireNonNull(algorithm) == AlgorithmRegistry.HashAlgorithm.SHA2_256) {
+      return SHA2_256;
     }
     throw new IllegalStateException("Unknown hash algorithm: " + algorithm);
   }
 
-  public static RekorEntry toRekorEntry(TransparencyLogEntry tle) throws RekorParseException {
+  public static PublicKeyDetails toPublicKeyDetails(AlgorithmRegistry.SigningAlgorithm algorithm) {
+    switch (algorithm) {
+      case PKIX_RSA_PKCS1V15_2048_SHA256:
+        return PublicKeyDetails.PKIX_RSA_PKCS1V15_2048_SHA256;
+      case PKIX_RSA_PKCS1V15_3072_SHA256:
+        return PublicKeyDetails.PKIX_RSA_PKCS1V15_3072_SHA256;
+      case PKIX_RSA_PKCS1V15_4096_SHA256:
+        return PublicKeyDetails.PKIX_RSA_PKCS1V15_4096_SHA256;
+      case PKIX_ECDSA_P256_SHA_256:
+        return PublicKeyDetails.PKIX_ECDSA_P256_SHA_256;
+    }
+    throw new IllegalStateException("Unknown algorithm: " + algorithm);
+  }
+
+  public static RekorEntry toRekorEntry(TransparencyLogEntry tle) {
     ImmutableRekorEntry.Builder builder = ImmutableRekorEntry.builder();
 
     builder.logIndex(tle.getLogIndex());

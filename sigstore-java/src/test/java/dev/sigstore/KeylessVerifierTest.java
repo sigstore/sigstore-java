@@ -357,7 +357,10 @@ public class KeylessVerifierTest {
   public void verifyCertificateMatches_noneProvided() throws Exception {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     var certificate =
-        (X509Certificate) CertGenerator.newCert(Signers.newEcdsaSigner().getPublicKey());
+        (X509Certificate)
+            CertGenerator.newCert(
+                Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256)
+                    .getPublicKey());
     Assertions.assertDoesNotThrow(() -> verifier.checkCertificateMatchers(certificate, List.of()));
   }
 
@@ -365,7 +368,10 @@ public class KeylessVerifierTest {
   public void verifyCertificateMatches_anyOf() throws Exception {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     var certificate =
-        (X509Certificate) CertGenerator.newCert(Signers.newEcdsaSigner().getPublicKey());
+        (X509Certificate)
+            CertGenerator.newCert(
+                Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256)
+                    .getPublicKey());
     Assertions.assertDoesNotThrow(
         () ->
             verifier.checkCertificateMatchers(
@@ -385,7 +391,10 @@ public class KeylessVerifierTest {
   public void verifyCertificateMatches_noneMatch() throws Exception {
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     var certificate =
-        (X509Certificate) CertGenerator.newCert(Signers.newEcdsaSigner().getPublicKey());
+        (X509Certificate)
+            CertGenerator.newCert(
+                Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256)
+                    .getPublicKey());
     var ex =
         Assertions.assertThrows(
             KeylessVerificationException.class,

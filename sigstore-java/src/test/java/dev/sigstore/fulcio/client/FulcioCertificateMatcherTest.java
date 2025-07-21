@@ -17,6 +17,7 @@ package dev.sigstore.fulcio.client;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.VerificationOptions.UncheckedCertificateException;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
@@ -36,7 +37,11 @@ public class FulcioCertificateMatcherTest {
 
   @BeforeAll
   public static void createCertificate() throws Exception {
-    certificate = (X509Certificate) CertGenerator.newCert(Signers.newEcdsaSigner().getPublicKey());
+    certificate =
+        (X509Certificate)
+            CertGenerator.newCert(
+                Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256)
+                    .getPublicKey());
   }
 
   @Test

@@ -94,7 +94,7 @@ class BundleWriter {
                 .setMessageDigest(
                     HashOutput.newBuilder()
                         .setAlgorithm(
-                            ProtoMutators.from(
+                            ProtoMutators.toProtoHashAlgorithm(
                                 messageSignature.getMessageDigest().get().getHashAlgorithm()))
                         .setDigest(
                             ByteString.copyFrom(

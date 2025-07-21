@@ -24,7 +24,6 @@ import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.ByteString;
 import dev.sigstore.bundle.Bundle;
-import dev.sigstore.bundle.Bundle.HashAlgorithm;
 import dev.sigstore.bundle.Bundle.MessageSignature;
 import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.bundle.ImmutableTimestamp;
@@ -41,7 +40,7 @@ import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.OidcTokenMatcher;
-import dev.sigstore.proto.common.v1.PublicKeyDetails;
+import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.X509Certificate;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.proto.rekor.v2.Signature;
@@ -114,6 +113,7 @@ public class KeylessSigner implements AutoCloseable {
   private final OidcClients oidcClients;
   private final List<OidcTokenMatcher> oidcIdentities;
   private final Signer signer;
+  private final AlgorithmRegistry.SigningAlgorithm signingAlgorithm;
   private final Duration minSigningCertificateLifetime;
 
   /** The code signing certificate from Fulcio. */
@@ -150,6 +150,7 @@ public class KeylessSigner implements AutoCloseable {
       OidcClients oidcClients,
       List<OidcTokenMatcher> oidcIdentities,
       Signer signer,
+      AlgorithmRegistry.SigningAlgorithm signingAlgorithm,
       Duration minSigningCertificateLifetime) {
     this.fulcioClient = fulcioClient;
     this.fulcioVerifier = fulcioVerifier;
@@ -161,6 +162,7 @@ public class KeylessSigner implements AutoCloseable {
     this.oidcClients = oidcClients;
     this.oidcIdentities = oidcIdentities;
     this.signer = signer;
+    this.signingAlgorithm = signingAlgorithm;
     this.minSigningCertificateLifetime = minSigningCertificateLifetime;
   }
 
@@ -186,7 +188,7 @@ public class KeylessSigner implements AutoCloseable {
     private SigningConfigProvider signingConfigProvider;
     private OidcClients oidcClients;
     private List<OidcTokenMatcher> oidcIdentities = Collections.emptyList();
-    private Signer signer;
+    private AlgorithmRegistry.SigningAlgorithm signingAlgorithm;
     private Duration minSigningCertificateLifetime = DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME;
     private boolean enableRekorV2 = false;
 
@@ -239,8 +241,8 @@ public class KeylessSigner implements AutoCloseable {
     }
 
     @CanIgnoreReturnValue
-    public Builder signer(Signer signer) {
-      this.signer = signer;
+    public Builder signingAlgorithm(AlgorithmRegistry.SigningAlgorithm signingAlgorithm) {
+      this.signingAlgorithm = signingAlgorithm;
       return this;
     }
 
@@ -276,7 +278,7 @@ public class KeylessSigner implements AutoCloseable {
       Preconditions.checkNotNull(signingConfigProvider);
       var signingConfig = signingConfigProvider.get();
       Preconditions.checkNotNull(oidcIdentities);
-      Preconditions.checkNotNull(signer);
+      Preconditions.checkNotNull(signingAlgorithm);
       Preconditions.checkNotNull(minSigningCertificateLifetime);
       var fulcioService = Service.select(signingConfig.getCas(), List.of(1));
       if (fulcioService.isEmpty()) {
@@ -328,6 +330,12 @@ public class KeylessSigner implements AutoCloseable {
         oidcClients = OidcClients.from(oidcService.get());
       }
 
+      if (!signingAlgorithm.getHashing().equals(AlgorithmRegistry.HashAlgorithm.SHA2_256)) {
+        throw new SigstoreConfigurationException("Signing algorithm must use sha256");
+      }
+
+      var signer = Signers.from(signingAlgorithm);
+
       return new KeylessSigner(
           fulcioClient,
           fulcioVerifier,
@@ -339,6 +347,7 @@ public class KeylessSigner implements AutoCloseable {
           oidcClients,
           oidcIdentities,
           signer,
+          signingAlgorithm,
           minSigningCertificateLifetime);
     }
 
@@ -354,7 +363,7 @@ public class KeylessSigner implements AutoCloseable {
       signingConfigProvider =
           SigningConfigProvider.fromOrDefault(
               sigstoreTufClientBuilder, LegacySigningConfig.PUBLIC_GOOD);
-      signer(Signers.newEcdsaSigner());
+      signingAlgorithm = AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256;
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
     }
@@ -368,7 +377,7 @@ public class KeylessSigner implements AutoCloseable {
       var sigstoreTufClientBuilder = SigstoreTufClient.builder().useStagingInstance();
       trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
       signingConfigProvider = SigningConfigProvider.from(sigstoreTufClientBuilder);
-      signer(Signers.newEcdsaSigner());
+      signingAlgorithm = AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256;
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
     }
@@ -384,9 +393,18 @@ public class KeylessSigner implements AutoCloseable {
    */
   @CheckReturnValue
   public List<Bundle> sign(List<byte[]> artifactDigests) throws KeylessSignerException {
-
-    if (artifactDigests.size() == 0) {
+    if (artifactDigests.isEmpty()) {
       throw new IllegalArgumentException("Require one or more digests");
+    }
+
+    for (var digest : artifactDigests) {
+      if (signingAlgorithm.getHashing().getLength() != digest.length) {
+        throw new KeylessSignerException(
+            "Invalid digest length: "
+                + digest.length
+                + " for signing Algorithm "
+                + signingAlgorithm);
+      }
     }
 
     var result = ImmutableList.<Bundle>builder();
@@ -435,7 +453,7 @@ public class KeylessSigner implements AutoCloseable {
           ImmutableBundle.builder()
               .certPath(signingCert)
               .messageSignature(
-                  MessageSignature.of(HashAlgorithm.SHA2_256, artifactDigest, signature));
+                  MessageSignature.of(signingAlgorithm.getHashing(), artifactDigest, signature));
 
       if (rekorV2Client != null) { // Using Rekor v2 and a TSA
         Preconditions.checkNotNull(
@@ -475,7 +493,7 @@ public class KeylessSigner implements AutoCloseable {
                     X509Certificate.newBuilder()
                         .setRawBytes(ByteString.copyFrom(encodedCert))
                         .build())
-                .setKeyDetails(PublicKeyDetails.PKIX_ECDSA_P256_SHA_256)
+                .setKeyDetails(ProtoMutators.toPublicKeyDetails(signingAlgorithm))
                 .build();
 
         var reqSignature =
@@ -610,7 +628,7 @@ public class KeylessSigner implements AutoCloseable {
   /**
    * Convenience wrapper around {@link #sign(List)} to sign a single digest
    *
-   * @param artifactDigest sha256 digest of the artifact to sign.
+   * @param artifactDigest sha256 digest of the artifacts to sign.
    * @return a keyless singing results.
    */
   @CheckReturnValue
@@ -626,14 +644,15 @@ public class KeylessSigner implements AutoCloseable {
    */
   @CheckReturnValue
   public Map<Path, Bundle> signFiles(List<Path> artifacts) throws KeylessSignerException {
-    if (artifacts.size() == 0) {
+    if (artifacts.isEmpty()) {
       throw new IllegalArgumentException("Require one or more paths");
     }
     var digests = new ArrayList<byte[]>(artifacts.size());
     for (var artifact : artifacts) {
       var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
       try {
-        digests.add(artifactByteSource.hash(Hashing.sha256()).asBytes());
+        digests.add(
+            artifactByteSource.hash(signingAlgorithm.getHashing().getHashFunction()).asBytes());
       } catch (IOException ex) {
         throw new KeylessSignerException("Failed to hash artifact " + artifact);
       }
@@ -654,15 +673,6 @@ public class KeylessSigner implements AutoCloseable {
    */
   @CheckReturnValue
   public Bundle signFile(Path artifact) throws KeylessSignerException {
-    return signFiles(List.of(artifact)).get(artifact);
-  }
-
-  /**
-   * Convenience wrapper around {@link #sign(List)} to accept a single file Compat - to be removed
-   * before 1.0.0
-   */
-  @Deprecated
-  public Bundle signFile2(Path artifact) throws KeylessSignerException {
     return signFiles(List.of(artifact)).get(artifact);
   }
 }
