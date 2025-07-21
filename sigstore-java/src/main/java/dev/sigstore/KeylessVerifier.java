@@ -42,6 +42,9 @@ import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.rekor.dsse.v0_0_1.Dsse;
 import dev.sigstore.rekor.dsse.v0_0_1.PayloadHash;
+import dev.sigstore.timestamp.client.ImmutableTimestampResponse;
+import dev.sigstore.timestamp.client.TimestampException;
+import dev.sigstore.timestamp.client.TimestampVerificationException;
 import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
@@ -54,6 +57,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
@@ -176,10 +181,38 @@ public class KeylessVerifier {
       signature = dsseEnvelope.getSignature();
     }
 
+    verifyTimestamps(leafCert, bundle.getTimestamps(), signature);
+
     try {
       rekorVerifier.verifyEntry(rekorEntry);
     } catch (RekorVerificationException ex) {
       throw new KeylessVerificationException("Transparency log entry could not be verified", ex);
+    }
+  }
+
+  private void verifyTimestamps(
+      X509Certificate leafCert, List<Bundle.Timestamp> timestamps, byte[] signature)
+      throws KeylessVerificationException {
+    if (timestamps == null || timestamps.isEmpty()) {
+      return;
+    }
+    for (Bundle.Timestamp timestamp : timestamps) {
+      byte[] tsBytes = timestamp.getRfc3161Timestamp();
+      if (tsBytes == null || tsBytes.length == 0) {
+        throw new KeylessVerificationException(
+            "Found an empty or null RFC3161 timestamp in bundle");
+      }
+      try {
+        var tsResp = ImmutableTimestampResponse.builder().encoded(tsBytes).build();
+        timestampVerifier.verify(tsResp, signature);
+        leafCert.checkValidity(tsResp.getGenTime());
+      } catch (TimestampException
+          | CertificateNotYetValidException
+          | CertificateExpiredException
+          | TimestampVerificationException e) {
+        throw new KeylessVerificationException(
+            "RFC3161 timestamp verification failed: " + e.getMessage(), e);
+      }
     }
   }
 
