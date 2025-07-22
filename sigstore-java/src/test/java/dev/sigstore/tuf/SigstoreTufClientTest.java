@@ -16,6 +16,9 @@
 package dev.sigstore.tuf;
 
 import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.proto.trustroot.v1.ServiceConfiguration;
+import dev.sigstore.proto.trustroot.v1.ServiceSelector;
+import dev.sigstore.proto.trustroot.v1.SigningConfig;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
@@ -121,12 +124,24 @@ class SigstoreTufClientTest {
   }
 
   private static Updater mockUpdater() throws IOException {
+    var serviceConfig = ServiceConfiguration.newBuilder().setSelector(ServiceSelector.ANY).build();
     var trustRootBytes =
         JsonFormat.printer().print(TrustedRoot.newBuilder()).getBytes(StandardCharsets.UTF_8);
+    var signingConfigBytes =
+        JsonFormat.printer()
+            .print(
+                SigningConfig.newBuilder()
+                    .setMediaType(SigstoreSigningConfig.MEDIA_TYPE)
+                    .setTsaConfig(serviceConfig)
+                    .setRekorTlogConfig(serviceConfig))
+            .getBytes(StandardCharsets.UTF_8);
     var mockUpdater = Mockito.mock(Updater.class);
     var mockTargetStore = Mockito.mock(TargetStore.class);
     Mockito.when(mockTargetStore.getTargetInputSteam(SigstoreTufClient.TRUST_ROOT_FILENAME))
         .thenAnswer((Answer<InputStream>) invocation -> new ByteArrayInputStream(trustRootBytes));
+    Mockito.when(mockTargetStore.getTargetInputSteam(SigstoreTufClient.SIGNING_CONFIG_FILENAME))
+        .thenAnswer(
+            (Answer<InputStream>) invocation -> new ByteArrayInputStream(signingConfigBytes));
     Mockito.when(mockUpdater.getTargetStore()).thenReturn(mockTargetStore);
 
     return mockUpdater;

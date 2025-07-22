@@ -62,7 +62,6 @@ import dev.sigstore.timestamp.client.TimestampException;
 import dev.sigstore.timestamp.client.TimestampResponse;
 import dev.sigstore.timestamp.client.TimestampVerificationException;
 import dev.sigstore.timestamp.client.TimestampVerifier;
-import dev.sigstore.trustroot.LegacySigningConfig;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
@@ -359,10 +358,7 @@ public class KeylessSigner implements AutoCloseable {
     public Builder sigstorePublicDefaults() {
       var sigstoreTufClientBuilder = SigstoreTufClient.builder().usePublicGoodInstance();
       trustedRootProvider = TrustedRootProvider.from(sigstoreTufClientBuilder);
-      // TODO: signing config is not pushed to prod yet
-      signingConfigProvider =
-          SigningConfigProvider.fromOrDefault(
-              sigstoreTufClientBuilder, LegacySigningConfig.PUBLIC_GOOD);
+      signingConfigProvider = SigningConfigProvider.from(sigstoreTufClientBuilder);
       signingAlgorithm = AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256;
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
