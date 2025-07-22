@@ -17,7 +17,6 @@ package dev.sigstore;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.Bundle;
-import dev.sigstore.bundle.Bundle.HashAlgorithm;
 import dev.sigstore.testkit.annotations.DisabledIfSkipStaging;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
@@ -108,7 +107,7 @@ public class KeylessTest {
       Assertions.assertArrayEquals(
           artifactDigest, result.getMessageSignature().get().getMessageDigest().get().getDigest());
       Assertions.assertEquals(
-          HashAlgorithm.SHA2_256,
+          AlgorithmRegistry.HashAlgorithm.SHA2_256,
           result.getMessageSignature().get().getMessageDigest().get().getHashAlgorithm());
       // check if required inclusion proof exists
       Assertions.assertNotNull(result.getEntries().get(0).getVerification().getInclusionProof());

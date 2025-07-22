@@ -16,6 +16,7 @@
 package dev.sigstore.bundle;
 
 import com.google.protobuf.ByteString;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
@@ -126,7 +127,7 @@ class BundleReader {
             ImmutableMessageSignature.builder()
                 .messageDigest(
                     ImmutableMessageDigest.builder()
-                        .hashAlgorithm(Bundle.HashAlgorithm.SHA2_256)
+                        .hashAlgorithm(AlgorithmRegistry.HashAlgorithm.SHA2_256)
                         .digest(
                             protoBundle
                                 .getMessageSignature()

@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
@@ -180,7 +181,7 @@ public class RekorClientHttpTest {
         MessageDigest.getInstance("SHA-256").digest(data.getBytes(StandardCharsets.UTF_8));
 
     // sign the full content (these signers do the artifact hashing themselves)
-    var signer = Signers.newEcdsaSigner();
+    var signer = Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256);
     var signature = signer.sign(data.getBytes(StandardCharsets.UTF_8));
 
     // create a fake signing cert (not fulcio/dex)

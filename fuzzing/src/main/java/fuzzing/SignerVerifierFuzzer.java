@@ -16,6 +16,7 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.encryption.signers.Verifier;
@@ -27,10 +28,10 @@ import java.security.SignatureException;
 public class SignerVerifierFuzzer {
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      Integer choice = data.consumeInt(0, 1);
+      Integer choice = data.consumeInt(0, AlgorithmRegistry.SigningAlgorithm.values().length - 1);
       byte[] byteArray = data.consumeRemainingAsBytes();
 
-      Signer signer = (choice == 1) ? Signers.newEcdsaSigner() : Signers.newRsaSigner();
+      Signer signer = Signers.from(AlgorithmRegistry.SigningAlgorithm.values()[choice]);
       Verifier verifier = Verifiers.newVerifier(signer.getPublicKey());
 
       byte[] signature1 = signer.sign(byteArray);

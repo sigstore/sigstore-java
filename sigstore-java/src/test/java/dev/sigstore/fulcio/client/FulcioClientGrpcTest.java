@@ -16,6 +16,7 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.http.HttpParams;
@@ -41,7 +42,7 @@ public class FulcioClientGrpcTest {
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
     var subject = mockOAuthServerExtension.getOidcToken().getSubjectAlternativeName();
 
-    var signer = Signers.newEcdsaSigner();
+    var signer = Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P256_SHA_256);
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
@@ -71,7 +72,7 @@ public class FulcioClientGrpcTest {
     var token = mockOAuthServerExtension.getOidcToken().getIdToken();
     var subject = mockOAuthServerExtension.getOidcToken().getSubjectAlternativeName();
 
-    var signer = Signers.newRsaSigner();
+    var signer = Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_RSA_PKCS1V15_2048_SHA256);
     var signed = signer.sign(subject.getBytes(StandardCharsets.UTF_8));
 
     // create a certificate request with our public key and our signed "subject"
