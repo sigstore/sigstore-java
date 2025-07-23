@@ -78,8 +78,7 @@ public class KeylessTest {
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   @DisabledIfSkipStaging
   public void sign_staging(boolean enableRekorV2) throws Exception {
-    var signer =
-        KeylessSigner.builder().sigstoreStagingDefaults().enableRekorV2(enableRekorV2).build();
+    var signer = KeylessSigner.builder().sigstoreStagingDefaults().build();
     var results = signer.sign(artifactDigests);
     verifySigningResult(results);
 
