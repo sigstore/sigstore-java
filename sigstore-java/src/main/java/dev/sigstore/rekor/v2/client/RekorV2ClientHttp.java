@@ -25,6 +25,7 @@ import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.proto.rekor.v2.CreateEntryRequest;
+import dev.sigstore.proto.rekor.v2.DSSERequestV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorParseException;
@@ -85,6 +86,38 @@ public class RekorV2ClientHttp implements RekorV2Client {
                 CreateEntryRequest.newBuilder()
                     .setHashedRekordRequestV002(hashedRekordRequest)
                     .build());
+
+    HttpRequest req =
+        HttpClients.newRequestFactory(httpParams)
+            .buildPostRequest(
+                new GenericUrl(rekorPutEndpoint),
+                ByteArrayContent.fromString("application/json", jsonPayload));
+    req.getHeaders().set("Accept", "application/json");
+    req.getHeaders().set("Content-Type", "application/json");
+
+    HttpResponse resp = req.execute();
+    if (resp.getStatusCode() != 201) {
+      throw new IOException(
+          String.format(
+              Locale.ROOT,
+              "bad response from rekor @ '%s' : %s",
+              rekorPutEndpoint,
+              resp.parseAsString()));
+    }
+
+    String respEntryJson = resp.parseAsString();
+
+    return RekorEntry.fromTLogEntryJson(respEntryJson);
+  }
+
+  @Override
+  public RekorEntry putEntry(DSSERequestV002 dsseRequestV002)
+      throws IOException, RekorParseException {
+    URI rekorPutEndpoint = uri.resolve(REKOR_ENTRIES_PATH);
+
+    String jsonPayload =
+        JsonFormat.printer()
+            .print(CreateEntryRequest.newBuilder().setDsseRequestV002(dsseRequestV002).build());
 
     HttpRequest req =
         HttpClients.newRequestFactory(httpParams)
