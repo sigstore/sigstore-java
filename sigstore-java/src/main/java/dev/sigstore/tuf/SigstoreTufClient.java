@@ -30,7 +30,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.Instant;
-import javax.annotation.Nullable;
 
 /**
  * Wrapper around {@link dev.sigstore.tuf.Updater} that provides access to sigstore specific
@@ -48,10 +47,7 @@ public class SigstoreTufClient {
   private final Updater updater;
   private Instant lastUpdate;
   private SigstoreTrustedRoot sigstoreTrustedRoot;
-  // TODO: this is nullable because we expect all future sigstore tuf repos to contain a signing
-  // config
-  // but while we transition, we need to handle the null case.
-  @Nullable private SigstoreSigningConfig sigstoreSigningConfig;
+  private SigstoreSigningConfig sigstoreSigningConfig;
   private final Duration cacheValidity;
 
   @VisibleForTesting
@@ -181,15 +177,9 @@ public class SigstoreTufClient {
       throw new SigstoreConfigurationException("Failed to read trusted root from target store", ex);
     }
     try {
-      if (updater.getTargetStore().hasTarget(SIGNING_CONFIG_FILENAME)) {
-        sigstoreSigningConfig =
-            SigstoreSigningConfig.from(
-                updater.getTargetStore().getTargetInputSteam(SIGNING_CONFIG_FILENAME));
-      } else {
-        sigstoreSigningConfig = null;
-        // TODO: Remove when prod and staging TUF repos have fully configured signing configs, but
-        // right now sigstore tuf repos not having sigstoreSigningConfig is a valid state.
-      }
+      sigstoreSigningConfig =
+          SigstoreSigningConfig.from(
+              updater.getTargetStore().getTargetInputSteam(SIGNING_CONFIG_FILENAME));
     } catch (IOException ex) {
       throw new SigstoreConfigurationException(
           "Failed to read signing config from target store", ex);
@@ -200,7 +190,6 @@ public class SigstoreTufClient {
     return sigstoreTrustedRoot;
   }
 
-  @Nullable
   public SigstoreSigningConfig getSigstoreSigningConfig() {
     return sigstoreSigningConfig;
   }

@@ -42,29 +42,11 @@ public interface SigningConfigProvider {
     };
   }
 
-  // Temporary while the tuf repos catches up, this will still fail if the remove TUF isn't
-  // available to check for signing config
-  static SigningConfigProvider fromOrDefault(
-      SigstoreTufClient.Builder tufClientBuilder, SigstoreSigningConfig defaultConfig) {
-    Preconditions.checkNotNull(tufClientBuilder);
-    return () -> {
-      try {
-        var tufClient = tufClientBuilder.build();
-        tufClient.update();
-        var fromTuf = tufClient.getSigstoreSigningConfig();
-        return fromTuf == null ? defaultConfig : fromTuf;
-      } catch (IOException ex) {
-        throw new SigstoreConfigurationException(
-            "Could not initialize signing config from provided tuf client", ex);
-      }
-    };
-  }
-
   static SigningConfigProvider from(Path signingConfig) {
     Preconditions.checkNotNull(signingConfig);
     return () -> {
-      try {
-        return SigstoreSigningConfig.from(Files.newInputStream(signingConfig));
+      try (var is = Files.newInputStream(signingConfig)) {
+        return SigstoreSigningConfig.from(is);
       } catch (IOException ex) {
         throw new SigstoreConfigurationException(
             "Could not initialize signing config from " + signingConfig, ex);
