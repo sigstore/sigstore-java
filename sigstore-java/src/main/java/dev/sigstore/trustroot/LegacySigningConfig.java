@@ -64,7 +64,7 @@ public class LegacySigningConfig {
   public static SigstoreSigningConfig STAGING =
       from(
           FULCIO_STAGING_URI,
-          Service.of(REKOR_PUBLIC_GOOD_URI, 1),
+          Service.of(REKOR_STAGING_URI, 1),
           DEX_STAGING_GOOD_URI,
           TSA_STAGING_URI);
   public static SigstoreSigningConfig STAGING_REKOR_V2 =

@@ -23,10 +23,10 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.ByteString;
-import dev.sigstore.bundle.Bundle;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.bundle.*;
 import dev.sigstore.bundle.Bundle.MessageSignature;
-import dev.sigstore.bundle.ImmutableBundle;
-import dev.sigstore.bundle.ImmutableTimestamp;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -42,6 +42,7 @@ import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.OidcTokenMatcher;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.X509Certificate;
+import dev.sigstore.proto.rekor.v2.DSSERequestV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.proto.rekor.v2.Signature;
 import dev.sigstore.proto.rekor.v2.Verifier;
@@ -65,6 +66,7 @@ import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
+import io.intoto.EnvelopeOuterClass;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -377,6 +379,140 @@ public class KeylessSigner implements AutoCloseable {
       minSigningCertificateLifetime(DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME);
       return this;
     }
+  }
+
+  public Bundle attest(String payload) throws KeylessSignerException {
+    // Technically speaking, it is unlikely the certificate will expire between signing artifacts
+    // However, files might be large, and it might take time to talk to Rekor
+    // so we check the certificate expiration here.
+    try {
+      renewSigningCertificate();
+    } catch (FulcioVerificationException
+        | UnsupportedAlgorithmException
+        | OidcException
+        | IOException
+        | InterruptedException
+        | InvalidKeyException
+        | NoSuchAlgorithmException
+        | SignatureException
+        | CertificateException ex) {
+      throw new KeylessSignerException("Failed to obtain signing certificate", ex);
+    }
+    CertPath signingCert;
+    byte[] signingCertPemBytes;
+    byte[] encodedCert;
+    lock.readLock().lock();
+    try {
+      signingCert = this.signingCert;
+      signingCertPemBytes = this.signingCertPemBytes;
+      encodedCert = this.encodedCert;
+      if (signingCert == null) {
+        throw new IllegalStateException("Signing certificate is null");
+      }
+    } finally {
+      lock.readLock().unlock();
+    }
+
+    var bundleBuilder = ImmutableBundle.builder().certPath(signingCert);
+
+    if (rekorV2Client != null) { // Using Rekor v2 and a TSA
+      Preconditions.checkNotNull(
+          timestampClient, "Timestamp client must be configured for Rekor v2");
+      Preconditions.checkNotNull(
+          timestampVerifier, "Timestamp verifier must be configured for Rekor v2");
+
+      var verifier =
+          Verifier.newBuilder()
+              .setX509Certificate(
+                  X509Certificate.newBuilder()
+                      .setRawBytes(ByteString.copyFrom(encodedCert))
+                      .build())
+              .setKeyDetails(ProtoMutators.toPublicKeyDetails(signingAlgorithm))
+              .build();
+
+      var dsse =
+          ImmutableDsseEnvelope.builder()
+              .payload(payload.getBytes(StandardCharsets.UTF_8))
+              .payloadType("application/vnd.in-toto+json")
+              .build();
+      var pae = dsse.getPAE();
+      Bundle.DsseEnvelope dsseSigned;
+      try {
+        var sig = signer.sign(pae);
+        dsseSigned =
+            ImmutableDsseEnvelope.builder()
+                .from(dsse)
+                .addSignatures(ImmutableSignature.builder().sig(sig).build())
+                .build();
+      } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+        throw new RuntimeException(e);
+      }
+
+      var dsseRequest =
+          DSSERequestV002.newBuilder()
+              .setEnvelope(
+                  EnvelopeOuterClass.Envelope.newBuilder()
+                      .setPayload(ByteString.copyFrom(dsseSigned.getPayload()))
+                      .setPayloadType(dsseSigned.getPayloadType())
+                      .addSignatures(
+                          EnvelopeOuterClass.Signature.newBuilder()
+                              .setSig(ByteString.copyFrom(dsseSigned.getSignature())))
+                      .build())
+              .addVerifiers(verifier)
+              .build();
+
+      try {
+        System.out.println(JsonFormat.printer().print(dsseRequest));
+      } catch (InvalidProtocolBufferException e) {
+        throw new RuntimeException(e);
+      }
+
+      var signatureDigest = Hashing.sha256().hashBytes(dsseSigned.getSignature()).asBytes();
+
+      var tsReq =
+          ImmutableTimestampRequest.builder()
+              .hashAlgorithm(dev.sigstore.timestamp.client.HashAlgorithm.SHA256)
+              .hash(signatureDigest)
+              .build();
+
+      TimestampResponse tsResp;
+      try {
+        tsResp = timestampClient.timestamp(tsReq);
+      } catch (TimestampException ex) {
+        throw new KeylessSignerException("Failed to generate timestamp", ex);
+      }
+
+      try {
+        timestampVerifier.verify(tsResp, dsseSigned.getSignature());
+      } catch (TimestampVerificationException ex) {
+        throw new KeylessSignerException("Returned timestamp was invalid", ex);
+      }
+
+      Bundle.Timestamp timestamp =
+          ImmutableTimestamp.builder().rfc3161Timestamp(tsResp.getEncoded()).build();
+
+      bundleBuilder.addTimestamps(timestamp);
+
+      RekorEntry entry;
+      try {
+        entry = rekorV2Client.putEntry(dsseRequest);
+      } catch (IOException | RekorParseException ex) {
+        throw new KeylessSignerException("Failed to put entry in rekor", ex);
+      }
+
+      try {
+        rekorVerifier.verifyEntry(entry);
+      } catch (RekorVerificationException ex) {
+        throw new KeylessSignerException("Failed to validate rekor entry after signing", ex);
+      }
+
+      bundleBuilder.dsseEnvelope(dsseSigned);
+
+      bundleBuilder.addEntries(entry);
+    } else {
+      throw new IllegalStateException("Rekor v2 client was not configured.");
+    }
+    return bundleBuilder.build();
   }
 
   /**
