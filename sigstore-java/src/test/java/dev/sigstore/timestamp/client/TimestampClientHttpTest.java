@@ -21,10 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.sigstore.trustroot.LegacySigningConfig;
 import dev.sigstore.trustroot.Service;
+import dev.sigstore.tuf.SigstoreTufClient;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.List;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.SocketPolicy;
@@ -50,10 +51,11 @@ public class TimestampClientHttpTest {
 
   @Test
   public void timestamp_success() throws Exception {
-    var client =
-        TimestampClientHttp.builder()
-            .setService(LegacySigningConfig.STAGING.getTsas().get(0))
-            .build();
+    var tufClient = SigstoreTufClient.builder().useStagingInstance().build();
+    tufClient.update();
+    var signingConfig = tufClient.getSigstoreSigningConfig();
+    var tsService = Service.select(signingConfig.getTsas(), List.of(1)).get();
+    var client = TimestampClientHttp.builder().setService(tsService).build();
 
     var tsResp = client.timestamp(tsReq);
 
@@ -85,10 +87,11 @@ public class TimestampClientHttpTest {
             .nonce(tsReq.getNonce())
             .build();
 
-    var client =
-        TimestampClientHttp.builder()
-            .setService(LegacySigningConfig.STAGING.getTsas().get(0))
-            .build();
+    var tufClient = SigstoreTufClient.builder().useStagingInstance().build();
+    tufClient.update();
+    var signingConfig = tufClient.getSigstoreSigningConfig();
+    var tsService = Service.select(signingConfig.getTsas(), List.of(1)).get();
+    var client = TimestampClientHttp.builder().setService(tsService).build();
 
     var tse =
         assertThrows(

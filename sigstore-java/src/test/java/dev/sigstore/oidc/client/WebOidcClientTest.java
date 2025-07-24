@@ -17,7 +17,6 @@ package dev.sigstore.oidc.client;
 
 import com.gargoylesoftware.htmlunit.WebClient;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
-import dev.sigstore.trustroot.LegacySigningConfig;
 import dev.sigstore.trustroot.Service;
 import io.github.netmikey.logunit.api.LogCapturer;
 import java.net.URI;
@@ -54,7 +53,7 @@ public class WebOidcClientTest {
   public void isEnabled_CI() {
     var client =
         WebOidcClient.builder()
-            .setIssuer(LegacySigningConfig.PUBLIC_GOOD.getOidcProviders().get(0))
+            .setIssuer(Service.of(URI.create("https://nonsense.com"), 1))
             .build();
     Assertions.assertFalse(client.isEnabled(Map.of("CI", "true")));
     logs.assertContains("Skipping browser based oidc provider because CI detected");
@@ -64,7 +63,7 @@ public class WebOidcClientTest {
   public void isEnabled_notCI() {
     var client =
         WebOidcClient.builder()
-            .setIssuer(LegacySigningConfig.PUBLIC_GOOD.getOidcProviders().get(0))
+            .setIssuer(Service.of(URI.create("https://nonsense.com"), 1))
             .build();
     Assertions.assertTrue(client.isEnabled(Map.of("CI", "false")));
   }
