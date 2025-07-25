@@ -288,7 +288,7 @@ public class KeylessSigner implements AutoCloseable {
       var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustedRoot);
 
       var rekorService =
-          Service.select(signingConfig.getTLogs(), enableRekorV2 ? List.of(1) : List.of(1, 2));
+          Service.select(signingConfig.getTLogs(), enableRekorV2 ? List.of(1, 2) : List.of(1));
       if (rekorService.isEmpty()) {
         throw new SigstoreConfigurationException(
             "No suitable rekor target was found in signing config");
