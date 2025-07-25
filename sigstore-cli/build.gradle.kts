@@ -1,6 +1,7 @@
 plugins {
     id("build-logic.java")
     id("application")
+    id("org.graalvm.buildtools.native") version "0.10.3"
 }
 
 repositories {
@@ -27,4 +28,12 @@ application {
 }
 tasks.run.configure {
     workingDir = rootProject.projectDir
+}
+
+graalvmNative {
+    binaries.getByName("main") {
+        imageName.set("sigstore-cli")
+        buildArgs.add("--no-fallback")
+        buildArgs.add("--enable-url-protocols=http,https")
+    }
 }
