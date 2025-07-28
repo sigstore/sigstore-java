@@ -3,7 +3,7 @@ plugins {
     id("build-logic.test-junit5")
     id("build-logic.depends-on-local-sigstore-java-repo")
     id("build-logic.depends-on-local-sigstore-maven-plugin-repo")
-    id("org.gradlex.maven-plugin-development") version "1.0.2"
+    id("org.gradlex.maven-plugin-development") version "1.0.3"
 }
 
 description = "A Maven plugin for signing with Sigstore"
