@@ -1,4 +1,6 @@
 name: Conformance Tests
+permissions:
+  contents: read
 
 on:
   push:
@@ -37,11 +39,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4.4.0
 
-      - name: Build sigstore-java cli
-        run: ./gradlew :sigstore-cli:build
-
-      - name: Unpack sigstore-java distribution
-        run: tar -xvf ${{ github.workspace }}/sigstore-cli/build/distributions/sigstore-cli-*.tar --strip-components 1
+      - name: Build sigstore-java cli and server jar
+        run: ./gradlew :sigstore-cli:serverShadowJar
+      
+      - name: Start test server in background
+        run: java -jar ${{ github.workspace }}/sigstore-cli/build/libs/sigstore-cli-server-all.jar &
+      
+      - name: Wait for server to be ready
+        run: curl --retry-connrefused --retry 10 --retry-delay 1 --fail http://localhost:8080/
 
       - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
@@ -51,6 +56,6 @@ jobs:
 
       - uses: sigstore/sigstore-conformance@fd90e6b0f3046f2276a6659481de6df495dea3b9 # v0.0.18
         with:
-          entrypoint: ${{ github.workspace }}/bin/sigstore-cli
+          entrypoint: ${{ github.workspace }}/sigstore-cli/sigstore-cli-server
           environment: ${{ matrix.sigstore-env }}
           xfail: "test_verify_dsse_bundle_with_trust_root"
