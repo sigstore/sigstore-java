@@ -64,7 +64,7 @@ public class KeylessTest {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var results = signer.sign(artifactDigests);
 
-    verifySigningResult(results);
+    verifySigningResult(results, false);
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     for (int i = 0; i < results.size(); i++) {
@@ -81,7 +81,7 @@ public class KeylessTest {
     var signer =
         KeylessSigner.builder().sigstoreStagingDefaults().enableRekorV2(enableRekorV2).build();
     var results = signer.sign(artifactDigests);
-    verifySigningResult(results);
+    verifySigningResult(results, enableRekorV2);
 
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
     for (int i = 0; i < results.size(); i++) {
@@ -90,7 +90,7 @@ public class KeylessTest {
     }
   }
 
-  private void verifySigningResult(List<Bundle> results) throws IOException {
+  private void verifySigningResult(List<Bundle> results, boolean enableRekorV2) throws IOException {
 
     Assertions.assertEquals(artifactDigests.size(), results.size());
 
@@ -111,6 +111,14 @@ public class KeylessTest {
           result.getMessageSignature().get().getMessageDigest().get().getHashAlgorithm());
       // check if required inclusion proof exists
       Assertions.assertNotNull(result.getEntries().get(0).getVerification().getInclusionProof());
+
+      if (enableRekorV2) {
+        Assertions.assertEquals(
+            "0.0.2", result.getEntries().get(0).getBodyDecoded().getApiVersion());
+      } else {
+        Assertions.assertEquals(
+            "0.0.1", result.getEntries().get(0).getBodyDecoded().getApiVersion());
+      }
     }
   }
 
