@@ -29,14 +29,15 @@ import dev.sigstore.proto.rekor.v2.Verifier;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.testing.CertGenerator;
 import dev.sigstore.trustroot.Service;
+import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
+import java.util.List;
 import java.util.UUID;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.jetbrains.annotations.NotNull;
@@ -50,8 +51,11 @@ public class RekorV2ClientHttpTest {
 
   @BeforeAll
   public static void setupClient() throws Exception {
-    // TODO(#1033): Get Rekor v2 service from TUF signing config when in prod
-    var rekorService = Service.of(URI.create("https://log2025-alpha1.rekor.sigstage.dev"), 2);
+    var tufClient = SigstoreTufClient.builder().useStagingInstance().build();
+    tufClient.update();
+    var signingConfig = tufClient.getSigstoreSigningConfig();
+    var rekorService = Service.select(signingConfig.getTLogs(), List.of(2)).get();
+
     client = RekorV2ClientHttp.builder().setService(rekorService).build();
     req = createdRekorRequest();
     entry = client.putEntry(req);
