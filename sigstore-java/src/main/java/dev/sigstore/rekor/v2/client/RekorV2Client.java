@@ -15,6 +15,7 @@
  */
 package dev.sigstore.rekor.v2.client;
 
+import dev.sigstore.proto.rekor.v2.DSSERequestV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorParseException;
@@ -30,4 +31,6 @@ public interface RekorV2Client {
    */
   RekorEntry putEntry(HashedRekordRequestV002 hashedRekordRequest)
       throws IOException, RekorParseException;
+
+  RekorEntry putEntry(DSSERequestV002 dsseRequestV002) throws IOException, RekorParseException;
 }
