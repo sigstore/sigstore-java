@@ -72,15 +72,15 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
       with:
-        java-version: 17
+        java-version: 21
         distribution: 'temurin'
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
     - name: install sigstore java development jars into mavenLocal
-      run: ./gradlew publishToMavenLocal -Prelease -PskipSigning
-
+      run: ./gradlew publishToMavenLocal -Prelease -PskipSigning -Porg.gradle.java.installations.auto-download=false
+s
     - name: calculate development version
       id: dev_version
       shell: bash
