@@ -7,8 +7,10 @@ class ToolchainProperties(
     val implementation: String?,
 )
 
+// TODO: update when ossfuzz bumps Java to 21, see https://github.com/google/oss-fuzz/issues/14266
 val BuildParametersExtension.buildJdk: ToolchainProperties?
-    get() = jdkBuildVersion.takeIf { it != 0 }
+    get() = (17.takeIf { System.getenv("CIFUZZ").equals("true", ignoreCase = true) }
+        ?: jdkBuildVersion.takeIf { it != 0 })
         ?.let { ToolchainProperties(it, jdkBuildVendor.orNull, jdkBuildImplementation.orNull) }
 
 val BuildParametersExtension.buildJdkVersion: Int
