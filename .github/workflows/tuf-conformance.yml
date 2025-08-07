@@ -12,7 +12,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        java-version: [11, 17]
+        java-version: [11, 17, 21]
       fail-fast: false
 
     concurrency:
@@ -28,17 +28,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
-          java-version: 17
+          java-version: 21
           distribution: 'temurin'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
 
       - name: Build tuf cli
-        run: ./gradlew :tuf-cli:build
+        run: ./gradlew -Porg.gradle.java.installations.auto-download=false :tuf-cli:build
 
       - name: Unpack tuf distribution
         run: tar -xvf ${{ github.workspace }}/tuf-cli/build/distributions/tuf-cli-*.tar --strip-components 1
