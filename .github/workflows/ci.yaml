@@ -19,7 +19,8 @@ jobs:
   build:
     strategy:
       matrix:
-        java-version: [11, 17]
+        # sigstore-java still supports Java 11, however, we test it with conformance-tests only
+        java-version: [17, 21]
       fail-fast: false
 
     concurrency:
@@ -39,10 +40,10 @@ jobs:
     - name: Set up JDK ${{ matrix.java-version }}
       uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
       with:
-        # We need Java 17 for the build, so we install it always
+        # We need Java 21 for the build, so we install it always
         java-version: |
           ${{ matrix.java-version }}
-          17
+          21
         distribution: 'temurin'
     - name: Setup Go environment
       uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -62,9 +63,9 @@ jobs:
 
     - name: Ensure sigstore-java self signing still works
       if: ${{ !github.event.pull_request.head.repo.fork }}
-      run: ./gradlew sigstore-java:publishToMavenLocal -Prelease -PskipPgpSigning
+      run: ./gradlew -Porg.gradle.java.installations.auto-download=false sigstore-java:publishToMavenLocal -Prelease -PskipPgpSigning
 
     - name: Test sigstore-java/sandbox
       run: |
         cd sandbox
-        ./gradlew build
+        ./gradlew -Porg.gradle.java.installations.auto-download=false build
