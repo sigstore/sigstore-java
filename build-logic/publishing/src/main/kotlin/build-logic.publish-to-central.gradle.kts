@@ -1,6 +1,7 @@
 plugins {
     id("java-library")
     id("maven-publish")
+    id("com.gradleup.nmcp")
     id("build-logic.publish-to-tmp-maven-repo")
 }
 
@@ -57,13 +58,6 @@ publishing {
                 url.set(repoUrl)
                 tag.set("HEAD")
             }
-        }
-    }
-    repositories {
-        maven {
-            name = "sonatype"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials(PasswordCredentials::class)
         }
     }
 }

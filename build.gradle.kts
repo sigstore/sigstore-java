@@ -1,5 +1,6 @@
 plugins {
     id("build-logic.root-build")
+    id("com.gradleup.nmcp.aggregation") version "1.0.2"
     // The Kotlin Gradle plugin was loaded multiple times in different subprojects, which is not supported and may break the build.
     `embedded-kotlin` apply false
 }
@@ -14,4 +15,18 @@ val parameters by tasks.registering {
     group = HelpTasksPlugin.HELP_GROUP
     description = "Displays build parameters (i.e. -P flags) that can be used to customize the build"
     dependsOn(gradle.includedBuild("build-logic").task(":build-parameters:parameters"))
+}
+
+nmcpAggregation {
+    centralPortal {
+        username = providers.environmentVariable("CENTRAL_PORTAL_USERNAME")
+        password = providers.environmentVariable("CENTRAL_PORTAL_PASSWORD")
+        publishingType = "USER_MANAGED"
+        publicationName = "sigstore protobuf-specs $version"
+    }
+}
+
+dependencies {
+    nmcpAggregation(project(":sigstore-java"))
+    nmcpAggregation(project(":sigstore-maven-plugin"))
 }
