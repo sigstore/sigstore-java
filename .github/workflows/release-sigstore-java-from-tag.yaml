@@ -57,14 +57,29 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4.4.1
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f # v0.8.1
+        with:
+          workload_identity_provider: projects/306323169285/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+          service_account: sigstore-java-releaser@sigstore-secrets.iam.gserviceaccount.com
+
+      - uses: google-github-actions/get-secretmanager-secrets@a8440875e1c2892062aef9061228d4f1af8f919b # v2.2.3
+        id: secrets
+        with:
+          secrets: |-
+            signing_key:sigstore-secrets/sigstore-java-pgp-priv-key
+            signing_password:sigstore-secrets/sigstore-java-pgp-priv-key-password
+            sonatype_username:sigstore-secrets/sigstore-sonatype-central-portal-username
+            sonatype_password:sigstore-secrets/sigstore-sonatype-central-portal-password
+
       - name: Build, Sign and Release to Maven Central
-        run: |
-          ./gradlew clean :sigstore-java:publishMavenJavaPublicationToSonatypeRepository :sigstore-maven-plugin:publishMavenJavaPublicationToSonatypeRepository -Prelease
         env:
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.PGP_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.PGP_PASSPHRASE }}
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ steps.secrets.outputs.signing_key }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ steps.secrets.outputs.signing_password }}
+          CENTRAL_PORTAL_USERNAME: ${{ steps.secrets.outputs.sonatype_username }}
+          CENTRAL_PORTAL_PASSWORD: ${{ steps.secrets.outputs.sonatype_password }}
+        run: |
+          ./gradlew clean :publishAggregationToCentralPortal -Prelease
 
   create-release-on-github:
     runs-on: ubuntu-latest

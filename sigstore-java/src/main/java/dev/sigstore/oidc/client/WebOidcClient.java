@@ -37,6 +37,7 @@ import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
@@ -93,6 +94,13 @@ public class WebOidcClient implements OidcClient {
     /** The issuer of the oidc tokens (the oidc service). */
     public Builder setIssuer(Service issuer) {
       this.issuer = issuer;
+      return this;
+    }
+
+    /** Deprecated compat issuer selector, remove in next version. */
+    @Deprecated
+    public Builder setIssuer(String issuer) {
+      this.issuer = Service.of(URI.create(issuer), 1);
       return this;
     }
 
