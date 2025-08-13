@@ -1,1 +1,2 @@
 com.google.protobuf.util.JsonFormat#parser() @ Use dev.sigstore.json.ProtoJson#parser() instead
+dev.sigstore.http.HttpClients#newHttpTransport(dev.sigstore.http.HttpParams) @ Use dev.sigstore.http.HttpClients#newRequestFactory(...) instead

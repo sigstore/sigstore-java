@@ -16,27 +16,33 @@
 package dev.sigstore.tuf;
 
 import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Locale;
 
 public class HttpFetcher implements Fetcher {
 
   private final URL mirror;
+  private final HttpRequestFactory requestFactory;
 
-  private HttpFetcher(URL mirror) {
+  private HttpFetcher(URL mirror, HttpRequestFactory requestFactory) {
     this.mirror = mirror;
+    this.requestFactory = requestFactory;
   }
 
-  public static HttpFetcher newFetcher(URL mirror) throws MalformedURLException {
+  public static HttpFetcher newFetcher(URL mirror) throws IOException {
+    var requestFactory =
+        HttpClients.newRequestFactory(
+            HttpParams.builder().build(),
+            GsonFactory.getDefaultInstance().createJsonObjectParser());
     if (mirror.toString().endsWith("/")) {
-      return new HttpFetcher(mirror);
+      return new HttpFetcher(mirror, requestFactory);
     }
-    return new HttpFetcher(new URL(mirror.toExternalForm() + "/"));
+    return new HttpFetcher(new URL(mirror.toExternalForm() + "/"), requestFactory);
   }
 
   @Override
@@ -48,12 +54,7 @@ public class HttpFetcher implements Fetcher {
   public byte[] fetchResource(String filename, int maxLength)
       throws IOException, FileExceedsMaxLengthException {
     GenericUrl fileUrl = new GenericUrl(mirror + filename);
-    var req =
-        HttpClients.newHttpTransport(HttpParams.builder().build())
-            .createRequestFactory(
-                request ->
-                    request.setParser(GsonFactory.getDefaultInstance().createJsonObjectParser()))
-            .buildGetRequest(fileUrl);
+    var req = requestFactory.buildGetRequest(fileUrl);
     req.getHeaders().setAccept("application/json; api-version=2.0");
     req.getHeaders().setContentType("application/json");
     req.setThrowExceptionOnExecuteError(false);

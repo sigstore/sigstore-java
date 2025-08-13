@@ -24,7 +24,6 @@ import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInsta
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
-import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.GenericJson;
 import com.google.api.client.json.JsonFactory;
@@ -33,6 +32,7 @@ import com.google.api.client.util.Key;
 import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.client.util.store.MemoryDataStoreFactory;
+import dev.sigstore.forbidden.SuppressForbidden;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.trustroot.Service;
@@ -140,13 +140,14 @@ public class WebOidcClient implements OidcClient {
    * @throws OidcException if an error occurs doing the authorization flow
    */
   @Override
+  @SuppressForbidden(reason = "HttpClients#newHttpTransport(HttpParams)")
   public OidcToken getIDToken(Map<String, String> env) throws OidcException {
     JsonFactory jsonFactory = new GsonFactory();
     HttpTransport httpTransport = HttpClients.newHttpTransport(httpParams);
     DataStoreFactory memStoreFactory = new MemoryDataStoreFactory();
     OIDCEndpoints endpoints;
     try {
-      endpoints = parseDiscoveryDocument(jsonFactory, httpTransport);
+      endpoints = parseDiscoveryDocument(jsonFactory);
     } catch (IOException e) {
       // TODO: maybe a more descriptive exception message
       throw new OidcException(
@@ -209,15 +210,12 @@ public class WebOidcClient implements OidcClient {
         .build();
   }
 
-  // Parses a oidc discovery document to discover other endpoints. This method does not
+  // Parses an oidc discovery document to discover other endpoints. This method does not
   // parse all the values, only the endpoints we care about.
-  OIDCEndpoints parseDiscoveryDocument(JsonFactory jsonFactory, HttpTransport httpTransport)
-      throws IOException {
-    HttpRequestFactory requestFactory =
-        httpTransport.createRequestFactory(
-            request -> {
-              request.setParser(jsonFactory.createJsonObjectParser());
-            });
+  OIDCEndpoints parseDiscoveryDocument(JsonFactory jsonFactory) throws IOException {
+    var requestFactory =
+        HttpClients.newRequestFactory(
+            HttpParams.builder().build(), jsonFactory.createJsonObjectParser());
     GenericUrl wellKnownConfig = new GenericUrl(issuer);
     wellKnownConfig.appendRawPath(WELL_KNOWN_CONFIG);
     HttpRequest request = requestFactory.buildGetRequest(wellKnownConfig);
