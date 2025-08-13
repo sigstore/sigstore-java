@@ -15,7 +15,8 @@
  */
 package dev.sigstore.tuf;
 
-import java.net.URL;
+import java.io.IOException;
+import java.net.URI;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -24,8 +25,8 @@ class HttpFetcherTest {
 
   @ParameterizedTest
   @CsvSource({"http://example.com", "http://example.com/"})
-  public void newFetcher_urlNoTrailingSlash(String url) throws Exception {
-    var fetcher = HttpFetcher.newFetcher(new URL(url));
+  public void newFetcher_urlNoTrailingSlash(String url) throws IOException {
+    var fetcher = HttpFetcher.newFetcher(URI.create(url));
     Assertions.assertEquals("http://example.com/", fetcher.getSource());
   }
 }

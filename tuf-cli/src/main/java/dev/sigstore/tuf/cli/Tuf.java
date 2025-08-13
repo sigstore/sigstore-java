@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf.cli;
 
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.Path;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -45,7 +45,7 @@ public class Tuf {
       names = {"--metadata-url"},
       required = false,
       paramLabel = "<METADATA_URL>")
-  private URL metadataUrl;
+  private URI metadataUrl;
 
   @Option(
       names = {"--target-name"},
@@ -57,7 +57,7 @@ public class Tuf {
       names = {"--target-base-url"},
       required = false,
       paramLabel = "<TARGET_URL>")
-  private URL targetBaseUrl;
+  private URI targetBaseUrl;
 
   @Option(
       names = {"--target-dir"},
@@ -72,7 +72,7 @@ public class Tuf {
     return metadataDir;
   }
 
-  URL getMetadataUrl() {
+  URI getMetadataUrl() {
     if (metadataUrl == null) {
       throw new ParameterException(spec.commandLine(), "--metadata-url not set");
     }
@@ -86,7 +86,7 @@ public class Tuf {
     return targetName;
   }
 
-  URL getTargetBaseUrl() {
+  URI getTargetBaseUrl() {
     if (targetBaseUrl == null) {
       throw new ParameterException(spec.commandLine(), "--target-base-url not set");
     }

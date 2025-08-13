@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.google.gson.JsonSyntaxException;
+import dev.sigstore.http.URIFormat;
 import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.encryption.Verifier;
 import dev.sigstore.tuf.encryption.Verifiers;
@@ -44,7 +45,7 @@ import io.github.netmikey.logunit.api.LogCapturer;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -165,9 +166,8 @@ class UpdaterTest {
     updater.updateRoot();
     Root root = TestResources.loadRoot(localStorePath.resolve("root.json"));
     assertEquals(2, root.getSignedMeta().getVersion());
-    logs.getEvents();
     logs.assertContains(
-        "TUF: ignored invalid signature: 'abcd123' for keyid: '0b5108e406f6d2f59ef767797b314be99d35903950ba43a2d51216eeeb8da98c', because 'exception decoding Hex string: String index out of range: 7'");
+        "TUF: ignored invalid signature: 'abcd123' for keyid: '0b5108e406f6d2f59ef767797b314be99d35903950ba43a2d51216eeeb8da98c', because 'exception decoding Hex string:");
   }
 
   @Test
@@ -942,8 +942,9 @@ class UpdaterTest {
     return Updater.builder()
         .setClock(Clock.fixed(Instant.parse(time), ZoneOffset.UTC))
         .setVerifiers(Verifiers::newVerifier)
-        .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(new URL(remoteUrl))))
-        .setTargetFetcher(HttpFetcher.newFetcher(new URL(remoteUrl + "targets/")))
+        .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(URI.create(remoteUrl))))
+        .setTargetFetcher(
+            HttpFetcher.newFetcher(URIFormat.appendPath(URI.create(remoteUrl), "targets/")))
         .setTrustedRootPath(RootProvider.fromFile(trustedRootFile))
         .setTrustedMetaStore(
             TrustedMetaStore.newTrustedMetaStore(

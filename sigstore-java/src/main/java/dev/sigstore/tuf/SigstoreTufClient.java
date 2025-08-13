@@ -17,12 +17,12 @@ package dev.sigstore.tuf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import dev.sigstore.http.URIFormat;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.InvalidKeyException;
@@ -65,7 +65,7 @@ public class SigstoreTufClient {
     Path tufCacheLocation =
         Path.of(System.getProperty("user.home")).resolve(".sigstore-java").resolve("root");
 
-    private URL remoteMirror;
+    private URI remoteMirror;
     private RootProvider trustedRoot;
 
     public Builder usePublicGoodInstance() {
@@ -73,13 +73,9 @@ public class SigstoreTufClient {
         throw new IllegalStateException(
             "Using public good after configuring remoteMirror and trustedRoot");
       }
-      try {
-        tufMirror(
-            new URL("https://tuf-repo-cdn.sigstore.dev/"),
-            RootProvider.fromResource(PUBLIC_GOOD_ROOT_RESOURCE));
-      } catch (MalformedURLException e) {
-        throw new AssertionError(e);
-      }
+      tufMirror(
+          URI.create("https://tuf-repo-cdn.sigstore.dev/"),
+          RootProvider.fromResource(PUBLIC_GOOD_ROOT_RESOURCE));
       return this;
     }
 
@@ -88,13 +84,9 @@ public class SigstoreTufClient {
         throw new IllegalStateException(
             "Using staging after configuring remoteMirror and trustedRoot");
       }
-      try {
-        tufMirror(
-            new URL("https://tuf-repo-cdn.sigstage.dev"),
-            RootProvider.fromResource(STAGING_ROOT_RESOURCE));
-      } catch (MalformedURLException e) {
-        throw new AssertionError(e);
-      }
+      tufMirror(
+          URI.create("https://tuf-repo-cdn.sigstage.dev"),
+          RootProvider.fromResource(STAGING_ROOT_RESOURCE));
       tufCacheLocation =
           Path.of(System.getProperty("user.home"))
               .resolve(".sigstore-java")
@@ -103,7 +95,7 @@ public class SigstoreTufClient {
       return this;
     }
 
-    public Builder tufMirror(URL mirror, RootProvider trustedRoot) {
+    public Builder tufMirror(URI mirror, RootProvider trustedRoot) {
       this.remoteMirror = mirror;
       this.trustedRoot = trustedRoot;
       return this;
@@ -126,11 +118,7 @@ public class SigstoreTufClient {
       if (!Files.isDirectory(tufCacheLocation)) {
         Files.createDirectories(tufCacheLocation);
       }
-      var normalizedRemoteMirror =
-          remoteMirror.toString().endsWith("/")
-              ? remoteMirror
-              : new URL(remoteMirror.toExternalForm() + "/");
-      var remoteTargetsLocation = new URL(normalizedRemoteMirror.toExternalForm() + "targets");
+      var remoteTargetsLocation = URIFormat.appendPath(remoteMirror, "targets");
       var filesystemTufStore = FileSystemTufStore.newFileSystemStore(tufCacheLocation);
       var tufUpdater =
           Updater.builder()
@@ -139,8 +127,7 @@ public class SigstoreTufClient {
                   TrustedMetaStore.newTrustedMetaStore(
                       PassthroughCacheMetaStore.newPassthroughMetaCache(filesystemTufStore)))
               .setTargetStore(filesystemTufStore)
-              .setMetaFetcher(
-                  MetaFetcher.newFetcher(HttpFetcher.newFetcher(normalizedRemoteMirror)))
+              .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(remoteMirror)))
               .setTargetFetcher(HttpFetcher.newFetcher(remoteTargetsLocation))
               .build();
       return new SigstoreTufClient(tufUpdater, cacheValidity);

@@ -26,7 +26,7 @@ import dev.sigstore.bundle.Bundle;
 import dev.sigstore.strings.StringMatcher;
 import dev.sigstore.tuf.RootProvider;
 import dev.sigstore.tuf.SigstoreTufClient;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -141,7 +141,7 @@ public class Verify implements Callable<Integer> {
           SigstoreTufClient.builder()
               .usePublicGoodInstance()
               .tufMirror(
-                  new URL(target.publicGoodWithTufUrlOverride),
+                  URI.create(target.publicGoodWithTufUrlOverride),
                   RootProvider.fromResource(SigstoreTufClient.PUBLIC_GOOD_ROOT_RESOURCE));
       verifier =
           KeylessVerifier.builder()
@@ -152,7 +152,7 @@ public class Verify implements Callable<Integer> {
           SigstoreTufClient.builder()
               .useStagingInstance()
               .tufMirror(
-                  new URL(target.stagingWithTufUrlOverride),
+                  URI.create(target.stagingWithTufUrlOverride),
                   RootProvider.fromResource(SigstoreTufClient.STAGING_ROOT_RESOURCE));
       verifier =
           KeylessVerifier.builder()
