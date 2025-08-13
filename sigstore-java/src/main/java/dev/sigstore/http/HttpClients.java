@@ -20,7 +20,10 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.apache.v2.ApacheHttpTransport;
 import com.google.api.client.util.ExponentialBackOff;
+import com.google.api.client.util.ObjectParser;
+import dev.sigstore.forbidden.SuppressForbidden;
 import java.io.IOException;
+import javax.annotation.Nullable;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -28,8 +31,9 @@ import org.apache.http.impl.client.HttpClientBuilder;
 public class HttpClients {
 
   /**
-   * Build a transport, you probably want to use {@link #newRequestFactory} to instantiate GET and
-   * POST requests.
+   * Build a transport, you probably want to use {@link #newRequestFactory(HttpParams)} to
+   * instantiate GET and POST requests or use {@link #newRequestFactory(HttpParams, ObjectParser) if
+   * you need to also configure the response parser}.
    */
   public static HttpTransport newHttpTransport(HttpParams httpParams) {
     HttpClientBuilder hcb =
@@ -41,7 +45,15 @@ public class HttpClients {
   }
 
   /** Create a new get requests with the httpParams applied and retries. */
+  @SuppressForbidden(reason = "HttpClients#newHttpTransport(HttpParams)")
   public static HttpRequestFactory newRequestFactory(HttpParams httpParams) throws IOException {
+    return newRequestFactory(httpParams, null);
+  }
+
+  /** Create a new get requests with the httpParams applied, retries and a response parser. */
+  @SuppressForbidden(reason = "HttpClients#newHttpTransport(HttpParams)")
+  public static HttpRequestFactory newRequestFactory(
+      HttpParams httpParams, @Nullable ObjectParser responseParser) throws IOException {
     return HttpClients.newHttpTransport(httpParams)
         .createRequestFactory(
             request -> {
@@ -52,6 +64,9 @@ public class HttpClients {
                   UnsuccessfulResponseHandler.newUnsuccessfulResponseHandler());
               request.setIOExceptionHandler(
                   new HttpBackOffIOExceptionHandler(new ExponentialBackOff()));
+              if (responseParser != null) {
+                request.setParser(responseParser);
+              }
             });
   }
 }
