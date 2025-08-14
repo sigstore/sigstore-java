@@ -22,7 +22,7 @@ nmcpAggregation {
         username = providers.environmentVariable("CENTRAL_PORTAL_USERNAME")
         password = providers.environmentVariable("CENTRAL_PORTAL_PASSWORD")
         publishingType = "USER_MANAGED"
-        publicationName = "sigstore protobuf-specs $version"
+        publicationName = "sigstore java $version"
     }
 }
 
