@@ -21,7 +21,7 @@ import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.TokenStringOidcClient;
 import dev.sigstore.tuf.RootProvider;
 import dev.sigstore.tuf.SigstoreTufClient;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -88,7 +88,7 @@ public class Sign implements Callable<Integer> {
           SigstoreTufClient.builder()
               .usePublicGoodInstance()
               .tufMirror(
-                  new URL(target.publicGoodWithTufUrlOverride),
+                  URI.create(target.publicGoodWithTufUrlOverride),
                   RootProvider.fromResource(SigstoreTufClient.PUBLIC_GOOD_ROOT_RESOURCE));
       signerBuilder =
           KeylessSigner.builder()
@@ -99,7 +99,7 @@ public class Sign implements Callable<Integer> {
           SigstoreTufClient.builder()
               .useStagingInstance()
               .tufMirror(
-                  new URL(target.stagingWithTufUrlOverride),
+                  URI.create(target.stagingWithTufUrlOverride),
                   RootProvider.fromResource(SigstoreTufClient.STAGING_ROOT_RESOURCE));
       signerBuilder =
           KeylessSigner.builder()

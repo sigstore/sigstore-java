@@ -20,29 +20,27 @@ import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
+import dev.sigstore.http.URIFormat;
 import java.io.IOException;
-import java.net.URL;
+import java.net.URI;
 import java.util.Locale;
 
 public class HttpFetcher implements Fetcher {
 
-  private final URL mirror;
+  private final URI mirror;
   private final HttpRequestFactory requestFactory;
 
-  private HttpFetcher(URL mirror, HttpRequestFactory requestFactory) {
+  private HttpFetcher(URI mirror, HttpRequestFactory requestFactory) {
     this.mirror = mirror;
     this.requestFactory = requestFactory;
   }
 
-  public static HttpFetcher newFetcher(URL mirror) throws IOException {
+  public static HttpFetcher newFetcher(URI mirror) throws IOException {
     var requestFactory =
         HttpClients.newRequestFactory(
             HttpParams.builder().build(),
             GsonFactory.getDefaultInstance().createJsonObjectParser());
-    if (mirror.toString().endsWith("/")) {
-      return new HttpFetcher(mirror, requestFactory);
-    }
-    return new HttpFetcher(new URL(mirror.toExternalForm() + "/"), requestFactory);
+    return new HttpFetcher(URIFormat.addTrailingSlash(mirror), requestFactory);
   }
 
   @Override
@@ -53,7 +51,7 @@ public class HttpFetcher implements Fetcher {
   @Override
   public byte[] fetchResource(String filename, int maxLength)
       throws IOException, FileExceedsMaxLengthException {
-    GenericUrl fileUrl = new GenericUrl(mirror + filename);
+    GenericUrl fileUrl = new GenericUrl(URIFormat.appendPath(mirror, filename));
     var req = requestFactory.buildGetRequest(fileUrl);
     req.getHeaders().setAccept("application/json; api-version=2.0");
     req.getHeaders().setContentType("application/json");
