@@ -87,7 +87,7 @@ $ ./gradlew javadoc
 $ "my-favorite-browser" ./sigstore-java/build/docs/javadoc/index.html
 ```
 
-### Signing
+## Distribution
 Sigstore Java and Sigstore Maven Plugin are signed with both PGP and sigstore.
 
 #### PGP
@@ -99,4 +99,4 @@ Sigstore Java and Sigstore Maven Plugin are signed with both PGP and sigstore.
 #### Sigstore
 | Version Range | Issuer | Signer Id |
 | ------------- | --------- | ------ |
-| 1.X.X - 2.X.X | https://token.actions.githubusercontent.com | https://github.com/sigstore/sigstore-java/.github/workflows/release-sigstore-java-from-tag.yaml@refs/tags/X.X.X |
+| 1.0.0 - 2.X.X | https://token.actions.githubusercontent.com | https://github.com/sigstore/sigstore-java/.github/workflows/release-sigstore-java-from-tag.yaml@refs/tags/X.X.X |
