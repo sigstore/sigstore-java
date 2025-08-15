@@ -86,3 +86,17 @@ To build and view javadoc from the sources, use the following command:
 $ ./gradlew javadoc
 $ "my-favorite-browser" ./sigstore-java/build/docs/javadoc/index.html
 ```
+
+### Signing
+Sigstore Java and Sigstore Maven Plugin are signed with both PGP and sigstore.
+
+#### PGP
+| Version Range | Key Id           |
+| ------------- | ---------------- |
+| 1.X.X         | AC74A3385D0E3252 |
+| 2.X.X         | 00E008229F5DAF37 |
+
+#### Sigstore
+| Version Range | Issuer | Signer Id |
+| ------------- | --------- | ------ |
+| 1.X.X - 2.X.X | https://token.actions.githubusercontent.com | https://github.com/sigstore/sigstore-java/.github/workflows/release-sigstore-java-from-tag.yaml@refs/tags/X.X.X |

@@ -9,6 +9,22 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [2.0.0-rc1] - 2025-08-14
+
+## Added
+- Add support for rekor v2 logs https://github.com/sigstore/sigstore-java/pull/990, https://github.com/sigstore/sigstore-java/pull/1016, https://github.com/sigstore/sigstore-java/pull/1017, https://github.com/sigstore/sigstore-java/pull/1008, https://github.com/sigstore/sigstore-java/pull/1031, https://github.com/sigstore/sigstore-java/pull/1040
+- Add support for timestamps https://github.com/sigstore/sigstore-java/pull/960, https://github.com/sigstore/sigstore-java/pull/975, https://github.com/sigstore/sigstore-java/pull/977, https://github.com/sigstore/sigstore-java/pull/978, https://github.com/sigstore/sigstore-java/pull/979
+- Library support for token string auth https://github.com/sigstore/sigstore-java/pull/925
+- ED25519 support in trusted\_root https://github.com/sigstore/sigstore-java/pull/983
+
+## Fixed
+- Fixed windows support https://github.com/sigstore/sigstore-java/pull/974
+- Parsing json with unknown fields https://github.com/sigstore/sigstore-java/pull/966
+
+## Changed
+- Users can no longer specify signer object in KeylessSigner, use Algorithm Registry instead https://github.com/sigstore/sigstore-java/pull/1027 
+- Users with custom sigstore infrastructure deployments must specify a SigningConfig to configure the KeylessSigner, individual urls for infrastructure pieces are removed https://github.com/sigstore/sigstore-java/pull/956, https://github.com/sigstore/sigstore-java/pull/965, https://github.com/sigstore/sigstore-java/pull/981
+
 # [1.3.0] - 2025-02-25
 
 ## Added
