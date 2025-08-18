@@ -15,6 +15,6 @@ dependencies {
     api("org.junit.jupiter:junit-jupiter-api")
     api("org.junit.jupiter:junit-jupiter-params")
     implementation("org.junit.jupiter:junit-jupiter")
-    api("org.assertj:assertj-core:3.27.3")
+    api("org.assertj:assertj-core:3.27.4")
     api(gradleTestKit())
 }
