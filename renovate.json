@@ -29,6 +29,10 @@
     {
       "matchPackagePrefixes": ["org.apache.maven"],
       "groupName": "maven"
+    },
+    {
+      "matchPackagePrefixes": ["com.gradleup.nmcp"],
+      "groupName": "gradleup_nmcp"
     }
   ]
 }
