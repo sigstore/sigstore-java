@@ -44,6 +44,7 @@ public class Refresh implements Callable<Integer> {
                     PassthroughCacheMetaStore.newPassthroughMetaCache(fsStore)))
             .setTrustedRootPath(RootProvider.fromFile(metadataDir.resolve("root.json")))
             .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(metadataUrl)))
+            .setClock(TestClock.get())
             .build();
     tuf.updateMeta();
     return 0;

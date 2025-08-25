@@ -49,6 +49,7 @@ public class Download implements Callable<Integer> {
             .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(metadataUrl)))
             .setTargetFetcher(HttpFetcher.newFetcher(targetBaseUrl))
             .setTargetStore(fsStore)
+            .setClock(TestClock.get())
             .build();
     // the java client isn't one shot like other clients, so downloadTarget doesn't call update
     // for the sake of conformance updateMeta here
