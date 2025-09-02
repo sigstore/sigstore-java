@@ -347,6 +347,15 @@ public class Updater {
         throw new RollbackVersionException(
             localTimestamp.getSignedMeta().getVersion(), timestamp.getSignedMeta().getVersion());
       }
+
+      // The snapshot version in the new timestamp must not be smaller than snapshot
+      // version in current timestamp
+      var snapshotVersion = timestamp.getSignedMeta().getSnapshotMeta().getVersion();
+      var localSnapshotVersion = localTimestamp.getSignedMeta().getSnapshotMeta().getVersion();
+      if (snapshotVersion < localSnapshotVersion) {
+        throw new RollbackVersionException(localSnapshotVersion, snapshotVersion);
+      }
+
       if (localTimestamp.getSignedMeta().getVersion() == timestamp.getSignedMeta().getVersion()) {
         return;
       }
