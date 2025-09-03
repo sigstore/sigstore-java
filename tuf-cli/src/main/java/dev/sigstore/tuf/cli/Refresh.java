@@ -35,6 +35,7 @@ public class Refresh implements Callable<Integer> {
   public Integer call() throws Exception {
     var metadataDir = tufCommand.getMetadataDir();
     var metadataUrl = tufCommand.getMetadataUrl();
+    var clock = tufCommand.getClock();
 
     var fsStore = FileSystemTufStore.newFileSystemStore(metadataDir);
     var tuf =
@@ -44,6 +45,7 @@ public class Refresh implements Callable<Integer> {
                     PassthroughCacheMetaStore.newPassthroughMetaCache(fsStore)))
             .setTrustedRootPath(RootProvider.fromFile(metadataDir.resolve("root.json")))
             .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(metadataUrl)))
+            .setClock(clock)
             .build();
     tuf.updateMeta();
     return 0;
