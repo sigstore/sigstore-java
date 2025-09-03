@@ -88,28 +88,16 @@ public class ConformanceServer {
       System.setErr(errPs);
 
       Path cwd = Paths.get(executeRequest.cwd);
-      java.util.List<String> resolvedArgs = new java.util.ArrayList<>();
+      java.util.List<String> args = new java.util.ArrayList<>();
 
       for (int i = 0; i < executeRequest.args.length; i++) {
         String arg = executeRequest.args[i];
-
-        if (arg.equals("--bundle") && i + 1 < executeRequest.args.length) {
-          resolvedArgs.add(arg);
-          String filePath = executeRequest.args[++i];
-          resolvedArgs.add(cwd.resolve(filePath).toAbsolutePath().toString());
-        } else if (i == executeRequest.args.length - 1 && !arg.startsWith("-")) {
-          if (arg.contains(":")) {
-            resolvedArgs.add(arg);
-          } else {
-            resolvedArgs.add(cwd.resolve(arg).toAbsolutePath().toString());
-          }
-        } else {
-          resolvedArgs.add(arg);
-        }
+        args.add(arg);
       }
+      args.add("--working-directory");
+      args.add(cwd.toAbsolutePath().toString());
 
-      int exitCode =
-          new picocli.CommandLine(new Sigstore()).execute(resolvedArgs.toArray(new String[0]));
+      int exitCode = new picocli.CommandLine(new Sigstore()).execute(args.toArray(new String[0]));
 
       Map<String, Object> responseMap =
           Map.of(

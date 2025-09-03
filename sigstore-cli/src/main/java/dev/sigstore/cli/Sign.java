@@ -16,6 +16,7 @@
 package dev.sigstore.cli;
 
 import dev.sigstore.KeylessSigner;
+import dev.sigstore.SigningConfigProvider;
 import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.TokenStringOidcClient;
@@ -71,18 +72,51 @@ public class Sign implements Callable<Integer> {
   }
 
   @Option(
+      names = {"--signing-config"},
+      description = "a custom signing config",
+      required = false)
+  Path signingConfig;
+
+  @Option(
       names = {"--identity-token"},
       description = "the OIDC identity token to use",
       required = false)
   String identityToken;
 
+  @Option(
+      names = {"--working-directory"},
+      description = "the working directory",
+      required = false)
+  Path workingDirectory;
+
   @Override
   public Integer call() throws Exception {
+    if (workingDirectory != null) {
+      artifact = workingDirectory.resolve(artifact);
+      bundleFile = workingDirectory.resolve(bundleFile);
+      if (signingConfig != null) {
+        signingConfig = workingDirectory.resolve(signingConfig);
+      }
+      if (target != null && target.trustedRoot != null) {
+        target.trustedRoot = workingDirectory.resolve(target.trustedRoot);
+      }
+    }
     KeylessSigner.Builder signerBuilder;
     if (target == null) {
-      signerBuilder = new KeylessSigner.Builder().sigstorePublicDefaults();
+      signerBuilder = new KeylessSigner.Builder().sigstorePublicDefaults().enableRekorV2(true);
+    } else if ((target.trustedRoot != null && signingConfig == null)
+        || (target.trustedRoot == null && signingConfig != null)) {
+      throw new IllegalArgumentException(
+          "Trusted root and signing config are both required if one is provided");
+    } else if (target.trustedRoot != null && signingConfig != null) {
+      signerBuilder =
+          new KeylessSigner.Builder()
+              .sigstoreStagingDefaults()
+              .enableRekorV2(true)
+              .trustedRootProvider(TrustedRootProvider.from(target.trustedRoot))
+              .signingConfigProvider(SigningConfigProvider.from(signingConfig));
     } else if (target.staging) {
-      signerBuilder = new KeylessSigner.Builder().sigstoreStagingDefaults();
+      signerBuilder = new KeylessSigner.Builder().sigstoreStagingDefaults().enableRekorV2(true);
     } else if (target.publicGoodWithTufUrlOverride != null) {
       var tufClientBuilder =
           SigstoreTufClient.builder()
@@ -93,6 +127,7 @@ public class Sign implements Callable<Integer> {
       signerBuilder =
           KeylessSigner.builder()
               .sigstorePublicDefaults()
+              .enableRekorV2(true)
               .trustedRootProvider(TrustedRootProvider.from(tufClientBuilder));
     } else if (target.stagingWithTufUrlOverride != null) {
       var tufClientBuilder =
@@ -104,6 +139,7 @@ public class Sign implements Callable<Integer> {
       signerBuilder =
           KeylessSigner.builder()
               .sigstoreStagingDefaults()
+              .enableRekorV2(true)
               .trustedRootProvider(TrustedRootProvider.from(tufClientBuilder));
     } else {
       throw new IllegalStateException("Unable to initialize signer");

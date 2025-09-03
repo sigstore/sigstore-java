@@ -107,12 +107,30 @@ public class Verify implements Callable<Integer> {
     String certificateIssuer;
   }
 
+  @Option(
+      names = {"--working-directory"},
+      description = "the working directory",
+      required = false)
+  Path workingDirectory;
+
   @Override
   public Integer call() throws Exception {
-    byte[] digest =
-        artifact.startsWith(SHA256_PREFIX)
-            ? Hex.decodeHex(artifact.substring(SHA256_PREFIX.length()))
-            : asByteSource(Path.of(artifact).toFile()).hash(Hashing.sha256()).asBytes();
+    byte[] digest;
+    if (artifact.startsWith(SHA256_PREFIX)) {
+      digest = Hex.decodeHex(artifact.substring(SHA256_PREFIX.length()));
+    } else {
+      if (workingDirectory != null) {
+        artifact = workingDirectory.resolve(artifact).toString();
+      }
+      digest = asByteSource(Path.of(artifact).toFile()).hash(Hashing.sha256()).asBytes();
+    }
+
+    if (workingDirectory != null) {
+      bundleFile = workingDirectory.resolve(bundleFile);
+      if (target != null && target.trustedRoot != null) {
+        target.trustedRoot = workingDirectory.resolve(target.trustedRoot);
+      }
+    }
 
     Bundle bundle = Bundle.from(bundleFile, StandardCharsets.UTF_8);
 
