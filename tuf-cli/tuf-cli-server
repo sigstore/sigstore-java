@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -o pipefail -o errexit -o nounset
+
+CWD=$PWD
+
+ARGS_JSON="["
+for arg in "$@"; do
+  escaped_arg=$(echo -n "$arg" | jq -R -s '.')
+  ARGS_JSON="$ARGS_JSON$escaped_arg,"
+done
+if [[ $ARGS_JSON == *, ]]; then
+  ARGS_JSON="${ARGS_JSON%,}"
+fi
+ARGS_JSON="$ARGS_JSON]"
+
+DATE_VAL="$(date +%s)"
+
+JSON_PAYLOAD=$(jq -nc --arg cwd "$CWD" --argjson args "$ARGS_JSON" --arg faketime "$DATE_VAL" '{"cwd": $cwd, "args": $args, "faketime": $faketime}')
+
+RESPONSE=$(curl -s -X POST --header "Content-Type: application/json" --data-binary "$JSON_PAYLOAD" http://localhost:8080/execute)
+
+STDOUT=$(echo "$RESPONSE" | jq -r .stdout)
+STDERR=$(echo "$RESPONSE" | jq -r .stderr)
+EXIT_CODE=$(echo "$RESPONSE" | jq .exitCode)
+
+echo -n "$STDOUT"
+echo -n "$STDERR" >&2
+
+exit "$EXIT_CODE"

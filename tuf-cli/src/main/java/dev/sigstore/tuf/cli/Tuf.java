@@ -17,6 +17,9 @@ package dev.sigstore.tuf.cli;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -65,6 +68,15 @@ public class Tuf {
       paramLabel = "<TARGET_DIR>")
   private Path targetDir;
 
+  private Clock clock = Clock.systemUTC();
+
+  @Option(
+      names = {"--time"},
+      required = false)
+  public void setTime(String epochSecond) {
+    this.clock = Clock.fixed(Instant.ofEpochSecond(Long.parseLong(epochSecond)), ZoneOffset.UTC);
+  }
+
   Path getMetadataDir() {
     if (metadataDir == null) {
       throw new ParameterException(spec.commandLine(), "--metadata-dir not set");
@@ -98,6 +110,10 @@ public class Tuf {
       throw new ParameterException(spec.commandLine(), "--target-dir not set");
     }
     return targetDir;
+  }
+
+  public Clock getClock() {
+    return clock;
   }
 
   public static void main(String[] args) {

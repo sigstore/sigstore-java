@@ -38,6 +38,7 @@ public class Download implements Callable<Integer> {
     var targetDir = tufCommand.getTargetDir();
     var targetBaseUrl = tufCommand.getTargetBaseUrl();
     var targetName = tufCommand.getTargetName();
+    var clock = tufCommand.getClock();
 
     var fsStore = FileSystemTufStore.newFileSystemStore(metadataDir, targetDir);
     var tuf =
@@ -49,6 +50,7 @@ public class Download implements Callable<Integer> {
             .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(metadataUrl)))
             .setTargetFetcher(HttpFetcher.newFetcher(targetBaseUrl))
             .setTargetStore(fsStore)
+            .setClock(clock)
             .build();
     // the java client isn't one shot like other clients, so downloadTarget doesn't call update
     // for the sake of conformance updateMeta here
