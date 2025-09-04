@@ -270,7 +270,7 @@ public class KeylessVerifierTest {
                     Bundle.from(new StringReader(modifiedBundleFile)),
                     VerificationOptions.empty()));
     Assertions.assertEquals(
-        "Could not parse HashedRekordLogEntryV002 from log entry body", thrown.getMessage());
+        "Could not parse hashedrekord from log entry body", thrown.getMessage());
   }
 
   @Test
