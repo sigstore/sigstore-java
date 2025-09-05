@@ -573,7 +573,7 @@ public class KeylessVerifierTest {
                     Path.of(artifact),
                     Bundle.from(new StringReader(invalidBundleFile)),
                     VerificationOptions.empty()));
-    Assertions.assertEquals("Unsupported hashedrekord version", ex.getMessage());
+    Assertions.assertEquals("Unsupported hashedrekord version: 0.0.3", ex.getMessage());
   }
 
   @Test
