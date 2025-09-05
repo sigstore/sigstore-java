@@ -339,7 +339,7 @@ public class KeylessVerifier {
             "Could not encode leaf certificate for comparison", e);
       }
     } else {
-      throw new KeylessVerificationException("Unsupported hashedrekord version");
+      throw new KeylessVerificationException("Unsupported hashedrekord version: " + version);
     }
   }
 
@@ -505,6 +505,8 @@ public class KeylessVerifier {
         throw new KeylessVerificationException(
             "Could not encode leaf certificate for comparison", e);
       }
+    } else {
+      throw new KeylessVerificationException("Unsupported DSSE version: " + version);
     }
   }
 }
