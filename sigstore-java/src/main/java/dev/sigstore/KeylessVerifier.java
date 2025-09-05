@@ -305,8 +305,7 @@ public class KeylessVerifier {
                 builder);
         logEntrySpec = builder.build();
       } catch (InvalidProtocolBufferException ipbe) {
-        throw new KeylessVerificationException(
-            "Could not parse HashedRekordLogEntryV002 from log entry body");
+        throw new KeylessVerificationException("Could not parse hashedrekord from log entry body");
       }
 
       if (!logEntrySpec.getData().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
@@ -460,8 +459,7 @@ public class KeylessVerifier {
                 builder);
         logEntrySpec = builder.build();
       } catch (InvalidProtocolBufferException ipbe) {
-        throw new KeylessVerificationException(
-            "Could not parse DSSELogEntryV002 from log entry body", ipbe);
+        throw new KeylessVerificationException("Could not parse DSSE from log entry body", ipbe);
       }
 
       if (!logEntrySpec.getPayloadHash().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
