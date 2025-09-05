@@ -22,8 +22,8 @@ import com.google.api.client.http.apache.v2.ApacheHttpTransport;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.ObjectParser;
 import dev.sigstore.forbidden.SuppressForbidden;
-import java.io.IOException;
 import javax.annotation.Nullable;
+import org.apache.http.HttpHeaders;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -36,8 +36,7 @@ public class HttpClients {
    * you need to also configure the response parser}.
    */
   public static HttpTransport newHttpTransport(HttpParams httpParams) {
-    HttpClientBuilder hcb =
-        ApacheHttpTransport.newDefaultHttpClientBuilder().setUserAgent(httpParams.getUserAgent());
+    HttpClientBuilder hcb = ApacheHttpTransport.newDefaultHttpClientBuilder();
     if (httpParams.getAllowInsecureConnections()) {
       hcb.setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
     }
@@ -46,17 +45,19 @@ public class HttpClients {
 
   /** Create a new get requests with the httpParams applied and retries. */
   @SuppressForbidden(reason = "HttpClients#newHttpTransport(HttpParams)")
-  public static HttpRequestFactory newRequestFactory(HttpParams httpParams) throws IOException {
+  public static HttpRequestFactory newRequestFactory(HttpParams httpParams) {
     return newRequestFactory(httpParams, null);
   }
 
   /** Create a new get requests with the httpParams applied, retries and a response parser. */
   @SuppressForbidden(reason = "HttpClients#newHttpTransport(HttpParams)")
   public static HttpRequestFactory newRequestFactory(
-      HttpParams httpParams, @Nullable ObjectParser responseParser) throws IOException {
+      HttpParams httpParams, @Nullable ObjectParser responseParser) {
     return HttpClients.newHttpTransport(httpParams)
         .createRequestFactory(
             request -> {
+              request.setSuppressUserAgentSuffix(true);
+              request.getHeaders().set(HttpHeaders.USER_AGENT, httpParams.getUserAgent());
               request.setConnectTimeout(httpParams.getTimeout() * 1000);
               request.setReadTimeout(httpParams.getTimeout() * 1000);
               request.setNumberOfRetries(3); // arbitrarily selected number of retries
