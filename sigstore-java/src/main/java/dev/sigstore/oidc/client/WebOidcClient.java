@@ -164,6 +164,8 @@ public class WebOidcClient implements OidcClient {
                 endpoints.getAuthEndpoint())
             .enablePKCE()
             .setScopes(Arrays.asList("openid", "email"))
+            .setRequestInitializer(
+                (req) -> req.getHeaders().set("User-Agent", httpParams.getUserAgent()))
             .setCredentialCreatedListener(
                 (credential, tokenResponse) ->
                     memStoreFactory
