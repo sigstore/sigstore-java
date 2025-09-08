@@ -19,8 +19,6 @@ import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.google.protobuf.InvalidProtocolBufferException;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.VerificationOptions.UncheckedCertificateException;
 import dev.sigstore.bundle.Bundle;
@@ -31,7 +29,6 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
-import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
 import dev.sigstore.proto.rekor.v2.DSSELogEntryV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
@@ -71,7 +68,9 @@ import java.util.stream.Collectors;
 import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
 
-/** Verify hashrekords from rekor signed using the keyless signing flow with fulcio certificates. */
+/**
+ * Verify hashedrekords from rekor signed using the keyless signing flow with fulcio certificates.
+ */
 public class KeylessVerifier {
 
   private final FulcioVerifier fulcioVerifier;
@@ -271,7 +270,7 @@ public class KeylessVerifier {
     String version = rekorEntry.getBodyDecoded().getApiVersion();
     if ("0.0.1".equals(version)) {
       try {
-        RekorTypes.getHashedRekord(rekorEntry);
+        RekorTypes.getHashedRekordV001(rekorEntry);
         var calculatedHashedRekord =
             HashedRekordRequest.newHashedRekordRequest(
                     artifactDigest, Certificates.toPemBytes(leafCert), signature)
@@ -291,21 +290,10 @@ public class KeylessVerifier {
     } else if ("0.0.2".equals(version)) {
       HashedRekordLogEntryV002 logEntrySpec;
       try {
-        HashedRekordLogEntryV002.Builder builder = HashedRekordLogEntryV002.newBuilder();
-        ProtoJson.parser()
-            .ignoringUnknownFields()
-            .merge(
-                new Gson()
-                    .toJson(
-                        rekorEntry
-                            .getBodyDecoded()
-                            .getSpec()
-                            .getAsJsonObject()
-                            .get("hashedRekordV002")),
-                builder);
-        logEntrySpec = builder.build();
-      } catch (InvalidProtocolBufferException ipbe) {
-        throw new KeylessVerificationException("Could not parse hashedrekord from log entry body");
+        logEntrySpec = RekorTypes.getHashedRekordV002(rekorEntry);
+      } catch (RekorTypeException re) {
+        throw new KeylessVerificationException(
+            "Could not parse hashedrekord from log entry body", re);
       }
 
       if (!logEntrySpec.getData().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
@@ -408,7 +396,7 @@ public class KeylessVerifier {
     if ("0.0.1".equals(version)) {
       Dsse rekorDsse;
       try {
-        rekorDsse = RekorTypes.getDsse(rekorEntry);
+        rekorDsse = RekorTypes.getDsseV001(rekorEntry);
       } catch (RekorTypeException re) {
         throw new KeylessVerificationException("Unexpected rekor type", re);
       }
@@ -425,7 +413,7 @@ public class KeylessVerifier {
         payloadDigest = Hex.decode(rekorDsse.getPayloadHash().getValue());
       } catch (DecoderException de) {
         throw new KeylessVerificationException(
-            "Could not decode hex sha256 artifact hash in hashrekord", de);
+            "Could not decode hex sha256 artifact hash in hashedrekord", de);
       }
 
       byte[] calculatedDigest = Hashing.sha256().hashBytes(dsseEnvelope.getPayload()).asBytes();
@@ -450,16 +438,9 @@ public class KeylessVerifier {
     } else if ("0.0.2".equals(version)) {
       DSSELogEntryV002 logEntrySpec;
       try {
-        DSSELogEntryV002.Builder builder = DSSELogEntryV002.newBuilder();
-        ProtoJson.parser()
-            .merge(
-                new Gson()
-                    .toJson(
-                        rekorEntry.getBodyDecoded().getSpec().getAsJsonObject().get("dsseV002")),
-                builder);
-        logEntrySpec = builder.build();
-      } catch (InvalidProtocolBufferException ipbe) {
-        throw new KeylessVerificationException("Could not parse DSSE from log entry body", ipbe);
+        logEntrySpec = RekorTypes.getDsseV002(rekorEntry);
+      } catch (RekorTypeException re) {
+        throw new KeylessVerificationException("Could not parse DSSE from log entry body", re);
       }
 
       if (!logEntrySpec.getPayloadHash().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {

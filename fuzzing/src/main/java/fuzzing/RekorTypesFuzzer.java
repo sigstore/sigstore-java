@@ -29,16 +29,30 @@ public class RekorTypesFuzzer {
 
   public static void fuzzerTestOneInput(FuzzedDataProvider data) {
     try {
-      int type = data.pickValue(new int[] {0, 1});
+      int type = data.pickValue(new int[] {0, 1, 2, 3});
       String string = data.consumeRemainingAsString();
 
-      URI uri = new URI(URL);
-      RekorEntry entry = RekorResponse.newRekorResponse(uri, string).getEntry();
-
-      if (type == 0) {
-        RekorTypes.getHashedRekord(entry);
+      RekorEntry entry;
+      if (type < 2) {
+        URI uri = new URI(URL);
+        entry = RekorResponse.newRekorResponse(uri, string).getEntry();
       } else {
-        RekorTypes.getDsse(entry);
+        entry = RekorEntry.fromTLogEntryJson(string);
+      }
+
+      switch (type) {
+        case 0:
+          RekorTypes.getHashedRekordV001(entry);
+          break;
+        case 1:
+          RekorTypes.getDsseV001(entry);
+          break;
+        case 2:
+          RekorTypes.getHashedRekordV002(entry);
+          break;
+        case 3:
+          RekorTypes.getDsseV002(entry);
+          break;
       }
     } catch (URISyntaxException | RekorTypeException | RekorParseException e) {
       // Known exception
