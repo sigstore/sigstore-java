@@ -18,7 +18,9 @@ package dev.sigstore.rekor.client;
 import dev.sigstore.KeylessVerificationException;
 import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.encryption.certificates.Certificates;
-import dev.sigstore.trustroot.*;
+import dev.sigstore.trustroot.Service;
+import dev.sigstore.trustroot.SigstoreConfigurationException;
+import dev.sigstore.trustroot.TransparencyLog;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -81,7 +83,7 @@ public class RekorEntryFetcher {
               artifactDigest, Certificates.toPemBytes(leafCert), signature);
     } catch (IOException e) {
       throw new KeylessVerificationException(
-          "Could not convert certificate to PEM when recreating hashrekord", e);
+          "Could not convert certificate to PEM when recreating hashedrekord", e);
     }
     Optional<RekorEntry> rekorEntry;
 

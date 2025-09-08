@@ -110,7 +110,7 @@ public class RekorClientHttpTest {
                 null,
                 null,
                 "x509",
-                RekorTypes.getHashedRekord(resp.getEntry())
+                RekorTypes.getHashedRekordV001(resp.getEntry())
                     .getSignature()
                     .getPublicKey()
                     .getContent())

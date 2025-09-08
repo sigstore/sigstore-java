@@ -18,6 +18,10 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.gson.JsonParseException;
+import com.google.protobuf.InvalidProtocolBufferException;
+import dev.sigstore.json.ProtoJson;
+import dev.sigstore.proto.rekor.v2.DSSELogEntryV002;
+import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
 import dev.sigstore.rekor.dsse.v0_0_1.Dsse;
 import dev.sigstore.rekor.hashedRekord.v0_0_1.HashedRekord;
 
@@ -29,15 +33,41 @@ public class RekorTypes {
    *
    * @param entry the rekor entry obtained from rekor
    * @return the parsed pojo
-   * @throws RekorTypeException if the hashrekord:0.0.1 entry could not be parsed
+   * @throws RekorTypeException if the hashedrekord:0.0.1 entry could not be parsed
    */
-  public static HashedRekord getHashedRekord(RekorEntry entry) throws RekorTypeException {
+  public static HashedRekord getHashedRekordV001(RekorEntry entry) throws RekorTypeException {
     expect(entry, "hashedrekord", "0.0.1");
 
     try {
       return GSON.get().fromJson(entry.getBodyDecoded().getSpec(), HashedRekord.class);
     } catch (JsonParseException jpe) {
-      throw new RekorTypeException("Could not parse hashrekord:0.0.1", jpe);
+      throw new RekorTypeException("Could not parse hashedrekord:0.0.1", jpe);
+    }
+  }
+
+  /**
+   * Parse a hashedrekord from rekor at api version 0.0.2.
+   *
+   * @param entry the rekor entry obtained from rekor
+   * @return the parsed proto
+   * @throws RekorTypeException if the hashedrekord:0.0.2 entry could not be parsed
+   */
+  public static HashedRekordLogEntryV002 getHashedRekordV002(RekorEntry entry)
+      throws RekorTypeException {
+    expect(entry, "hashedrekord", "0.0.2");
+
+    try {
+      HashedRekordLogEntryV002.Builder builder = HashedRekordLogEntryV002.newBuilder();
+      ProtoJson.parser()
+          .ignoringUnknownFields()
+          .merge(
+              GSON.get()
+                  .toJson(
+                      entry.getBodyDecoded().getSpec().getAsJsonObject().get("hashedRekordV002")),
+              builder);
+      return builder.build();
+    } catch (InvalidProtocolBufferException | NullPointerException | IllegalStateException e) {
+      throw new RekorTypeException("Could not parse hashedrekord:0.0.2", e);
     }
   }
 
@@ -48,13 +78,36 @@ public class RekorTypes {
    * @return the parsed pojo
    * @throws RekorTypeException if the dsse:0.0.1 entry could not be parsed
    */
-  public static Dsse getDsse(RekorEntry entry) throws RekorTypeException {
+  public static Dsse getDsseV001(RekorEntry entry) throws RekorTypeException {
     expect(entry, "dsse", "0.0.1");
 
     try {
       return GSON.get().fromJson(entry.getBodyDecoded().getSpec(), Dsse.class);
     } catch (JsonParseException jpe) {
       throw new RekorTypeException("Could not parse dsse:0.0.1", jpe);
+    }
+  }
+
+  /**
+   * Parse a dsse from rekor at api version 0.0.2.
+   *
+   * @param entry the rekor entry obtained from rekor
+   * @return the parsed proto
+   * @throws RekorTypeException if the dsse:0.0.2 entry could not be parsed
+   */
+  public static DSSELogEntryV002 getDsseV002(RekorEntry entry) throws RekorTypeException {
+    expect(entry, "dsse", "0.0.2");
+
+    try {
+      DSSELogEntryV002.Builder builder = DSSELogEntryV002.newBuilder();
+      ProtoJson.parser()
+          .ignoringUnknownFields()
+          .merge(
+              GSON.get().toJson(entry.getBodyDecoded().getSpec().getAsJsonObject().get("dsseV002")),
+              builder);
+      return builder.build();
+    } catch (InvalidProtocolBufferException | NullPointerException | IllegalStateException e) {
+      throw new RekorTypeException("Could not parse dsse:0.0.2", e);
     }
   }
 

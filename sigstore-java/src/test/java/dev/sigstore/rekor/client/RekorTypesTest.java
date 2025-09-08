@@ -23,28 +23,54 @@ import org.junit.jupiter.api.Test;
 
 public class RekorTypesTest {
 
-  private RekorEntry fromResource(String path) throws Exception {
+  private RekorEntry fromResourceV001(String path) throws Exception {
     var rekorResponse = Resources.toString(Resources.getResource(path), StandardCharsets.UTF_8);
 
     return RekorResponse.newRekorResponse(new URI("https://not.used.com"), rekorResponse)
         .getEntry();
   }
 
-  @Test
-  public void getHashedRekord_pass() throws Exception {
-    var entry = fromResource("dev/sigstore/samples/rekor-response/valid/entry.json");
+  private RekorEntry fromResourceV002(String path) throws Exception {
+    var tle = Resources.toString(Resources.getResource(path), StandardCharsets.UTF_8);
 
-    var hashedRekord = RekorTypes.getHashedRekord(entry);
+    return RekorEntry.fromTLogEntryJson(tle);
+  }
+
+  @Test
+  public void getHashedRekordV001_pass() throws Exception {
+    var entry = fromResourceV001("dev/sigstore/samples/rekor-response/valid/entry.json");
+
+    var hashedRekord = RekorTypes.getHashedRekordV001(entry);
     Assertions.assertNotNull(hashedRekord);
   }
 
   @Test
-  public void getHashedRekord_badType() throws Exception {
-    var entry = fromResource("dev/sigstore/samples/rekor-response/valid/jar-entry.json");
+  public void getHashedRekordV002_pass() throws Exception {
+    var entry = fromResourceV002("dev/sigstore/samples/rekor-response/valid/entry-v2.json");
+
+    var hashedRekord = RekorTypes.getHashedRekordV002(entry);
+    Assertions.assertNotNull(hashedRekord);
+  }
+
+  @Test
+  public void getHashedRekordV001_badType() throws Exception {
+    var entry = fromResourceV001("dev/sigstore/samples/rekor-response/valid/jar-entry.json");
 
     var exception =
-        Assertions.assertThrows(RekorTypeException.class, () -> RekorTypes.getHashedRekord(entry));
+        Assertions.assertThrows(
+            RekorTypeException.class, () -> RekorTypes.getHashedRekordV001(entry));
     Assertions.assertEquals(
         "Expecting type hashedrekord:0.0.1, but found jar:0.0.1", exception.getMessage());
+  }
+
+  @Test
+  public void getHashedRekordV002_badType() throws Exception {
+    var entry = fromResourceV002("dev/sigstore/samples/rekor-response/valid/jar-entry-v2.json");
+
+    var exception =
+        Assertions.assertThrows(
+            RekorTypeException.class, () -> RekorTypes.getHashedRekordV002(entry));
+    Assertions.assertEquals(
+        "Expecting type hashedrekord:0.0.2, but found jar:0.0.2", exception.getMessage());
   }
 }

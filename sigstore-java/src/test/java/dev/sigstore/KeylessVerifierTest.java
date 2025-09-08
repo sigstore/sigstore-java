@@ -23,6 +23,7 @@ import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.signers.Signers;
+import dev.sigstore.rekor.client.RekorTypeException;
 import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.strings.StringMatcher;
 import dev.sigstore.testing.CertGenerator;
@@ -271,6 +272,8 @@ public class KeylessVerifierTest {
                     VerificationOptions.empty()));
     Assertions.assertEquals(
         "Could not parse hashedrekord from log entry body", thrown.getMessage());
+    Assertions.assertTrue(thrown.getCause() instanceof RekorTypeException);
+    Assertions.assertEquals("Could not parse hashedrekord:0.0.2", thrown.getCause().getMessage());
   }
 
   @Test
