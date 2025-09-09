@@ -18,8 +18,8 @@ dependencies {
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.39.0"))
     implementation("com.google.oauth-client:google-oauth-client")
 
-    implementation("org.eclipse.jetty:jetty-server:11.0.24")
-    implementation("org.eclipse.jetty:jetty-servlet:11.0.24")
+    implementation("org.eclipse.jetty:jetty-server:11.0.26")
+    implementation("org.eclipse.jetty:jetty-servlet:11.0.26")
 
     implementation("org.slf4j:slf4j-simple:2.0.17")
 
