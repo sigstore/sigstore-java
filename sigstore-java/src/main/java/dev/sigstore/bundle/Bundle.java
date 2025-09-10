@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.cert.CertPath;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.immutables.gson.Gson;
@@ -149,6 +150,7 @@ public abstract class Bundle {
      * content.
      */
     @Gson.Ignore
+    @Value.Auxiliary
     @Derived
     default byte[] getPAE() {
       return ("DSSEv1 "
@@ -160,6 +162,21 @@ public abstract class Bundle {
               + " "
               + getPayloadAsString())
           .getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Override
+    int hashCode();
+
+    @Override
+    boolean equals(Object obj);
+
+    @Value.Check
+    default void check() {
+      // This is a workaround for immutables not using Arrays.equals for derived byte[]
+      // see: https://github.com/immutables/immutables/issues/1610
+      if (!Arrays.equals(getPAE(), getPAE())) {
+        throw new IllegalStateException("Should be unreachable");
+      }
     }
 
     @Lazy
