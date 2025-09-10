@@ -126,6 +126,11 @@ public class RekorEntryTest {
   }
 
   @Test
+  public void fromTLogEntryJson_null() {
+    Assertions.assertThrows(RekorParseException.class, () -> RekorEntry.fromTLogEntryJson(null));
+  }
+
+  @Test
   public void fromTLogEntryJson_invalid() {
     var thrown =
         Assertions.assertThrows(

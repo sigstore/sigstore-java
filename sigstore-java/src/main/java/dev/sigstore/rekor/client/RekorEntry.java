@@ -170,11 +170,14 @@ public interface RekorEntry {
 
   /** Returns a RekorEntry from the JSON representation of a TransparencyLogEntry */
   static RekorEntry fromTLogEntryJson(String json) throws RekorParseException {
+    if (Objects.isNull(json)) {
+      throw new RekorParseException("Cannot parse null Rekor response");
+    }
     try {
       TransparencyLogEntry.Builder builder = TransparencyLogEntry.newBuilder();
       ProtoJson.parser().ignoringUnknownFields().merge(json, builder);
       return ProtoMutators.toRekorEntry(builder.build());
-    } catch (InvalidProtocolBufferException e) {
+    } catch (InvalidProtocolBufferException | NullPointerException e) {
       throw new RekorParseException("Failed to parse Rekor response JSON", e);
     }
   }
