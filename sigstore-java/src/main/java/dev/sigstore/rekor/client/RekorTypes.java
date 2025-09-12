@@ -66,7 +66,10 @@ public class RekorTypes {
                       entry.getBodyDecoded().getSpec().getAsJsonObject().get("hashedRekordV002")),
               builder);
       return builder.build();
-    } catch (InvalidProtocolBufferException | NullPointerException | IllegalStateException e) {
+    } catch (InvalidProtocolBufferException
+        | JsonParseException
+        | NullPointerException
+        | IllegalStateException e) {
       throw new RekorTypeException("Could not parse hashedrekord:0.0.2", e);
     }
   }
@@ -106,7 +109,10 @@ public class RekorTypes {
               GSON.get().toJson(entry.getBodyDecoded().getSpec().getAsJsonObject().get("dsseV002")),
               builder);
       return builder.build();
-    } catch (InvalidProtocolBufferException | NullPointerException | IllegalStateException e) {
+    } catch (InvalidProtocolBufferException
+        | JsonParseException
+        | NullPointerException
+        | IllegalStateException e) {
       throw new RekorTypeException("Could not parse dsse:0.0.2", e);
     }
   }
