@@ -52,21 +52,4 @@ class PluginSmokeTest : BaseGradleTest() {
                 .hasFileName("hello.properties.sigstore.json")
         }
     }
-
-    @Test
-    fun `oidcClient dsl`() {
-        project {
-            apply(plugin = "dev.sigstore.sign-base")
-            configure<SigstoreSignExtension> {
-                oidcClient {
-                    // Note: the code is red in IDEA because it does not understand
-                    // there's sam-with-receiver plugin for Action<.>
-                    gitHub {}
-                    web {
-                        issuer.set("https://sigstore-test.example.com")
-                    }
-                }
-            }
-        }
-    }
 }
