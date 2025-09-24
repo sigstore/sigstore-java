@@ -17,31 +17,22 @@
 package dev.sigstore.sign.work
 
 import dev.sigstore.KeylessSigner
-import dev.sigstore.oidc.client.OidcClient
-import dev.sigstore.oidc.client.OidcClients
-import dev.sigstore.sign.OidcClientConfiguration
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.internal.impldep.org.hamcrest.core.AnyOf
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.slf4j.LoggerFactory
-import java.util.concurrent.ConcurrentHashMap
 
 abstract class SignWorkParameters : WorkParameters {
     abstract val inputFile: RegularFileProperty
     abstract val outputSignature: RegularFileProperty
-    abstract val oidcClient: Property<OidcClientConfiguration>
 }
 
 abstract class SignWorkAction : WorkAction<SignWorkParameters> {
     companion object {
         private val logger = LoggerFactory.getLogger(SignWorkAction::class.java)
-
-        private val clients = ConcurrentHashMap<Any, KeylessSigner>()
-
-        // the default key that delegates to KeylessSigners set of default OIDC providers
-        const val DEFAULT_KEY = "_default"
+        private val signer: KeylessSigner by lazy {
+            KeylessSigner.builder().sigstorePublicDefaults().build()
+        }
     }
 
     abstract val parameters: SignWorkParameters
@@ -49,16 +40,6 @@ abstract class SignWorkAction : WorkAction<SignWorkParameters> {
     override fun execute() {
         val inputFile = parameters.inputFile.get().asFile
         logger.info("Signing in Sigstore: {}", inputFile)
-
-        val signerKey = if (parameters.oidcClient.isPresent) parameters.oidcClient.get().key() else DEFAULT_KEY
-        val signer = clients.computeIfAbsent(signerKey) {
-            KeylessSigner.builder().apply {
-                sigstorePublicDefaults()
-                if (signerKey != DEFAULT_KEY) {
-                    forceCredentialProviders(OidcClients.of(parameters.oidcClient.get().build() as OidcClient))
-                }
-            }.build()
-        }
 
         val result = signer.signFile(inputFile.toPath())
         val bundleJson = result.toJson()

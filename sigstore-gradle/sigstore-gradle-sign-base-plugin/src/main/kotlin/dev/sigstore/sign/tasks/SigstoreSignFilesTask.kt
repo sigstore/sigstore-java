@@ -16,7 +16,6 @@
  */
 package dev.sigstore.sign.tasks
 
-import dev.sigstore.sign.OidcClientConfiguration
 import dev.sigstore.sign.SigstoreSignExtension
 import dev.sigstore.sign.SigstoreSignature
 import dev.sigstore.sign.services.SigstoreSigningService
@@ -86,9 +85,6 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
     @get:Internal
     abstract val signatureDirectory: DirectoryProperty
 
-    @get:Internal
-    abstract val oidcClient: Property<OidcClientConfiguration>
-
     @get:Nested
     @get:Optional
     abstract val launcher: Property<JavaLauncher>
@@ -114,9 +110,6 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
             false
         }
         sigstoreClientClasspath.from(project.configurations["sigstoreClientClasspath"])
-        oidcClient.convention(
-            project.the<SigstoreSignExtension>().oidcClient.client
-        )
         signatureDirectory.convention(
             layout.buildDirectory.dir("sigstore/$name")
         )
@@ -201,7 +194,6 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
                     submit(SignWorkAction::class.java) {
                         inputFile.set(file)
                         outputSignature.set(signature.outputSignature)
-                        oidcClient.set(this@SigstoreSignFilesTask.oidcClient)
                     }
                     // Wait after submitting each action, so the worker become active, and we can reuse it.
                     // It enables reusing Fulcio certificates
