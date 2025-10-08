@@ -47,10 +47,6 @@ abstract class SigstoreSignExtension(private val project: Project) {
 
     init {
         sigstoreJavaVersion.convention("2.0.0-rc2")
-        (this as ExtensionAware).extensions.create<OidcClientExtension>(
-            "oidcClient",
-            project.objects,
-        )
     }
 
     fun sign(publications: DomainObjectCollection<Publication>) {
@@ -68,13 +64,6 @@ abstract class SigstoreSignExtension(private val project: Project) {
         for (publication in publications) {
             sign(publication as PublicationInternal<*>)
         }
-    }
-
-    val oidcClient: OidcClientExtension
-        get() = (this as ExtensionAware).the()
-
-    fun oidcClient(configure: Action<OidcClientExtension>) {
-        configure.execute((this as ExtensionAware).the())
     }
 
     private fun <T : PublicationArtifact> sign(publication: PublicationInternal<T>) {
