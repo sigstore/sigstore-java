@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 /**
@@ -50,6 +51,8 @@ public class KeylessSignerTest {
   public static List<Path> artifacts;
   public static List<Bundle> signingResults;
   public static KeylessSigner signer;
+  public static String attestation;
+  public static Bundle attestationResult;
 
   @BeforeAll
   public static void setup() throws Exception {
@@ -70,6 +73,9 @@ public class KeylessSignerTest {
       signingResults.add(Mockito.mock(Bundle.class));
     }
 
+    attestation = "some attestation";
+    attestationResult = Mockito.mock(Bundle.class);
+
     // make sure our mock signing results are not equal
     Assertions.assertNotEquals(signingResults.get(0), signingResults.get(1));
 
@@ -80,6 +86,9 @@ public class KeylessSignerTest {
     Mockito.doReturn(signingResults)
         .when(signer)
         .sign(Mockito.argThat(new ByteArrayListMatcher(artifactHashes)));
+    Mockito.doReturn(attestationResult)
+        .when(signer)
+        .attest(ArgumentMatchers.argThat(attestation::equals));
   }
 
   @Test
@@ -99,6 +108,11 @@ public class KeylessSignerTest {
   @Test
   public void sign_digest() throws Exception {
     Assertions.assertEquals(signingResults.get(0), signer.sign(artifactHashes.get(0)));
+  }
+
+  @Test
+  public void attest_validation() throws Exception {
+    Assertions.assertEquals(attestationResult, signer.attest(attestation));
   }
 
   @Test
