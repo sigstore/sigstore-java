@@ -9,7 +9,7 @@ if (!project.hasProperty("skipErrorprone") && buildParameters.enableErrorprone) 
     apply(plugin = "net.ltgt.errorprone")
 
     dependencies {
-        "errorprone"("com.google.errorprone:error_prone_core:2.38.0")
+        "errorprone"("com.google.errorprone:error_prone_core:2.42.0")
         "annotationProcessor"("com.google.guava:guava-beta-checker:1.0")
     }
 
