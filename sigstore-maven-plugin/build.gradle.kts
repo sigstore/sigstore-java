@@ -14,7 +14,7 @@ dependencies {
     compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations:3.15.1")
 
     implementation(project(":sigstore-java"))
-    implementation("org.bouncycastle:bcutil-jdk18on:1.80")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.82")
     implementation("org.apache.maven.plugins:maven-gpg-plugin:3.2.7")
 
     testImplementation("org.apache.maven.shared:maven-verifier:1.8.0")
