@@ -46,7 +46,7 @@ abstract class SigstoreSignExtension(private val project: Project) {
     abstract val sigstoreJavaVersion : Property<String>
 
     init {
-        sigstoreJavaVersion.convention("2.0.0-rc2")
+        sigstoreJavaVersion.convention("2.0.0-rc3")
     }
 
     fun sign(publications: DomainObjectCollection<Publication>) {

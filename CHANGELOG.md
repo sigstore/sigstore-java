@@ -9,6 +9,16 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [2.0.0-rc2] - 2025-10-21
+
+## Fixed
+- Fix TUF snapshot version rollback case: https://github.com/sigstore/sigstore-java/pull/1061
+- Fix userAgent string in requests: https://github.com/sigstore/sigstore-java/pull/1066
+- Handle parsing/format failures: https://github.com/sigstore/sigstore-java/pull/1063, https://github.com/sigstore/sigstore-java/pull/1064, https://github.com/sigstore/sigstore-java/pull/1073, https://github.com/sigstore/sigstore-java/pull/1074, https://github.com/sigstore/sigstore-java/pull/1075
+
+## Changed
+- Remove oidc config from gradle plugin: https://github.com/sigstore/sigstore-java/pull/1076
+
 # [2.0.0-rc1] - 2025-08-14
 
 ## Added
