@@ -1,7 +1,7 @@
 plugins {
   `java-library`
   `maven-publish`
-  val sigstoreVersion = System.getProperty("sigstore.version") ?: "2.0.0-rc1"
+  val sigstoreVersion = System.getProperty("sigstore.version") ?: "2.0.0-rc2"
   id("dev.sigstore.sign") version "$sigstoreVersion"
   signing
 }

@@ -15,7 +15,7 @@ Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-spe
 
 ```kotlin
 plugins {
-    id("dev.sigstore.sign") version "2.0.0-rc1"
+    id("dev.sigstore.sign") version "2.0.0-rc2"
 }
 
 // Automatically sign all Maven publications, using GitHub Actions OIDC when available,
@@ -47,27 +47,8 @@ plugins {
 }
 
 dependencies {
-    // Override sigstore-java clients
+    // Override sigstore-java clients, this may lead to unexpected behavior
     sigstoreClient("dev.sigstore:sigstore-java:<alternate-version>")
-}
-
-sigstoreSign {
-    oidcClient {
-        // oidcClient configuration should very rarely be configured, it should be
-        // inferred from a sigstore deployment's config obtained from a TUF repository
-        // with a default set of ambient credential providers
-        gitHub {
-            audience.set("sigstore")
-        }
-        web {
-            clientId.set("sigstore")
-            issuer.set("https://oauth2.sigstore.dev/auth")
-        }
-        // override the client config to a specific provider
-        client.set(web)
-        // or
-        client(web)
-    }
 }
 ```
 
@@ -147,13 +128,7 @@ Properties:
 Extensions:
 * `sigstoreSign`: `dev.sigstore.sign.SigstoreSignExtension`
 
-  Configures signing parameters
-
-  * `oidcClient`: `dev.sigstore.sign.OidcClientExtension`
-
-    Configures OIDC token source.
-
-    Supported sources: web browser, GitHub Actions.
+  An empty extension that may support configuration in the feature
 
 Configurations:
 * `sigstoreClient`
