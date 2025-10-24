@@ -51,7 +51,11 @@ public interface InTotoPayload {
     Map<String, String> getDigest();
   }
 
+  static InTotoPayload from(String payload) {
+    return GSON.get().fromJson(payload, InTotoPayload.class);
+  }
+
   static InTotoPayload from(DsseEnvelope dsseEnvelope) {
-    return GSON.get().fromJson(dsseEnvelope.getPayloadAsString(), InTotoPayload.class);
+    return from(dsseEnvelope.getPayloadAsString());
   }
 }

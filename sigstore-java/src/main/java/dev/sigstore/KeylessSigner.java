@@ -22,11 +22,15 @@ import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.Bundle.MessageSignature;
 import dev.sigstore.bundle.ImmutableBundle;
+import dev.sigstore.bundle.ImmutableDsseEnvelope;
+import dev.sigstore.bundle.ImmutableSignature;
 import dev.sigstore.bundle.ImmutableTimestamp;
+import dev.sigstore.dsse.InTotoPayload;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -42,6 +46,7 @@ import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.OidcTokenMatcher;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.X509Certificate;
+import dev.sigstore.proto.rekor.v2.DSSERequestV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.proto.rekor.v2.Signature;
 import dev.sigstore.proto.rekor.v2.Verifier;
@@ -65,6 +70,7 @@ import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
+import io.intoto.EnvelopeOuterClass;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -101,6 +107,8 @@ public class KeylessSigner implements AutoCloseable {
    * signing certificate that is considered good enough.
    */
   public static final Duration DEFAULT_MIN_SIGNING_CERTIFICATE_LIFETIME = Duration.ofMinutes(5);
+
+  public static final String DEFAULT_INTOTO_PAYLOAD_TYPE = "https://in-toto.io/Statement/v1";
 
   private final FulcioClient fulcioClient;
   private final FulcioVerifier fulcioVerifier;
@@ -670,5 +678,164 @@ public class KeylessSigner implements AutoCloseable {
   @CheckReturnValue
   public Bundle signFile(Path artifact) throws KeylessSignerException {
     return signFiles(List.of(artifact)).get(artifact);
+  }
+
+  public Bundle attest(String payload) throws KeylessSignerException {
+    if (rekorV2Client != null) { // Using Rekor v2 and a TSA
+      Preconditions.checkNotNull(
+          timestampClient, "Timestamp client must be configured for Rekor v2");
+      Preconditions.checkNotNull(
+          timestampVerifier, "Timestamp verifier must be configured for Rekor v2");
+    } else {
+      throw new IllegalStateException("No rekor v2 client was configured.");
+    }
+
+    if (payload == null || payload.isEmpty()) {
+      throw new IllegalArgumentException("Payload must be non-empty");
+    }
+
+    InTotoPayload inTotoPayload;
+    try {
+      inTotoPayload = InTotoPayload.from(payload);
+    } catch (JsonSyntaxException jse) {
+      throw new IllegalArgumentException("Payload is not a valid in-toto statement");
+    }
+
+    if (!inTotoPayload.getType().equals(DEFAULT_INTOTO_PAYLOAD_TYPE)) {
+      throw new IllegalArgumentException(
+          "Payload must be of type \""
+              + DEFAULT_INTOTO_PAYLOAD_TYPE
+              + "\" but was \""
+              + inTotoPayload.getType()
+              + "\"");
+    }
+
+    if (inTotoPayload.getSubject() == null || inTotoPayload.getSubject().isEmpty()) {
+      throw new IllegalArgumentException("Payload must contain at least one subject");
+    }
+
+    for (var subject : inTotoPayload.getSubject()) {
+      if (subject.getName() != null && !subject.getName().isEmpty()) {
+        continue;
+      }
+      throw new IllegalArgumentException("Payload must contain at least one non-empty subject");
+    }
+
+    // Technically speaking, it is unlikely the certificate will expire between signing artifacts
+    // However, files might be large, and it might take time to talk to Rekor
+    // so we check the certificate expiration here.
+    try {
+      renewSigningCertificate();
+    } catch (FulcioVerificationException
+        | UnsupportedAlgorithmException
+        | OidcException
+        | IOException
+        | InterruptedException
+        | InvalidKeyException
+        | NoSuchAlgorithmException
+        | SignatureException
+        | CertificateException ex) {
+      throw new KeylessSignerException("Failed to obtain signing certificate", ex);
+    }
+
+    CertPath signingCert;
+    byte[] encodedCert;
+    lock.readLock().lock();
+    try {
+      signingCert = this.signingCert;
+      encodedCert = this.encodedCert;
+      if (signingCert == null) {
+        throw new IllegalStateException("Signing certificate is null");
+      }
+    } finally {
+      lock.readLock().unlock();
+    }
+
+    var bundleBuilder = ImmutableBundle.builder().certPath(signingCert);
+
+    var dsse =
+        ImmutableDsseEnvelope.builder()
+            .payload(payload.getBytes(StandardCharsets.UTF_8))
+            .payloadType("application/vnd.in-toto+json")
+            .build();
+
+    var pae = dsse.getPAE();
+
+    Bundle.DsseEnvelope dsseSigned;
+    try {
+      var sig = signer.sign(pae);
+      dsseSigned =
+          ImmutableDsseEnvelope.builder()
+              .from(dsse)
+              .addSignatures(ImmutableSignature.builder().sig(sig).build())
+              .build();
+    } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException ex) {
+      throw new KeylessSignerException("Failed to sign artifact", ex);
+    }
+
+    var verifier =
+        Verifier.newBuilder()
+            .setX509Certificate(
+                X509Certificate.newBuilder().setRawBytes(ByteString.copyFrom(encodedCert)).build())
+            .setKeyDetails(ProtoMutators.toPublicKeyDetails(signingAlgorithm))
+            .build();
+
+    var dsseRequest =
+        DSSERequestV002.newBuilder()
+            .setEnvelope(
+                EnvelopeOuterClass.Envelope.newBuilder()
+                    .setPayload(ByteString.copyFrom(dsseSigned.getPayload()))
+                    .setPayloadType(dsseSigned.getPayloadType())
+                    .addSignatures(
+                        EnvelopeOuterClass.Signature.newBuilder()
+                            .setSig(ByteString.copyFrom(dsseSigned.getSignature())))
+                    .build())
+            .addVerifiers(verifier)
+            .build();
+
+    var signatureDigest = Hashing.sha256().hashBytes(dsseSigned.getSignature()).asBytes();
+
+    var tsReq =
+        ImmutableTimestampRequest.builder()
+            .hashAlgorithm(dev.sigstore.timestamp.client.HashAlgorithm.SHA256)
+            .hash(signatureDigest)
+            .build();
+
+    TimestampResponse tsResp;
+    try {
+      tsResp = timestampClient.timestamp(tsReq);
+    } catch (TimestampException ex) {
+      throw new KeylessSignerException("Failed to generate timestamp", ex);
+    }
+
+    try {
+      timestampVerifier.verify(tsResp, dsseSigned.getSignature());
+    } catch (TimestampVerificationException ex) {
+      throw new KeylessSignerException("Returned timestamp was invalid", ex);
+    }
+
+    Bundle.Timestamp timestamp =
+        ImmutableTimestamp.builder().rfc3161Timestamp(tsResp.getEncoded()).build();
+
+    bundleBuilder.addTimestamps(timestamp);
+
+    RekorEntry entry;
+    try {
+      entry = rekorV2Client.putEntry(dsseRequest);
+    } catch (IOException | RekorParseException ex) {
+      throw new KeylessSignerException("Failed to put entry in rekor", ex);
+    }
+
+    try {
+      rekorVerifier.verifyEntry(entry);
+    } catch (RekorVerificationException ex) {
+      throw new KeylessSignerException("Failed to validate rekor entry after signing", ex);
+    }
+
+    bundleBuilder.dsseEnvelope(dsseSigned);
+
+    bundleBuilder.addEntries(entry);
+
+    return bundleBuilder.build();
   }
 }
