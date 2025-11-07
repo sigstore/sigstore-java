@@ -3,10 +3,11 @@ permissions:
   contents: read
 
 on:
+  schedule:
+    - cron: '0 14 * * 1,4' # work hours for nyc
   push:
     branches: [main]
   pull_request: {}
-  # TODO: add cron
 
 jobs:
   conformance:
@@ -54,7 +55,7 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
 
-      - uses: sigstore/sigstore-conformance@244638a7a138ae9f6106cfe2d44a698eccd3bef7 # v0.0.21
+      - uses: sigstore/sigstore-conformance@48320dc345b60e599a447a3d321b71b310c687bb # v0.0.23
         with:
           entrypoint: ${{ github.workspace }}/sigstore-cli/sigstore-cli-server
           environment: ${{ matrix.sigstore-env }}
