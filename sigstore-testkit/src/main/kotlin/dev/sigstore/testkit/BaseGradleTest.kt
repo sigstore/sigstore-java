@@ -23,11 +23,8 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.internal.DefaultGradleRunner
 import org.gradle.util.GradleVersion
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.Arguments.arguments
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.appendText
@@ -36,20 +33,23 @@ open class BaseGradleTest {
     enum class ConfigurationCache {
         ON, OFF
     }
+
     enum class ProjectIsolation {
         ON, OFF
     }
 
-    // to debug these tests, add .withDebug(true) before running a test in debug mode
+    // when using withEnvironment, the system environment needs to be passed in because
+    // the runner forks into a new process. You cannot debug these tests with ".withDebug" and
+    // will have to remove "withEnvironment" to debug it.
     protected val gradleRunner = GradleRunner
         .create()
         .withPluginClasspath()
-        .withEnvironment(mapOf("JAVA_HOME" to TEST_JAVA_HOME))
+        .withEnvironment(System.getenv() + mapOf("JAVA_HOME" to TEST_JAVA_HOME))
 
     companion object {
         val isCI = System.getenv().containsKey("CI") || System.getProperties().containsKey("CI")
 
-        val EXTRA_LOCAL_REPOS  = System.getProperty("sigstore.test.local.maven.repo").split(File.pathSeparatorChar)
+        val EXTRA_LOCAL_REPOS = System.getProperty("sigstore.test.local.maven.repo").split(File.pathSeparatorChar)
 
         val TEST_JAVA_HOME = System.getProperty("sigstore-java.test.JAVA_HOME")
 
@@ -74,8 +74,8 @@ open class BaseGradleTest {
         ).map { GradleVersion.version(it) }
             .filter {
                 // See https://docs.gradle.org/current/userguide/compatibility.html
-                JavaVersion.current() <= JavaVersion.VERSION_21 && it <= GradleVersion.version("8.4") ||
-                    JavaVersion.current() <= JavaVersion.VERSION_25 && it <= GradleVersion.version("9.1.0")
+                (it >= GradleVersion.version("8.5") || JavaVersion.current() < JavaVersion.VERSION_21)
+                        && (it >= GradleVersion.version("9.1.0") || JavaVersion.current() < JavaVersion.VERSION_25)
             }
 
         @JvmStatic

@@ -1,3 +1,6 @@
+// codeql java version hint: languageVersion = JavaLanguageVersion.of(21)
+// https://github.com/github/codeql-action/issues/1855
+
 plugins {
     id("build-logic.root-build")
     id("com.gradleup.nmcp.aggregation") version "1.0.2"
