@@ -22,11 +22,8 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.internal.DefaultGradleRunner
 import org.gradle.util.GradleVersion
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.Arguments.arguments
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.appendText
@@ -53,30 +50,32 @@ open class BaseGradleTest {
             )
 
         @JvmStatic
-        fun gradleVersions() = listOf(
-            // Gradle 7.2 fails with "No service of type ObjectFactory available in default services"
-            // So we require Gradle 7.3+
-            "7.3",
-            "7.5.1",
-            "8.1",
-            "8.5",
-        ).map { GradleVersion.version(it) }
+        fun gradleVersions() = mapOf(
+            17 to listOf("7.3", "7.51", "8.1", "8.5", "9.2").map { GradleVersion.version(it) },
+            21 to listOf("8.5", "9.2").map { GradleVersion.version(it) },
+        ).withDefault { listOf("9.2").map { GradleVersion.version(it) } }
 
         @JvmStatic
         fun gradleVersionAndSettings(): Iterable<TestedGradle> {
+            val javaMajorVersion: Int = Runtime.version().feature()
+
+            val versions: List<GradleVersion> = gradleVersions()[javaMajorVersion]!!
+
             if (!isCI) {
                 // Execute a single combination only when running locally
                 return listOf(
-                    TestedGradle(gradleVersions().first(), ConfigurationCache.ON, ProjectIsolation.ON)
+                    TestedGradle(versions.first(), ConfigurationCache.ON, ProjectIsolation.ON)
                 )
             }
             return buildList {
                 addAll(
-                    gradleVersions().map { TestedGradle(it, ConfigurationCache.ON, ProjectIsolation.ON) }
+                    versions.map { TestedGradle(it, ConfigurationCache.ON, ProjectIsolation.ON) }
                 )
                 // Test the first and the last version without configuration cache
-                add(TestedGradle(gradleVersions().first(), ConfigurationCache.OFF, ProjectIsolation.OFF))
-                add(TestedGradle(gradleVersions().last(), ConfigurationCache.OFF, ProjectIsolation.OFF))
+                add(TestedGradle(versions.first(), ConfigurationCache.OFF, ProjectIsolation.OFF))
+                if (versions.first() != versions.last()) {
+                    add(TestedGradle(versions.last(), ConfigurationCache.OFF, ProjectIsolation.OFF))
+                }
             }
         }
 
