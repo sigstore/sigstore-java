@@ -18,6 +18,7 @@ package dev.sigstore.testkit
 
 import org.assertj.core.api.AbstractCharSequenceAssert
 import org.assertj.core.api.SoftAssertions
+import org.gradle.api.JavaVersion
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.internal.DefaultGradleRunner
 import org.gradle.util.GradleVersion
@@ -40,12 +41,17 @@ open class BaseGradleTest {
     }
 
     // to debug these tests, add .withDebug(true) before running a test in debug mode
-    protected val gradleRunner = GradleRunner.create().withPluginClasspath()
+    protected val gradleRunner = GradleRunner
+        .create()
+        .withPluginClasspath()
+        .withEnvironment(mapOf("JAVA_HOME" to TEST_JAVA_HOME))
 
     companion object {
         val isCI = System.getenv().containsKey("CI") || System.getProperties().containsKey("CI")
 
         val EXTRA_LOCAL_REPOS  = System.getProperty("sigstore.test.local.maven.repo").split(File.pathSeparatorChar)
+
+        val TEST_JAVA_HOME = System.getProperty("sigstore-java.test.JAVA_HOME")
 
         val SIGSTORE_JAVA_CURRENT_VERSION =
             TestedSigstoreJava.LocallyBuiltVersion(
@@ -53,14 +59,24 @@ open class BaseGradleTest {
             )
 
         @JvmStatic
-        fun gradleVersions() = listOf(
+        fun gradleVersions(): Iterable<GradleVersion> = listOf(
             // Gradle 7.2 fails with "No service of type ObjectFactory available in default services"
             // So we require Gradle 7.3+
             "7.3",
             "7.5.1",
             "8.1",
             "8.5",
+            "8.7",
+            "8.10.2",
+            "8.14.3",
+            "9.1.0",
+            "9.2.0",
         ).map { GradleVersion.version(it) }
+            .filter {
+                // See https://docs.gradle.org/current/userguide/compatibility.html
+                JavaVersion.current() <= JavaVersion.VERSION_21 && it <= GradleVersion.version("8.4") ||
+                    JavaVersion.current() <= JavaVersion.VERSION_25 && it <= GradleVersion.version("9.1.0")
+            }
 
         @JvmStatic
         fun gradleVersionAndSettings(): Iterable<TestedGradle> {
