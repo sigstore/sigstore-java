@@ -47,7 +47,7 @@ dependencies {
     testImplementation(project(":sigstore-testkit"))
     testImplementation(platform("org.junit:junit-bom:5.12.2"))
 
-    testImplementation(platform("org.mockito:mockito-bom:5.16.1"))
+    testImplementation(platform("org.mockito:mockito-bom:5.20.0"))
     testImplementation("org.mockito:mockito-core")
     testImplementation("org.mockito:mockito-junit-jupiter")
 
