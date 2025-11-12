@@ -22,6 +22,7 @@ import dev.sigstore.testkit.TestedGradleAndSigstoreJava
 import dev.sigstore.testkit.TestedSigstoreJava
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists
 import org.assertj.core.api.Assertions.assertThat
+import org.gradle.util.GradleVersion
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
@@ -30,6 +31,11 @@ class SigstoreSignTest: BaseGradleTest() {
     @ParameterizedTest
     @MethodSource("gradleAndSigstoreJavaVersions")
     fun `sign file`(case: TestedGradleAndSigstoreJava) {
+        val destLine =
+            if (case.gradle.version < GradleVersion.version("8.0"))
+                """outputFile = file("helloProps.txt")"""
+            else
+                """destinationFile = layout.buildDirectory.file("helloProps.txt")"""
         writeBuildGradle(
             """
             import dev.sigstore.sign.tasks.SigstoreSignFilesTask
@@ -40,11 +46,11 @@ class SigstoreSignTest: BaseGradleTest() {
             ${declareRepositoryAndDependency(case.sigstoreJava)}
             group = "dev.sigstore.test"
             def helloProps = tasks.register("helloProps", WriteProperties) {
-                outputFile = file("build/helloProps.txt")
+                ${destLine}
                 property("helloProps", "world")
             }
             def signFile = tasks.register("signFile", SigstoreSignFilesTask) {
-                signFile(helloProps.map { it.outputFile })
+                signFile(helloProps.map { it.outputs.files.singleFile })
                     .outputSignature.set(file("build/helloProps.txt.sigstore.json"))
             }
             """.trimIndent()
