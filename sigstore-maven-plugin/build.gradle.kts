@@ -9,13 +9,13 @@ plugins {
 description = "A Maven plugin for signing with Sigstore"
 
 dependencies {
-    compileOnly("org.apache.maven:maven-plugin-api:3.9.10")
-    compileOnly("org.apache.maven:maven-core:3.9.10")
-    compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations:3.15.1")
+    compileOnly("org.apache.maven:maven-plugin-api:3.9.11")
+    compileOnly("org.apache.maven:maven-core:3.9.11")
+    compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations:3.15.2")
 
     implementation(project(":sigstore-java"))
     implementation("org.bouncycastle:bcutil-jdk18on:1.82")
-    implementation("org.apache.maven.plugins:maven-gpg-plugin:3.2.7")
+    implementation("org.apache.maven.plugins:maven-gpg-plugin:3.2.8")
 
     testImplementation("org.apache.maven.shared:maven-verifier:1.8.0")
 
