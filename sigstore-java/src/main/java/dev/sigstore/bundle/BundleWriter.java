@@ -33,6 +33,7 @@ import dev.sigstore.proto.rekor.v1.InclusionProof;
 import dev.sigstore.proto.rekor.v1.KindVersion;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
 import dev.sigstore.rekor.client.RekorEntry;
+import io.intoto.EnvelopeOuterClass.Envelope;
 import java.security.cert.CertificateEncodingException;
 import java.util.Base64;
 import java.util.List;
@@ -78,28 +79,51 @@ class BundleWriter {
    * @return Sigstore Bundle in protobuf builder format
    */
   static dev.sigstore.proto.bundle.v1.Bundle.Builder createBundleBuilder(Bundle bundle) {
-    if (bundle.getMessageSignature().isEmpty()) {
-      throw new IllegalStateException("can only serialize bundles with message signatures");
+    if (bundle.getMessageSignature().isEmpty() && bundle.getDsseEnvelope().isEmpty()) {
+      throw new IllegalStateException("Either message signature or DSSE envelope must be present");
     }
-    var messageSignature = bundle.getMessageSignature().get();
-    if (messageSignature.getMessageDigest().isEmpty()) {
+    if (bundle.getMessageSignature().isPresent() && bundle.getDsseEnvelope().isPresent()) {
+      throw new IllegalStateException(
+          "Only one of message signature or DSSE envelope must be present");
+    }
+    if (bundle.getMessageSignature().isPresent()
+        && bundle.getMessageSignature().get().getMessageDigest().isEmpty()) {
       throw new IllegalStateException(
           "keyless signature must have artifact digest when serializing to bundle");
     }
-    return dev.sigstore.proto.bundle.v1.Bundle.newBuilder()
-        .setMediaType(bundle.getMediaType())
-        .setVerificationMaterial(buildVerificationMaterial(bundle))
-        .setMessageSignature(
-            MessageSignature.newBuilder()
-                .setMessageDigest(
-                    HashOutput.newBuilder()
-                        .setAlgorithm(
-                            ProtoMutators.toProtoHashAlgorithm(
-                                messageSignature.getMessageDigest().get().getHashAlgorithm()))
-                        .setDigest(
-                            ByteString.copyFrom(
-                                messageSignature.getMessageDigest().get().getDigest())))
-                .setSignature(ByteString.copyFrom(messageSignature.getSignature())));
+    dev.sigstore.proto.bundle.v1.Bundle.Builder builder =
+        dev.sigstore.proto.bundle.v1.Bundle.newBuilder()
+            .setMediaType(bundle.getMediaType())
+            .setVerificationMaterial(buildVerificationMaterial(bundle));
+    if (bundle.getMessageSignature().isPresent()) {
+      var messageSignature = bundle.getMessageSignature().get();
+      builder.setMessageSignature(
+          MessageSignature.newBuilder()
+              .setMessageDigest(
+                  HashOutput.newBuilder()
+                      .setAlgorithm(
+                          ProtoMutators.toProtoHashAlgorithm(
+                              messageSignature.getMessageDigest().get().getHashAlgorithm()))
+                      .setDigest(
+                          ByteString.copyFrom(
+                              messageSignature.getMessageDigest().get().getDigest())))
+              .setSignature(ByteString.copyFrom(messageSignature.getSignature())));
+    }
+    if (bundle.getDsseEnvelope().isPresent()) {
+      var dsseEnvelope = bundle.getDsseEnvelope().get();
+      var envelopeBuilder =
+          Envelope.newBuilder()
+              .setPayload(ByteString.copyFrom(dsseEnvelope.getPayload()))
+              .setPayloadType(dsseEnvelope.getPayloadType());
+      for (var sig : dsseEnvelope.getSignatures()) {
+        envelopeBuilder.addSignatures(
+            io.intoto.EnvelopeOuterClass.Signature.newBuilder()
+                .setSig(ByteString.copyFrom(sig.getSig()))
+                .build());
+      }
+      builder.setDsseEnvelope(envelopeBuilder.build());
+    }
+    return builder;
   }
 
   private static VerificationMaterial.Builder buildVerificationMaterial(Bundle bundle) {

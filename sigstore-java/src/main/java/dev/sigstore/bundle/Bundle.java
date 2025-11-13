@@ -149,6 +149,7 @@ public abstract class Bundle {
      * content.
      */
     @Gson.Ignore
+    @Value.Auxiliary
     @Derived
     default byte[] getPAE() {
       return ("DSSEv1 "
