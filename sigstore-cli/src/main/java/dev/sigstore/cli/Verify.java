@@ -18,6 +18,7 @@ package dev.sigstore.cli;
 import static com.google.common.io.Files.asByteSource;
 
 import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import dev.sigstore.KeylessVerifier;
 import dev.sigstore.TrustedRootProvider;
 import dev.sigstore.VerificationOptions;
@@ -30,7 +31,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
-import org.apache.commons.codec.binary.Hex;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -117,7 +117,8 @@ public class Verify implements Callable<Integer> {
   public Integer call() throws Exception {
     byte[] digest;
     if (artifact.startsWith(SHA256_PREFIX)) {
-      digest = Hex.decodeHex(artifact.substring(SHA256_PREFIX.length()));
+      digest =
+          BaseEncoding.base16().ignoreCase().decode(artifact.substring(SHA256_PREFIX.length()));
     } else {
       if (workingDirectory != null) {
         artifact = workingDirectory.resolve(artifact).toString();
