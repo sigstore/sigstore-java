@@ -55,7 +55,7 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
 
-      - uses: sigstore/sigstore-conformance@48320dc345b60e599a447a3d321b71b310c687bb # v0.0.23
+      - uses: sigstore/sigstore-conformance@b7856cfca56fe3f957d4cefdc2c359cc36a84e14 # v0.0.24
         with:
           entrypoint: ${{ github.workspace }}/sigstore-cli/sigstore-cli-server
           environment: ${{ matrix.sigstore-env }}
