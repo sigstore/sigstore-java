@@ -59,5 +59,5 @@ jobs:
         with:
           entrypoint: ${{ github.workspace }}/sigstore-cli/sigstore-cli-server
           environment: ${{ matrix.sigstore-env }}
-          skip-result-upload: ${{ matrix.java-version != "17" }}
+          skip-result-upload: ${{ matrix.java-version != 17 }}
           xfail: "test_verify*intoto-with-custom-trust-root]"
