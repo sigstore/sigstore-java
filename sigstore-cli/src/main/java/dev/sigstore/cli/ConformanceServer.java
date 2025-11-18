@@ -16,21 +16,21 @@
 package dev.sigstore.cli;
 
 import com.google.gson.Gson;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.io.Content;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.util.Callback;
 
 public class ConformanceServer {
 
@@ -49,30 +49,30 @@ public class ConformanceServer {
     server.join();
   }
 
-  public static class ConformanceHandler extends AbstractHandler {
+  public static class ConformanceHandler extends Handler.Abstract {
     @Override
-    public void handle(
-        String target,
-        Request baseRequest,
-        HttpServletRequest request,
-        HttpServletResponse response)
-        throws IOException, ServletException {
-      if ("/".equals(target)) {
-        handleHealthCheck(response);
-        baseRequest.setHandled(true);
-      } else if ("/execute".equals(target) && "POST".equals(request.getMethod())) {
-        handleExecute(request, response);
-        baseRequest.setHandled(true);
+    public boolean handle(Request request, Response response, Callback callback)
+        throws IOException {
+      if ("/".equals(request.getHttpURI().getPath())) {
+        handleHealthCheck(response, callback);
+        return true;
+      } else if ("/execute".equals(request.getHttpURI().getPath())
+          && "POST".equals(request.getMethod())) {
+        handleExecute(request, response, callback);
+        return true;
       }
+      return false;
     }
   }
 
-  private static void handleExecute(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
+  private static void handleExecute(Request request, Response response, Callback callback) {
     ExecuteRequest executeRequest;
-    try (InputStream is = request.getInputStream()) {
+    try (InputStream is = Content.Source.asInputStream(request)) {
       String requestBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
       executeRequest = GSON.fromJson(requestBody, ExecuteRequest.class);
+    } catch (IOException e) {
+      callback.failed(e);
+      return;
     }
 
     // Tests should not be run in parallel, to ensure orderly input/output
@@ -106,22 +106,17 @@ public class ConformanceServer {
               "exitCode", exitCode);
       String jsonResponse = GSON.toJson(responseMap);
 
-      response.setStatus(HttpServletResponse.SC_OK);
-      response.setContentType("application/json");
-      byte[] responseBytes = jsonResponse.getBytes(StandardCharsets.UTF_8);
-      response.setContentLength(responseBytes.length);
+      response.getHeaders().put(HttpHeader.CONTENT_TYPE, "application/json");
+      Content.Sink.write(response, true, jsonResponse, callback);
 
-      try (OutputStream os = response.getOutputStream()) {
-        os.write(responseBytes);
-      }
     } finally {
       System.setOut(originalOut);
       System.setErr(originalErr);
     }
   }
 
-  private static void handleHealthCheck(HttpServletResponse response) throws IOException {
-    response.setStatus(HttpServletResponse.SC_OK);
-    response.getWriter().println("OK");
+  private static void handleHealthCheck(Response response, Callback callback) throws IOException {
+    response.getHeaders().put(HttpHeader.CONTENT_TYPE, "text/plain");
+    Content.Sink.write(response, true, "OK", callback);
   }
 }
