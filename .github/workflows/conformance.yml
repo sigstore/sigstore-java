@@ -12,7 +12,6 @@ on:
 jobs:
   conformance:
     strategy:
-      max-parallel: 1
       matrix:
         java-version: [11, 17, 21]
         sigstore-env: [production, staging]
