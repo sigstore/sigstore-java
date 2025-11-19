@@ -17,6 +17,7 @@ package dev.sigstore.testkit.tuf;
 
 import com.google.common.io.Resources;
 import dev.sigstore.json.GsonSupplier;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.tuf.model.Root;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -44,7 +45,7 @@ public class TestResources {
     }
   }
 
-  public static Root loadRoot(Path rootPath) throws IOException {
+  public static Root loadRoot(Path rootPath) throws IOException, JsonParseException {
     return GsonSupplier.GSON.get().fromJson(Files.readString(rootPath), Root.class);
   }
 }

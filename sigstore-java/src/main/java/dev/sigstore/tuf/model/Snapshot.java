@@ -16,23 +16,27 @@
 package dev.sigstore.tuf.model;
 
 import com.google.common.base.Preconditions;
+import dev.sigstore.json.JsonParseException;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
-import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Snapshot metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
 public interface Snapshot extends SignedTufMeta<SnapshotMeta> {
   @Override
-  @Derived
+  @Value.Lazy
   @Gson.Ignore
-  default SnapshotMeta getSignedMeta() {
+  default SnapshotMeta getSignedMeta() throws JsonParseException {
     return getSignedMeta(SnapshotMeta.class);
   }
 
   @Value.Check
   default void checkType() {
-    Preconditions.checkState(getSignedMeta().getType().equals("snapshot"));
+    try {
+      Preconditions.checkState(getSignedMeta().getType().equals("snapshot"));
+    } catch (JsonParseException e) {
+      throw new IllegalStateException(e);
+    }
   }
 }

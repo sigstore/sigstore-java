@@ -22,7 +22,6 @@ import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.ByteString;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.Bundle.MessageSignature;
@@ -40,6 +39,7 @@ import dev.sigstore.fulcio.client.FulcioClientGrpc;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
@@ -697,7 +697,7 @@ public class KeylessSigner implements AutoCloseable {
     InTotoPayload inTotoPayload;
     try {
       inTotoPayload = InTotoPayload.from(payload);
-    } catch (JsonSyntaxException jse) {
+    } catch (JsonParseException jse) {
       throw new IllegalArgumentException("Payload is not a valid in-toto statement");
     }
 

@@ -25,6 +25,7 @@ import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.util.Preconditions;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;
@@ -130,7 +131,7 @@ public class RekorClientHttp implements RekorClient {
   @Override
   public List<String> searchEntry(
       String email, String hash, String publicKeyFormat, String publicKeyContent)
-      throws IOException {
+      throws IOException, JsonParseException {
     URI rekorSearchEndpoint = uri.resolve(REKOR_INDEX_SEARCH_PATH);
 
     HashMap<String, Object> publicKeyParams = null;

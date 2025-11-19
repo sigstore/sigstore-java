@@ -15,6 +15,7 @@
  */
 package dev.sigstore.tuf;
 
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
@@ -44,7 +45,7 @@ public class PassthroughCacheMetaStore implements MetaReader, MetaStore {
   @Override
   @SuppressWarnings("unchecked")
   public <T extends SignedTufMeta<? extends TufMeta>> Optional<T> readMeta(
-      String roleName, Class<T> tClass) throws IOException {
+      String roleName, Class<T> tClass) throws IOException, JsonParseException {
     // check memory cache
     if (cache.containsKey(roleName)) {
       return Optional.of((T) cache.get(roleName));

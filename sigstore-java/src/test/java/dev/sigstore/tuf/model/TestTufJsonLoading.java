@@ -20,9 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.google.common.io.Resources;
-import com.google.gson.JsonSyntaxException;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.tuf.model.TargetMeta.TargetData;
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
@@ -34,7 +33,7 @@ import org.junit.jupiter.api.Test;
 public class TestTufJsonLoading {
 
   @Test
-  public void loadRootJson() throws IOException {
+  public void loadRootJson() throws Exception {
     Root trustRoot;
     try (Reader reader =
         Resources.asCharSource(
@@ -70,7 +69,7 @@ public class TestTufJsonLoading {
   }
 
   @Test
-  public void loadSnapshotJson() throws IOException {
+  public void loadSnapshotJson() throws Exception {
     Snapshot snapshot;
     try (Reader reader =
         Resources.asCharSource(
@@ -108,7 +107,7 @@ public class TestTufJsonLoading {
   }
 
   @Test
-  public void loadTargetsJson() throws IOException {
+  public void loadTargetsJson() throws Exception {
     Targets targets;
     try (Reader reader =
         Resources.asCharSource(
@@ -189,7 +188,7 @@ public class TestTufJsonLoading {
   public void loadTargetData_failNoHashes() {
     var error =
         Assertions.assertThrows(
-            JsonSyntaxException.class,
+            JsonParseException.class,
             () ->
                 GSON.get()
                     .fromJson(
@@ -197,6 +196,6 @@ public class TestTufJsonLoading {
                         TargetData.class));
     Assertions.assertEquals(
         "No hashes (sha256 or sha512) found for target data: TargetData{custom=Custom{sigstoreMeta=SigstoreMeta{status=Active, usage=CTFE}}, hashes=Hashes{}, length=177}",
-        error.getCause().getMessage());
+        error.getCause().getCause().getMessage());
   }
 }

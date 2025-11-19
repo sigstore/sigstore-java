@@ -17,6 +17,7 @@ package dev.sigstore.json;
 
 import com.google.gson.*;
 import dev.sigstore.dsse.GsonAdaptersInTotoPayload;
+import dev.sigstore.forbidden.SuppressForbidden;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntry;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntryBody;
 import dev.sigstore.tuf.model.*;
@@ -30,42 +31,44 @@ import java.util.function.Supplier;
  * requests between sigstore and this client -- and should probably be used for any api call to
  * sigstore that expects JSON.
  */
-public enum GsonSupplier implements Supplier<Gson> {
+@SuppressForbidden(reason = "GsonBuilder")
+public enum GsonSupplier implements Supplier<GsonChecked> {
   GSON;
 
   @SuppressWarnings("ImmutableEnumChecker")
-  private final Gson gson =
-      new GsonBuilder()
-          .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
-          .registerTypeAdapter(
-              LocalDateTime.class,
-              (JsonDeserializer<LocalDateTime>)
-                  (json, type, jsonDeserializationContext) ->
-                      ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString())
-                          .toLocalDateTime())
-          // Immutables generated GSON Adapters in alphabetical order
-          .registerTypeAdapterFactory(new GsonAdaptersDelegations())
-          .registerTypeAdapterFactory(new GsonAdaptersDelegationRole())
-          .registerTypeAdapterFactory(new GsonAdaptersHashes())
-          .registerTypeAdapterFactory(new GsonAdaptersKey())
-          .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
-          .registerTypeAdapterFactory(new GsonAdaptersRekorEntryBody())
-          .registerTypeAdapterFactory(new GsonAdaptersRoot())
-          .registerTypeAdapterFactory(new GsonAdaptersRootMeta())
-          .registerTypeAdapterFactory(new GsonAdaptersRootRole())
-          .registerTypeAdapterFactory(new GsonAdaptersSignature())
-          .registerTypeAdapterFactory(new GsonAdaptersSnapshot())
-          .registerTypeAdapterFactory(new GsonAdaptersSnapshotMeta())
-          .registerTypeAdapterFactory(new GsonAdaptersTargets())
-          .registerTypeAdapterFactory(new GsonAdaptersTargetMeta())
-          .registerTypeAdapterFactory(new GsonAdaptersTimestamp())
-          .registerTypeAdapterFactory(new GsonAdaptersTimestampMeta())
-          .registerTypeAdapterFactory(new GsonAdaptersInTotoPayload())
-          .disableHtmlEscaping()
-          .create();
+  private final GsonChecked gson =
+      new GsonChecked(
+          new GsonBuilder()
+              .registerTypeAdapter(byte[].class, new GsonByteArrayAdapter())
+              .registerTypeAdapter(
+                  LocalDateTime.class,
+                  (JsonDeserializer<LocalDateTime>)
+                      (json, type, jsonDeserializationContext) ->
+                          ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString())
+                              .toLocalDateTime())
+              // Immutables generated GSON Adapters in alphabetical order
+              .registerTypeAdapterFactory(new GsonAdaptersDelegations())
+              .registerTypeAdapterFactory(new GsonAdaptersDelegationRole())
+              .registerTypeAdapterFactory(new GsonAdaptersHashes())
+              .registerTypeAdapterFactory(new GsonAdaptersKey())
+              .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
+              .registerTypeAdapterFactory(new GsonAdaptersRekorEntryBody())
+              .registerTypeAdapterFactory(new GsonAdaptersRoot())
+              .registerTypeAdapterFactory(new GsonAdaptersRootMeta())
+              .registerTypeAdapterFactory(new GsonAdaptersRootRole())
+              .registerTypeAdapterFactory(new GsonAdaptersSignature())
+              .registerTypeAdapterFactory(new GsonAdaptersSnapshot())
+              .registerTypeAdapterFactory(new GsonAdaptersSnapshotMeta())
+              .registerTypeAdapterFactory(new GsonAdaptersTargets())
+              .registerTypeAdapterFactory(new GsonAdaptersTargetMeta())
+              .registerTypeAdapterFactory(new GsonAdaptersTimestamp())
+              .registerTypeAdapterFactory(new GsonAdaptersTimestampMeta())
+              .registerTypeAdapterFactory(new GsonAdaptersInTotoPayload())
+              .disableHtmlEscaping()
+              .create());
 
   @Override
-  public Gson get() {
+  public GsonChecked get() {
     return gson;
   }
 }

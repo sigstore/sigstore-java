@@ -16,9 +16,9 @@
 package dev.sigstore.tuf.model;
 
 import com.google.common.base.Preconditions;
+import dev.sigstore.json.JsonParseException;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
-import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Timestamp metadata. */
 @Gson.TypeAdapters
@@ -26,14 +26,18 @@ import org.immutables.value.Value.Derived;
 public interface Timestamp extends SignedTufMeta<TimestampMeta> {
 
   @Override
-  @Derived
+  @Value.Lazy
   @Gson.Ignore
-  default TimestampMeta getSignedMeta() {
+  default TimestampMeta getSignedMeta() throws JsonParseException {
     return getSignedMeta(TimestampMeta.class);
   }
 
   @Value.Check
   default void checkType() {
-    Preconditions.checkState(getSignedMeta().getType().equals("timestamp"));
+    try {
+      Preconditions.checkState(getSignedMeta().getType().equals("timestamp"));
+    } catch (JsonParseException e) {
+      throw new IllegalStateException(e);
+    }
   }
 }

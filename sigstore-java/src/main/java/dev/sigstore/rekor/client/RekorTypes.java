@@ -17,8 +17,8 @@ package dev.sigstore.rekor.client;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
-import com.google.gson.JsonParseException;
 import com.google.protobuf.InvalidProtocolBufferException;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.rekor.v2.DSSELogEntryV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
@@ -119,18 +119,22 @@ public class RekorTypes {
 
   private static void expect(RekorEntry entry, String expectedKind, String expectedApiVersion)
       throws RekorTypeException {
-    var kind = entry.getBodyDecoded().getKind();
-    var apiVersion = entry.getBodyDecoded().getApiVersion();
-    if (!(kind.equals(expectedKind) && apiVersion.equals(expectedApiVersion))) {
-      throw new RekorTypeException(
-          "Expecting type "
-              + expectedKind
-              + ":"
-              + expectedApiVersion
-              + ", but found "
-              + kind
-              + ":"
-              + apiVersion);
+    try {
+      var kind = entry.getBodyDecoded().getKind();
+      var apiVersion = entry.getBodyDecoded().getApiVersion();
+      if (!(kind.equals(expectedKind) && apiVersion.equals(expectedApiVersion))) {
+        throw new RekorTypeException(
+            "Expecting type "
+                + expectedKind
+                + ":"
+                + expectedApiVersion
+                + ", but found "
+                + kind
+                + ":"
+                + apiVersion);
+      }
+    } catch (JsonParseException jpe) {
+      throw new RekorTypeException("Could not parse type from entry", jpe);
     }
   }
 }

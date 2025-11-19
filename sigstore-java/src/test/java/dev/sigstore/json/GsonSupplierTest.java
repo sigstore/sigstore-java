@@ -17,14 +17,12 @@ package dev.sigstore.json;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParseException;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class GsonSupplierTest {
-  private final Gson gson = GSON.get();
+  private final GsonChecked gson = GSON.get();
 
   @Test
   public void testWrite() {
@@ -32,7 +30,7 @@ public class GsonSupplierTest {
   }
 
   @Test
-  public void testRead() {
+  public void testRead() throws Exception {
     Assertions.assertArrayEquals(
         "abcd".getBytes(StandardCharsets.UTF_8), gson.fromJson("\"YWJjZA==\"", byte[].class));
     Assertions.assertArrayEquals(new byte[] {}, gson.fromJson("\"\"", byte[].class));

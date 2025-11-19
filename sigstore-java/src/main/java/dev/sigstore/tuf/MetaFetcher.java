@@ -18,6 +18,7 @@ package dev.sigstore.tuf;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.base.Preconditions;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
@@ -45,19 +46,20 @@ public class MetaFetcher {
   }
 
   public Optional<MetaFetchResult<Root>> getRootAtVersion(int version)
-      throws IOException, FileExceedsMaxLengthException {
+      throws IOException, FileExceedsMaxLengthException, JsonParseException {
     String versionFileName = version + ".root.json";
     return getMeta(versionFileName, Root.class, null);
   }
 
   public <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
-      String role, Class<T> t) throws IOException, FileExceedsMaxLengthException {
+      String role, Class<T> t)
+      throws IOException, FileExceedsMaxLengthException, JsonParseException {
     return getMeta(getFileName(role, null), t, null);
   }
 
   public <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
       String role, int version, Class<T> t, Integer maxSize)
-      throws IOException, FileExceedsMaxLengthException {
+      throws IOException, FileExceedsMaxLengthException, JsonParseException {
     Preconditions.checkArgument(version > 0, "version should be positive, got: %s", version);
     return getMeta(getFileName(role, version), t, maxSize);
   }
@@ -70,7 +72,7 @@ public class MetaFetcher {
 
   <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
       String filename, Class<T> t, Integer maxSize)
-      throws IOException, FileExceedsMaxLengthException {
+      throws IOException, FileExceedsMaxLengthException, JsonParseException {
     byte[] roleBytes = fetcher.fetchResource(filename, maxSize == null ? MAX_META_BYTES : maxSize);
     if (roleBytes == null) {
       return Optional.empty();

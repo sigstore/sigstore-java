@@ -29,6 +29,7 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
 import dev.sigstore.proto.rekor.v2.DSSELogEntryV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
@@ -267,7 +268,12 @@ public class KeylessVerifier {
     }
 
     // recreate the log entry and check if it matches what was provided in the entry
-    String version = rekorEntry.getBodyDecoded().getApiVersion();
+    String version;
+    try {
+      version = rekorEntry.getBodyDecoded().getApiVersion();
+    } catch (JsonParseException ex) {
+      throw new KeylessVerificationException("Could not extract body from log entry");
+    }
     if ("0.0.1".equals(version)) {
       try {
         RekorTypes.getHashedRekordV001(rekorEntry);
@@ -346,7 +352,13 @@ public class KeylessVerifier {
               + dsseEnvelope.getPayloadType()
               + "'");
     }
-    InTotoPayload payload = InTotoPayload.from(dsseEnvelope);
+
+    InTotoPayload payload;
+    try {
+      payload = InTotoPayload.from(dsseEnvelope);
+    } catch (JsonParseException jpe) {
+      throw new KeylessVerificationException("Could not parse DSSE payload", jpe);
+    }
 
     // find one sha256 hash in the subject list that matches the artifact hash
     if (payload.getSubject().stream()
@@ -392,7 +404,12 @@ public class KeylessVerifier {
       throw new KeylessVerificationException("Signature could not be processed", se);
     }
 
-    String version = rekorEntry.getBodyDecoded().getApiVersion();
+    String version;
+    try {
+      version = rekorEntry.getBodyDecoded().getApiVersion();
+    } catch (JsonParseException ex) {
+      throw new KeylessVerificationException("Could not extract body from log entry");
+    }
     if ("0.0.1".equals(version)) {
       Dsse rekorDsse;
       try {

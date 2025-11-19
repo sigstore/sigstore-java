@@ -88,7 +88,7 @@ public class RekorClientHttpTest {
   }
 
   @Test
-  public void searchEntries_nullParams() throws IOException {
+  public void searchEntries_nullParams() throws Exception {
     assertEquals(ImmutableList.of(), client.searchEntry(null, null, null, null));
   }
 
@@ -129,7 +129,7 @@ public class RekorClientHttpTest {
   }
 
   @Test
-  public void searchEntries_zeroResults() throws IOException {
+  public void searchEntries_zeroResults() throws Exception {
     assertTrue(
         client
             .searchEntry(

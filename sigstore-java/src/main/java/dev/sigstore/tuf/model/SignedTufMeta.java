@@ -17,11 +17,11 @@ package dev.sigstore.tuf.model;
 
 import com.google.gson.JsonElement;
 import dev.sigstore.json.GsonSupplier;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import java.io.IOException;
 import java.util.List;
 import org.immutables.gson.Gson;
-import org.immutables.value.Value.Derived;
 import org.immutables.value.Value.Lazy;
 
 /**
@@ -34,12 +34,12 @@ public interface SignedTufMeta<T extends TufMeta> {
   List<Signature> getSignatures();
 
   /** The role metadata that has been signed. */
-  T getSignedMeta();
+  T getSignedMeta() throws JsonParseException;
 
   /** An internal helper to translate raw signed json to a useable type. */
-  @Derived
+  @Lazy
   @Gson.Ignore
-  default T getSignedMeta(Class<T> type) {
+  default T getSignedMeta(Class<T> type) throws JsonParseException {
     return GsonSupplier.GSON.get().fromJson(getRawSignedMeta(), type);
   }
 

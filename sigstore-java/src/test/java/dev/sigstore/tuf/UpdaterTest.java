@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
-import com.google.gson.JsonSyntaxException;
 import dev.sigstore.http.URIFormat;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.encryption.Verifier;
 import dev.sigstore.tuf.encryption.Verifiers;
@@ -481,7 +481,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var ex =
         assertThrows(
-            JsonSyntaxException.class,
+            JsonParseException.class,
             updater::update,
             "targets.json data should be causing a gson error due to missing TargetData. If at some point we support nullable TargetData this test should be updated to expect TargetMetadataMissingException while calling downloadTargets().");
     MatcherAssert.assertThat(

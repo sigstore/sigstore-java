@@ -15,6 +15,7 @@
  */
 package dev.sigstore.tuf;
 
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
@@ -33,5 +34,5 @@ public interface MetaReader {
    * @throws IOException if an error occurs reading from the backing store
    */
   <T extends SignedTufMeta<? extends TufMeta>> Optional<T> readMeta(
-      String roleName, Class<T> tClass) throws IOException;
+      String roleName, Class<T> tClass) throws IOException, JsonParseException;
 }

@@ -30,20 +30,20 @@ class FileSystemTufStoreTest {
   public static final String REPO = "synthetic/test-template";
 
   @Test
-  void newFileSystemStore_empty(@TempDir Path repoBase) throws IOException {
+  void newFileSystemStore_empty(@TempDir Path repoBase) throws Exception {
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(tufStore.readMeta(RootRole.ROOT, Root.class).isPresent());
   }
 
   @Test
-  void newFileSystemStore_hasRepo(@TempDir Path repoBase) throws IOException {
+  void newFileSystemStore_hasRepo(@TempDir Path repoBase) throws Exception {
     TestResources.setupRepoFiles(REPO, repoBase, "root.json");
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertTrue(tufStore.readMeta(RootRole.ROOT, Root.class).isPresent());
   }
 
   @Test
-  void writeMeta(@TempDir Path repoBase) throws IOException {
+  void writeMeta(@TempDir Path repoBase) throws Exception {
     FileSystemTufStore tufStore = FileSystemTufStore.newFileSystemStore(repoBase);
     assertFalse(repoBase.resolve("root.json").toFile().exists());
     tufStore.writeMeta(
