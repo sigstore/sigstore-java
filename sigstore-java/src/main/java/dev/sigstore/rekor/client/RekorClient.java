@@ -15,6 +15,7 @@
  */
 package dev.sigstore.rekor.client;
 
+import dev.sigstore.json.JsonParseException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -57,5 +58,5 @@ public interface RekorClient {
    */
   List<String> searchEntry(
       String email, String hash, String publicKeyFormat, String publicKeyContent)
-      throws IOException;
+      throws IOException, JsonParseException;
 }

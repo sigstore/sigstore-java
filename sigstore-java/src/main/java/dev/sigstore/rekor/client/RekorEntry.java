@@ -18,8 +18,8 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.gson.JsonParseException;
 import com.google.protobuf.InvalidProtocolBufferException;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
@@ -128,7 +128,7 @@ public interface RekorEntry {
    * Returns a decoded {@link RekorEntryBody} of the log entry. Use {@link RekorTypes} to further
    * process.
    */
-  @Derived
+  @Lazy
   default RekorEntryBody getBodyDecoded() throws JsonParseException {
     return GSON.get()
         .fromJson(new String(Base64.getDecoder().decode(getBody()), UTF_8), RekorEntryBody.class);
@@ -178,7 +178,9 @@ public interface RekorEntry {
       TransparencyLogEntry.Builder builder = TransparencyLogEntry.newBuilder();
       ProtoJson.parser().ignoringUnknownFields().merge(json, builder);
       return ProtoMutators.toRekorEntry(builder.build());
-    } catch (InvalidProtocolBufferException | JsonParseException | NullPointerException e) {
+    } catch (InvalidProtocolBufferException
+        | com.google.gson.JsonParseException
+        | NullPointerException e) {
       throw new RekorParseException("Failed to parse Rekor response JSON", e);
     }
   }

@@ -18,6 +18,7 @@ package dev.sigstore.tuf;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import dev.sigstore.http.URIFormat;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
@@ -152,7 +153,8 @@ public class SigstoreTufClient {
     } catch (IOException
         | NoSuchAlgorithmException
         | InvalidKeySpecException
-        | InvalidKeyException ex) {
+        | InvalidKeyException
+        | JsonParseException ex) {
       throw new SigstoreConfigurationException("TUF repo failed to update", ex);
     }
     lastUpdate = Instant.now();

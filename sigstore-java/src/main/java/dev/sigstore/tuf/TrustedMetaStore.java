@@ -15,6 +15,7 @@
  */
 package dev.sigstore.tuf;
 
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.RootRole;
 import dev.sigstore.tuf.model.SignedTufMeta;
@@ -58,7 +59,7 @@ public class TrustedMetaStore {
    * @throws IllegalStateException if the data was never persisted and this function was called
    */
   <T extends SignedTufMeta<? extends TufMeta>> T getMeta(String roleName, Class<T> tClass)
-      throws IOException {
+      throws IOException, JsonParseException {
     return metaStore
         .readMeta(roleName, tClass)
         .orElseThrow(
@@ -73,11 +74,11 @@ public class TrustedMetaStore {
     metaStore.writeMeta(RootRole.ROOT, root);
   }
 
-  public Root getRoot() throws IOException {
+  public Root getRoot() throws IOException, JsonParseException {
     return getMeta(RootRole.ROOT, Root.class);
   }
 
-  public Optional<Root> findRoot() throws IOException {
+  public Optional<Root> findRoot() throws IOException, JsonParseException {
     return metaStore.readMeta(RootRole.ROOT, Root.class);
   }
 
@@ -85,11 +86,11 @@ public class TrustedMetaStore {
     metaStore.writeMeta(RootRole.TIMESTAMP, timestamp);
   }
 
-  public Timestamp getTimestamp() throws IOException {
+  public Timestamp getTimestamp() throws IOException, JsonParseException {
     return getMeta(RootRole.TIMESTAMP, Timestamp.class);
   }
 
-  public Optional<Timestamp> findTimestamp() throws IOException {
+  public Optional<Timestamp> findTimestamp() throws IOException, JsonParseException {
     return metaStore.readMeta(RootRole.TIMESTAMP, Timestamp.class);
   }
 
@@ -97,11 +98,11 @@ public class TrustedMetaStore {
     metaStore.writeMeta(RootRole.SNAPSHOT, snapshot);
   }
 
-  public Snapshot getSnapshot() throws IOException {
+  public Snapshot getSnapshot() throws IOException, JsonParseException {
     return getMeta(RootRole.SNAPSHOT, Snapshot.class);
   }
 
-  public Optional<Snapshot> findSnapshot() throws IOException {
+  public Optional<Snapshot> findSnapshot() throws IOException, JsonParseException {
     return metaStore.readMeta(RootRole.SNAPSHOT, Snapshot.class);
   }
 
@@ -109,11 +110,11 @@ public class TrustedMetaStore {
     metaStore.writeMeta(RootRole.TARGETS, targets);
   }
 
-  public Targets getTargets() throws IOException {
+  public Targets getTargets() throws IOException, JsonParseException {
     return getMeta(RootRole.TARGETS, Targets.class);
   }
 
-  public Optional<Targets> findTargets() throws IOException {
+  public Optional<Targets> findTargets() throws IOException, JsonParseException {
     return metaStore.readMeta(RootRole.TARGETS, Targets.class);
   }
 

@@ -18,6 +18,7 @@ package dev.sigstore;
 import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.dsse.InTotoPayload;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.testkit.annotations.DisabledIfSkipStaging;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
@@ -119,7 +120,8 @@ public class KeylessTest {
     checkBundleSerialization(result);
   }
 
-  private void verifySigningResult(List<Bundle> results, boolean enableRekorV2) throws IOException {
+  private void verifySigningResult(List<Bundle> results, boolean enableRekorV2)
+      throws IOException, JsonParseException {
 
     Assertions.assertEquals(artifactDigests.size(), results.size());
 

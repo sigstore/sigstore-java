@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.tuf.encryption.Verifiers;
 import dev.sigstore.tuf.model.*;
 import dev.sigstore.tuf.model.TargetMeta.TargetData;
@@ -96,13 +97,17 @@ public class Updater {
 
   /** Update metadata and download all targets. */
   public void update()
-      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+      throws IOException,
+          NoSuchAlgorithmException,
+          InvalidKeySpecException,
+          InvalidKeyException,
+          JsonParseException {
     updateMeta();
     downloadTargets(trustedMetaStore.getTargets());
   }
 
   /** Update just metadata but do not download targets. */
-  public void updateMeta() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+  public void updateMeta() throws IOException, JsonParseException {
     updateRoot();
     var oldTimestamp = trustedMetaStore.findTimestamp();
     updateTimestamp();
@@ -120,7 +125,7 @@ public class Updater {
    * Download a single target defined in targets. Will not re-download a target that is already
    * cached locally. Does not handle delegated targets.
    */
-  public void downloadTarget(String targetName) throws IOException {
+  public void downloadTarget(String targetName) throws IOException, JsonParseException {
     var targetData = trustedMetaStore.getTargets().getSignedMeta().getTargets().get(targetName);
     if (targetData == null) {
       throw new TargetMetadataMissingException(targetName);
@@ -146,7 +151,8 @@ public class Updater {
           RoleExpiredException,
           FileExceedsMaxLengthException,
           RollbackVersionException,
-          SignatureVerificationException {
+          SignatureVerificationException,
+          JsonParseException {
     // 5.3.1) record the time at start and use for expiration checks consistently throughout the
     // update.
     updateStartTime = ZonedDateTime.now(clock);
@@ -229,7 +235,7 @@ public class Updater {
   }
 
   void verifyDelegate(Root trustedRoot, SignedTufMeta<? extends TufMeta> delegate)
-      throws SignatureVerificationException, IOException {
+      throws SignatureVerificationException, IOException, JsonParseException {
     verifyDelegate(
         delegate.getSignatures(),
         trustedRoot.getSignedMeta().getKeys(),
@@ -323,10 +329,9 @@ public class Updater {
 
   void updateTimestamp()
       throws IOException,
-          NoSuchAlgorithmException,
-          InvalidKeySpecException,
           FileNotFoundException,
-          SignatureVerificationException {
+          SignatureVerificationException,
+          JsonParseException {
     // 1) download the timestamp.json bytes.
     var timestamp =
         metaFetcher
@@ -371,8 +376,7 @@ public class Updater {
           FileNotFoundException,
           InvalidHashesException,
           SignatureVerificationException,
-          NoSuchAlgorithmException,
-          InvalidKeySpecException {
+          JsonParseException {
     // 1) download the snapshot.json bytes up to timestamp's snapshot length.
     int timestampSnapshotVersion =
         trustedMetaStore.getTimestamp().getSignedMeta().getSnapshotMeta().getVersion();
@@ -464,9 +468,8 @@ public class Updater {
           FileNotFoundException,
           InvalidHashesException,
           SignatureVerificationException,
-          NoSuchAlgorithmException,
-          InvalidKeySpecException,
-          FileExceedsMaxLengthException {
+          FileExceedsMaxLengthException,
+          JsonParseException {
     // 1) download the targets.json up to targets.json length in bytes.
     SnapshotMeta.SnapshotTarget targetMeta =
         trustedMetaStore.getSnapshot().getSignedMeta().getTargetMeta("targets.json");
@@ -505,7 +508,10 @@ public class Updater {
   }
 
   void downloadTargets(Targets targets)
-      throws IOException, TargetMetadataMissingException, FileNotFoundException {
+      throws IOException,
+          TargetMetadataMissingException,
+          FileNotFoundException,
+          JsonParseException {
     // Skip #7 and go straight to downloading targets. It looks like delegations were removed from
     // sigstore TUF data.
     // {@see https://github.com/sigstore/sigstore/issues/562}

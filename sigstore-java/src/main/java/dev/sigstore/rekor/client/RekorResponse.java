@@ -18,7 +18,7 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.reflect.TypeToken;
-import com.google.gson.JsonSyntaxException;
+import dev.sigstore.json.JsonParseException;
 import java.net.URI;
 import java.util.Map;
 import org.immutables.value.Value;
@@ -60,10 +60,10 @@ public interface RekorResponse {
     Map<String, RekorEntry> entryMap;
     try {
       entryMap = GSON.get().fromJson(rawResponse, type);
-    } catch (JsonSyntaxException
-        | NullPointerException
+    } catch (NullPointerException
         | NumberFormatException
-        | StringIndexOutOfBoundsException ex) {
+        | StringIndexOutOfBoundsException
+        | JsonParseException ex) {
       throw new RekorParseException("Rekor entry json could not be parsed: " + rawResponse, ex);
     }
     if (entryMap == null) {

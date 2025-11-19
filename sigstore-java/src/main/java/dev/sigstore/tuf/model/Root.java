@@ -16,9 +16,9 @@
 package dev.sigstore.tuf.model;
 
 import com.google.common.base.Preconditions;
+import dev.sigstore.json.JsonParseException;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
-import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Root metadata. */
 @Gson.TypeAdapters
@@ -26,13 +26,17 @@ import org.immutables.value.Value.Derived;
 public interface Root extends SignedTufMeta<RootMeta> {
   @Override
   @Gson.Ignore
-  @Derived
-  default RootMeta getSignedMeta() {
+  @Value.Lazy
+  default RootMeta getSignedMeta() throws JsonParseException {
     return getSignedMeta(RootMeta.class);
   }
 
   @Value.Check
   default void checkType() {
-    Preconditions.checkState(getSignedMeta().getType().equals("root"));
+    try {
+      Preconditions.checkState(getSignedMeta().getType().equals("root"));
+    } catch (JsonParseException e) {
+      throw new IllegalStateException(e);
+    }
   }
 }

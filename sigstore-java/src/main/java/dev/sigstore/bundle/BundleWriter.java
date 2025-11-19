@@ -19,6 +19,7 @@ import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.bundle.v1.TimestampVerificationData;
 import dev.sigstore.proto.bundle.v1.VerificationMaterial;
@@ -146,26 +147,35 @@ class BundleWriter {
   }
 
   private static TransparencyLogEntry.Builder buildTlogEntries(RekorEntry entry) {
-    TransparencyLogEntry.Builder transparencyLogEntry =
-        TransparencyLogEntry.newBuilder()
-            .setLogIndex(entry.getLogIndex())
-            .setLogId(LogId.newBuilder().setKeyId(ByteString.fromHex(entry.getLogID())))
-            .setKindVersion(
-                KindVersion.newBuilder()
-                    .setKind(entry.getBodyDecoded().getKind())
-                    .setVersion(entry.getBodyDecoded().getApiVersion()))
-            .setIntegratedTime(entry.getIntegratedTime())
-            .setCanonicalizedBody(ByteString.copyFrom(Base64.getDecoder().decode(entry.getBody())));
-    if (entry.getVerification().getSignedEntryTimestamp() != null) {
-      transparencyLogEntry.setInclusionPromise(
-          InclusionPromise.newBuilder()
-              .setSignedEntryTimestamp(
-                  ByteString.copyFrom(
-                      Base64.getDecoder()
-                          .decode(entry.getVerification().getSignedEntryTimestamp()))));
+    try {
+      TransparencyLogEntry.Builder transparencyLogEntry =
+          TransparencyLogEntry.newBuilder()
+              .setLogIndex(entry.getLogIndex())
+              .setLogId(LogId.newBuilder().setKeyId(ByteString.fromHex(entry.getLogID())))
+              .setKindVersion(
+                  KindVersion.newBuilder()
+                      .setKind(entry.getBodyDecoded().getKind())
+                      .setVersion(entry.getBodyDecoded().getApiVersion()))
+              .setIntegratedTime(entry.getIntegratedTime())
+              .setCanonicalizedBody(
+                  ByteString.copyFrom(Base64.getDecoder().decode(entry.getBody())));
+      if (entry.getVerification().getSignedEntryTimestamp() != null) {
+        transparencyLogEntry.setInclusionPromise(
+            InclusionPromise.newBuilder()
+                .setSignedEntryTimestamp(
+                    ByteString.copyFrom(
+                        Base64.getDecoder()
+                            .decode(entry.getVerification().getSignedEntryTimestamp()))));
+      }
+      addInclusionProof(transparencyLogEntry, entry);
+      return transparencyLogEntry;
+    } catch (JsonParseException jpe) {
+      throw new IllegalStateException(
+          "Trying to serialize a bad bundle: rekor entry body is invalid: '"
+              + entry.getBody()
+              + "'",
+          jpe);
     }
-    addInclusionProof(transparencyLogEntry, entry);
-    return transparencyLogEntry;
   }
 
   private static void addInclusionProof(

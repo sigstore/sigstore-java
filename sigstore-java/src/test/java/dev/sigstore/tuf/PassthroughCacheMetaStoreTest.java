@@ -40,7 +40,7 @@ class PassthroughCacheMetaStoreTest {
   private static Timestamp timestamp;
 
   @BeforeAll
-  public static void readAllMeta() throws IOException {
+  public static void readAllMeta() throws Exception {
     Path timestampResource =
         Path.of(
             Resources.getResource("dev/sigstore/tuf/synthetic/test/repository/timestamp.json")

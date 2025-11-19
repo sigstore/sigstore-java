@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.gson.JsonElement;
 import dev.sigstore.bundle.Bundle.DsseEnvelope;
+import dev.sigstore.json.JsonParseException;
 import java.util.List;
 import java.util.Map;
 import org.immutables.gson.Gson;
@@ -51,11 +52,11 @@ public interface InTotoPayload {
     Map<String, String> getDigest();
   }
 
-  static InTotoPayload from(String payload) {
+  static InTotoPayload from(String payload) throws JsonParseException {
     return GSON.get().fromJson(payload, InTotoPayload.class);
   }
 
-  static InTotoPayload from(DsseEnvelope dsseEnvelope) {
+  static InTotoPayload from(DsseEnvelope dsseEnvelope) throws JsonParseException {
     return from(dsseEnvelope.getPayloadAsString());
   }
 }

@@ -16,23 +16,27 @@
 package dev.sigstore.tuf.model;
 
 import com.google.common.base.Preconditions;
+import dev.sigstore.json.JsonParseException;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
-import org.immutables.value.Value.Derived;
 
 /** Signed envelope of the Targets metadata. */
 @Gson.TypeAdapters
 @Value.Immutable
 public interface Targets extends SignedTufMeta<TargetMeta> {
   @Override
-  @Derived
+  @Value.Lazy
   @Gson.Ignore
-  default TargetMeta getSignedMeta() {
+  default TargetMeta getSignedMeta() throws JsonParseException {
     return getSignedMeta(TargetMeta.class);
   }
 
   @Value.Check
   default void checkType() {
-    Preconditions.checkState(getSignedMeta().getType().equals("targets"));
+    try {
+      Preconditions.checkState(getSignedMeta().getType().equals("targets"));
+    } catch (JsonParseException e) {
+      throw new IllegalStateException(e);
+    }
   }
 }
