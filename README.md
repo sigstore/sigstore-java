@@ -1,4 +1,4 @@
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/dev.sigstore/sigstore-java/badge.svg)](https://maven-badges.herokuapp.com/maven-central/dev.sigstore/sigstore-java)
+[![Maven Central](https://maven-badges.sml.io/maven-central/dev.sigstore/sigstore-java/badge.svg)](https://maven-badges.sml.io/maven-central/dev.sigstore/sigstore-java)
 [![javadoc](https://javadoc.io/badge2/dev.sigstore/sigstore-java/javadoc.svg)](https://javadoc.io/doc/dev.sigstore/sigstore-java)
 [![CI](https://github.com/sigstore/sigstore-java/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/sigstore/sigstore-java/actions/workflows/ci.yaml)
 
