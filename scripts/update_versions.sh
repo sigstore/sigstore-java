@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# change all versions in the repository after doing a release
+
 # this script is simple and should work for most usecases, but it may break if we do weird things
 set -Eeo pipefail
 
@@ -35,7 +37,7 @@ sed -i "s/\(dev.sigstore.sign\") version \"\)$previous_version/\1$release_versio
 sed -i "s/\(sigstore.version.*\)$previous_version/\1$release_version/" examples/hello-world/build.gradle.kts
 sed -i "s/\(<sigstore.version>\)$previous_version/\1$release_version/" examples/hello-world/pom.xml
 
-# update to latest dev version
+# update to latest dev version (change change_version.sh if you change this section)
 sed -i "s/\(sigstoreJavaVersion.convention(\"\)$release_version/\1$next_version/" sigstore-gradle/sigstore-gradle-sign-base-plugin/src/main/kotlin/dev/sigstore/sign/SigstoreSignExtension.kt
 sed -i "s/version=$release_version/version=$next_version/" gradle.properties
 
