@@ -1,6 +1,7 @@
 # Changelog
 
-All notable changes to `sigstore-java` will be documented in this file.
+All notable changes to `sigstore-java` will be documented in this file. For a full list of changes, see the
+changelog in [Releases](https://github.com/sigstore/sigstore-java/releases).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
@@ -8,6 +9,16 @@ All versions prior to 1.0.0 are untracked
 
 
 ## [Unreleased]
+
+# [2.0.0] - 2025-11-20
+
+## Added
+- GA support for Rekor V2 based logs
+- Add support for creating and uploading DSSE attestations: https://github.com/sigstore/sigstore-java/pull/1084
+
+## Changed
+- Json operations wrapped to produce checked exceptions: https://github.com/sigstore/sigstore-java/pull/1115
+
 
 # [2.0.0-rc2] - 2025-10-21
 
