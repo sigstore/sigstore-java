@@ -21,7 +21,7 @@ build plugin specifics.
 
 ### Keyless Signing And Verification
 
-#### Signing
+#### Artifact Signing
 ```java
 Path testArtifact = Paths.get("path/to/my/file.jar")
 
@@ -33,7 +33,7 @@ Bundle result = signer.signFile(testArtifact);
 String bundleJson = result.toJson();
 ```
 
-#### Verification
+#### Artifact Verification
 
 ##### Get artifact and bundle
 ```java
@@ -66,9 +66,21 @@ try {
 }
 ```
 
+#### Attesting DSSE Payloads (only for testing on staging)
+```java
+String payload = "<some https://in-toto.io/Statement/v1 statement>"
+
+// sign using the Sigstore stating instance with rekor v2 explicitly enabled
+var signer = KeylessSigner.builder().sigstoreStagingDefaults().enableRekorV2(true).build();
+var result = signer.attest(payload);
+
+// sigstore bundle format (serialized as <attestation>.sigstore.json)
+String bundleJson = result.toJson();
+```
+
 #### Verifying DSSE Bundles
 
-sigstore-java doesn't create DSSE bundles yet, but it can verify the signatures over them with the same
+sigstore-java doesn't create DSSE bundles on the public good infrastructure yet, but it can verify the signatures over them with the same
 KeylessVerifier workflow detailed above. While sigstore-java inspects the [embedded payload](https://docs.sigstore.dev/about/bundle/#dsse)
 to ensure the provided artifact is a subject in the [in-toto statement](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
 it is not able to make any further assertions about the payload. Consumers of DSSE bundles should inspect

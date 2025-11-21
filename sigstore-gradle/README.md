@@ -15,7 +15,7 @@ Signature format uses [Sigstore bundle](https://github.com/sigstore/protobuf-spe
 
 ```kotlin
 plugins {
-    id("dev.sigstore.sign") version "2.0.0-rc2"
+    id("dev.sigstore.sign") version "2.0.0"
 }
 
 // Automatically sign all Maven publications, using GitHub Actions OIDC when available,
