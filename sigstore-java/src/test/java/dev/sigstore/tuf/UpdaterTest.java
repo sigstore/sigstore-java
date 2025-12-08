@@ -55,14 +55,13 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+import okio.Buffer;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
-import org.eclipse.jetty.server.handler.ContextHandler;
-import org.eclipse.jetty.server.handler.ResourceHandler;
-import org.eclipse.jetty.util.resource.Resource;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jetbrains.annotations.NotNull;
@@ -80,7 +79,7 @@ class UpdaterTest {
 
   public static final String TEST_STATIC_UPDATE_TIME = "2022-09-09T13:37:00.00Z";
 
-  static Server remote;
+  static MockWebServer remote;
   static String remoteUrl;
   @TempDir Path localStorePath;
   @TempDir static Path localMirrorPath;
@@ -89,32 +88,28 @@ class UpdaterTest {
   LogCapturer logs = LogCapturer.create().captureForType(Updater.class, Level.DEBUG);
 
   @BeforeAll
-  static void startRemoteResourceServer() throws Exception {
-    remote = new Server();
-    ServerConnector connector = new ServerConnector(remote);
-    connector.setHost("127.0.0.1");
-    remote.addConnector(connector);
-
-    ResourceHandler resourceHandler = new ResourceHandler();
-    Resource resourceBase = Resource.newResource(localMirrorPath.toAbsolutePath());
-    resourceHandler.setBaseResource(resourceBase);
-    resourceHandler.setDirectoriesListed(true);
-    resourceHandler.setDirAllowed(true);
-    resourceHandler.setAcceptRanges(true);
-    ContextHandler symlinkAllowingHandler = new ContextHandler();
-    symlinkAllowingHandler.setContextPath("/");
-    symlinkAllowingHandler.setAllowNullPathInfo(true);
-    symlinkAllowingHandler.setHandler(resourceHandler);
-    symlinkAllowingHandler.setBaseResource(resourceBase);
-    // the @TempDir locations on OS X are under /var/.. which is a symlink to /private/var and are
-    // not followed by default in Jetty for security reasons.
-    symlinkAllowingHandler.clearAliasChecks();
-    symlinkAllowingHandler.addAliasCheck(
-        new SymlinkAllowedResourceAliasChecker(symlinkAllowingHandler));
-    remote.setHandler(symlinkAllowingHandler);
+  static void startRemoteResourceServer() throws IOException {
+    remote = new MockWebServer();
+    remote.setDispatcher(
+        new Dispatcher() {
+          @Override
+          public MockResponse dispatch(RecordedRequest request) {
+            try {
+              String path = request.getPath().substring(1);
+              Path file = localMirrorPath.resolve(path);
+              if (Files.exists(file) && !Files.isDirectory(file)) {
+                return new MockResponse()
+                    .setResponseCode(200)
+                    .setBody(new Buffer().write(Files.readAllBytes(file)));
+              }
+              return new MockResponse().setResponseCode(404);
+            } catch (IOException e) {
+              return new MockResponse().setResponseCode(500);
+            }
+          }
+        });
     remote.start();
-    remoteUrl = "http://" + connector.getHost() + ":" + connector.getLocalPort() + "/";
-    System.out.println("TUF local server listening on: " + remoteUrl);
+    remoteUrl = remote.url("/").toString();
   }
 
   @Test
@@ -983,8 +978,8 @@ class UpdaterTest {
   }
 
   @AfterAll
-  static void shutdownRemoteResourceServer() throws Exception {
-    remote.stop();
+  static void shutdownRemoteResourceServer() throws IOException {
+    remote.shutdown();
   }
 
   public static final Verifiers.Supplier ALWAYS_VERIFIES =
