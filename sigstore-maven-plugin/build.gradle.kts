@@ -9,8 +9,8 @@ plugins {
 description = "A Maven plugin for signing with Sigstore"
 
 dependencies {
-    compileOnly("org.apache.maven:maven-plugin-api:3.9.11")
-    compileOnly("org.apache.maven:maven-core:3.9.11")
+    compileOnly("org.apache.maven:maven-plugin-api:3.9.12")
+    compileOnly("org.apache.maven:maven-core:3.9.12")
     compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations:3.15.2")
 
     implementation(project(":sigstore-java"))
