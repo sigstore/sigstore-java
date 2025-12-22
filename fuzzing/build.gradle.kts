@@ -8,7 +8,7 @@ repositories {
 
 dependencies {
     implementation(project(":sigstore-java"))
-    implementation("com.code-intelligence:jazzer-api:0.28.0")
+    implementation("com.code-intelligence:jazzer-api:0.29.1")
     implementation("com.google.guava:guava:33.5.0-jre")
 }
 
