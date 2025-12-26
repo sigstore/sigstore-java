@@ -11,6 +11,10 @@ plugins {
 description = "A Java client for signing and verifying using Sigstore"
 
 dependencies {
+    constraints {
+        // Just in case third-party dependencies use it
+        implementation("commons-codec:commons-codec:1.20.0")
+    }
     compileOnly("org.immutables:gson:2.10.1")
     compileOnly("org.immutables:value-annotations:2.10.1")
     annotationProcessor("org.immutables:value:2.10.1")
@@ -34,7 +38,6 @@ dependencies {
     runtimeOnly("io.grpc:grpc-netty-shaded")
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
 
-    implementation("commons-codec:commons-codec:1.18.0")
     implementation("com.google.code.gson:gson:2.13.2")
     implementation("org.bouncycastle:bcutil-jdk18on:1.83")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.83")
