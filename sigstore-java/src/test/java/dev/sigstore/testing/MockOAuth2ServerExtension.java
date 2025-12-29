@@ -16,13 +16,13 @@
 package dev.sigstore.testing;
 
 import com.gargoylesoftware.htmlunit.WebClient;
-import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.WebOidcClient;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
 import org.junit.jupiter.api.extension.*;
@@ -44,7 +44,8 @@ public class MockOAuth2ServerExtension
     try {
       var oauthServerConfig =
           Resources.toString(
-              Resources.getResource("dev/sigstore/oidc/server/config.json"), Charsets.UTF_8);
+              Resources.getResource("dev/sigstore/oidc/server/config.json"),
+              StandardCharsets.UTF_8);
       var cfg = OAuth2Config.Companion.fromJson(oauthServerConfig);
       mockOAuthServer = new MockOAuth2Server(cfg);
       mockOAuthServer.start();
