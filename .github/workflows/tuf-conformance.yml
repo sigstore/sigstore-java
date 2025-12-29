@@ -7,7 +7,8 @@ on:
     branches: [main]
   pull_request: {}
   workflow_dispatch: {}
-  # TODO: add cron
+  schedule:
+    - cron: '30 6 * * 3'
 
 jobs:
   conformance:
