@@ -103,10 +103,10 @@ $ "my-favorite-browser" ./sigstore-java/build/docs/javadoc/index.html
 Sigstore Java and Sigstore Maven Plugin are signed with both PGP and sigstore.
 
 #### PGP
-| Version Range | Key Id           |
-| ------------- | ---------------- |
-| 1.X.X         | AC74A3385D0E3252 |
-| 2.X.X         | 00E008229F5DAF37 |
+| Version Range | Key Id | 
+| ------------- | ------ |
+| 1.X.X         | [2c02310024baae4b34976ffeac74a3385d0e3252](https://keyserver.ubuntu.com/pks/lookup?search=2c02310024baae4b34976ffeac74a3385d0e3252&fingerprint=on&op=index) |
+| 2.X.X         | [300b49c14dfa7e0ad9d8515400e008229f5daf37](https://keyserver.ubuntu.com/pks/lookup?search=300b49c14dfa7e0ad9d8515400e008229f5daf37&fingerprint=on&op=index) |
 
 #### Sigstore
 | Version Range | Issuer | Signer Id |
