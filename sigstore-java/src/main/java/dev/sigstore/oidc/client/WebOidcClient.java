@@ -182,7 +182,8 @@ public class WebOidcClient implements OidcClient {
     // Use custom flow that injects nonce into authorization URL
     NonceAuthorizationCodeFlow flow = new NonceAuthorizationCodeFlow(flowBuilder, nonce);
     AuthorizationCodeInstalledApp app =
-        new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver(), browserHandler::openBrowser);
+        new AuthorizationCodeInstalledApp(
+            flow, new LocalServerReceiver(), browserHandler::openBrowser);
 
     String idTokenString = null;
     IdToken parsedIdToken = null;

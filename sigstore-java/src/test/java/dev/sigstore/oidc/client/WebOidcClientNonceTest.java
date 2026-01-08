@@ -18,15 +18,14 @@ package dev.sigstore.oidc.client;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.google.common.io.Resources;
 import dev.sigstore.trustroot.Service;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 public class WebOidcClientNonceTest {
 
@@ -41,9 +40,9 @@ public class WebOidcClientNonceTest {
 
   @Test
   void testNonceVerificationSuccess() throws Exception {
-    String config = Resources.toString(
-        Resources.getResource("dev/sigstore/oidc/server/config.json"),
-        StandardCharsets.UTF_8);
+    String config =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/oidc/server/config.json"), StandardCharsets.UTF_8);
     server = new MockOAuth2Server(OAuth2Config.Companion.fromJson(config));
     server.start();
 
@@ -61,9 +60,10 @@ public class WebOidcClientNonceTest {
 
   @Test
   void testNonceVerificationFailure_MismatchedNonce() throws Exception {
-    String config = Resources.toString(
-        Resources.getResource("dev/sigstore/oidc/server/config-bad-nonce.json"),
-        StandardCharsets.UTF_8);
+    String config =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/oidc/server/config-bad-nonce.json"),
+            StandardCharsets.UTF_8);
     server = new MockOAuth2Server(OAuth2Config.Companion.fromJson(config));
     server.start();
 
@@ -74,9 +74,12 @@ public class WebOidcClientNonceTest {
               .setBrowser(webClient::getPage)
               .build();
 
-      OidcException exception = Assertions.assertThrows(OidcException.class, () -> {
-        oidcClient.getIDToken(Map.of());
-      });
+      OidcException exception =
+          Assertions.assertThrows(
+              OidcException.class,
+              () -> {
+                oidcClient.getIDToken(Map.of());
+              });
       Assertions.assertTrue(exception.getMessage().contains("nonce in id token does not match"));
     }
   }
