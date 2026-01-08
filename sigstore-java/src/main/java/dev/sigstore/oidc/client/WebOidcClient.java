@@ -16,6 +16,7 @@
 package dev.sigstore.oidc.client;
 
 import com.google.api.client.auth.oauth2.AuthorizationCodeFlow;
+import com.google.api.client.auth.oauth2.AuthorizationCodeRequestUrl;
 import com.google.api.client.auth.oauth2.BearerToken;
 import com.google.api.client.auth.oauth2.ClientParametersAuthentication;
 import com.google.api.client.auth.openidconnect.IdToken;
@@ -38,7 +39,9 @@ import dev.sigstore.http.HttpParams;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;
+import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -153,6 +156,10 @@ public class WebOidcClient implements OidcClient {
       throw new OidcException(
           "ioexception obtaining and parsing oidc configuration for " + issuer, e);
     }
+
+    // Generate a cryptographically secure nonce for replay attack prevention
+    String nonce = generateNonce();
+
     AuthorizationCodeFlow.Builder flowBuilder =
         new AuthorizationCodeFlow.Builder(
                 BearerToken.authorizationHeaderAccessMethod(),
@@ -171,9 +178,11 @@ public class WebOidcClient implements OidcClient {
                     memStoreFactory
                         .getDataStore("user")
                         .set(ID_TOKEN_KEY, tokenResponse.get(ID_TOKEN_KEY).toString()));
+
+    // Use custom flow that injects nonce into authorization URL
+    NonceAuthorizationCodeFlow flow = new NonceAuthorizationCodeFlow(flowBuilder, nonce);
     AuthorizationCodeInstalledApp app =
-        new AuthorizationCodeInstalledApp(
-            flowBuilder.build(), new LocalServerReceiver(), browserHandler::openBrowser);
+        new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver(), browserHandler::openBrowser);
 
     String idTokenString = null;
     IdToken parsedIdToken = null;
@@ -188,6 +197,16 @@ public class WebOidcClient implements OidcClient {
               .build();
       if (!idTokenVerifier.verifyOrThrow(parsedIdToken)) {
         throw new OidcException("id token could not be verified");
+      }
+
+      // Verify that the nonce in the ID token matches the one we sent
+      Object tokenNonce = parsedIdToken.getPayload().get("nonce");
+      if (tokenNonce == null) {
+        throw new OidcException("id token is missing required nonce claim");
+      }
+      if (!nonce.equals(tokenNonce.toString())) {
+        throw new OidcException(
+            "nonce in id token does not match expected value - possible replay attack");
       }
     } catch (IOException e) {
       // TODO: maybe a more descriptive exception message
@@ -253,5 +272,40 @@ public class WebOidcClient implements OidcClient {
   public interface BrowserHandler {
     /** Opens a browser to allow a user to complete the oauth browser workflow. */
     void openBrowser(String url) throws IOException;
+  }
+
+  /**
+   * Generates a cryptographically secure random nonce for OIDC authentication. The nonce is used to
+   * prevent replay attacks by binding the ID token to the authentication request.
+   *
+   * @return a URL-safe base64-encoded random string
+   */
+  private static String generateNonce() {
+    SecureRandom secureRandom = new SecureRandom();
+    byte[] nonceBytes = new byte[32];
+    secureRandom.nextBytes(nonceBytes);
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(nonceBytes);
+  }
+
+  /**
+   * Custom AuthorizationCodeFlow that adds a nonce parameter to the authorization URL. This is
+   * required for OpenID Connect to prevent replay attacks.
+   */
+  private static class NonceAuthorizationCodeFlow extends AuthorizationCodeFlow {
+    private final String nonce;
+
+    NonceAuthorizationCodeFlow(AuthorizationCodeFlow.Builder builder, String nonce) {
+      super(builder);
+      this.nonce = nonce;
+    }
+
+    @Override
+    public AuthorizationCodeRequestUrl newAuthorizationUrl() {
+      return super.newAuthorizationUrl().set("nonce", nonce);
+    }
+
+    String getNonce() {
+      return nonce;
+    }
   }
 }
