@@ -21,4 +21,4 @@ permissions:
 jobs:
   dependency-review:
     name: License and Vulnerability Scan
-    uses: sigstore/community/.github/workflows/reusable-dependency-review.yml@bafa89c67f03939c1fb8bcc08152dd178994519c
+    uses: sigstore/community/.github/workflows/reusable-dependency-review.yml@a959c6f853740ef3e0d11071240260975b352dd3
