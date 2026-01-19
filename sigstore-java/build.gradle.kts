@@ -45,7 +45,7 @@ dependencies {
     implementation("com.google.oauth-client:google-oauth-client-java6")
 
     testImplementation(project(":sigstore-testkit"))
-    testImplementation(platform("org.junit:junit-bom:5.14.1"))
+    testImplementation(platform("org.junit:junit-bom:5.14.2"))
 
     testImplementation(platform("org.mockito:mockito-bom:5.21.0"))
     testImplementation("org.mockito:mockito-core")
