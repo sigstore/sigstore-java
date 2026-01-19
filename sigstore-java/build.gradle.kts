@@ -24,7 +24,7 @@ dependencies {
     // this requires inclusion of protos is src/main/proto
     protobuf("dev.sigstore:protobuf-specs:0.5.0")
 
-    implementation(platform("com.google.protobuf:protobuf-bom:4.33.2"))
+    implementation(platform("com.google.protobuf:protobuf-bom:4.33.4"))
     implementation("com.google.protobuf:protobuf-java-util")
 
     // grpc deps
@@ -61,7 +61,7 @@ dependencies {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.33.2"
+        artifact = "com.google.protobuf:protoc:4.33.4"
     }
     plugins {
         id("grpc") {
