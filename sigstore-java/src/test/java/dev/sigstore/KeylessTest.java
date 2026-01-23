@@ -22,8 +22,12 @@ import dev.sigstore.json.JsonParseException;
 import dev.sigstore.testkit.annotations.DisabledIfSkipStaging;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
+import dev.sigstore.trustroot.ImmutableSigstoreSigningConfig;
+import dev.sigstore.trustroot.Service;
+import dev.sigstore.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -76,6 +80,38 @@ public class KeylessTest {
     var results = signer.sign(artifactDigests);
 
     verifySigningResult(results, false);
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    for (int i = 0; i < results.size(); i++) {
+      verifier.verify(artifactDigests.get(i), results.get(i), VerificationOptions.empty());
+      checkBundleSerialization(results.get(i));
+    }
+  }
+
+  /**
+   * This test injects rekor v2 into the signing config since it's not quite pushed out to prod yet.
+   * Should be merged into "sign_production" above when ready.
+   */
+  @Test
+  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
+  public void sign_production_rekorV2() throws Exception {
+    var prodTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+    prodTufClient.update();
+    var prodSigningConfig = prodTufClient.getSigstoreSigningConfig();
+    var signingConfig =
+        ImmutableSigstoreSigningConfig.builder()
+            .from(prodSigningConfig)
+            .addTLogs(Service.of(URI.create("https://log2025-1.rekor.sigstore.dev"), 2))
+            .build();
+    var signer =
+        KeylessSigner.builder()
+            .sigstorePublicDefaults()
+            .signingConfigProvider(() -> signingConfig)
+            .enableRekorV2(true)
+            .build();
+    var results = signer.sign(artifactDigests);
+
+    verifySigningResult(results, true);
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     for (int i = 0; i < results.size(); i++) {
