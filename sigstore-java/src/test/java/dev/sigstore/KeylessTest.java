@@ -95,6 +95,7 @@ public class KeylessTest {
   @Test
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_production_rekorV2() throws Exception {
+    // TODO(#1033): Get Rekor v2 service from TUF signing config when in prod
     var prodTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
     prodTufClient.update();
     var prodSigningConfig = prodTufClient.getSigstoreSigningConfig();
@@ -135,6 +136,38 @@ public class KeylessTest {
       verifier.verify(artifactDigests.get(i), results.get(i), VerificationOptions.empty());
       checkBundleSerialization(results.get(i));
     }
+  }
+
+  @Test
+  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
+  public void attest_production() throws Exception {
+    // TODO(#1033): Get Rekor v2 service from TUF signing config when in prod
+    var prodTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+    prodTufClient.update();
+    var prodSigningConfig = prodTufClient.getSigstoreSigningConfig();
+    var signingConfig =
+        ImmutableSigstoreSigningConfig.builder()
+            .from(prodSigningConfig)
+            .addTLogs(Service.of(URI.create("https://log2025-1.rekor.sigstore.dev"), 2))
+            .build();
+    var signer =
+        KeylessSigner.builder()
+            .sigstorePublicDefaults()
+            .signingConfigProvider(() -> signingConfig)
+            .enableRekorV2(true)
+            .build();
+    var result = signer.attest(payload);
+
+    Assertions.assertNotNull(result.getDsseEnvelope().get());
+    Assertions.assertEquals(payload, result.getDsseEnvelope().get().getPayloadAsString());
+    Assertions.assertEquals(1, result.getEntries().size());
+    Assertions.assertEquals("0.0.2", result.getEntries().get(0).getBodyDecoded().getApiVersion());
+
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var intotoPayload = InTotoPayload.from(result.getDsseEnvelope().get());
+    var artifactDigest = Hex.decode(intotoPayload.getSubject().get(0).getDigest().get("sha256"));
+    verifier.verify(artifactDigest, result, VerificationOptions.empty());
+    checkBundleSerialization(result);
   }
 
   @Test
