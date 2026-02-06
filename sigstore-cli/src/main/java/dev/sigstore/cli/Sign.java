@@ -18,8 +18,11 @@ package dev.sigstore.cli;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.SigningConfigProvider;
 import dev.sigstore.TrustedRootProvider;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.TokenStringOidcClient;
+import dev.sigstore.trustroot.ImmutableSigstoreSigningConfig;
+import dev.sigstore.trustroot.Service;
 import dev.sigstore.tuf.RootProvider;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.net.URI;
@@ -89,6 +92,12 @@ public class Sign implements Callable<Integer> {
       required = false)
   Path workingDirectory;
 
+  @Option(
+      names = {"--in-toto"},
+      description = "treat the artifact as an in-toto statement payload",
+      required = false)
+  boolean inToto;
+
   @Override
   public Integer call() throws Exception {
     if (workingDirectory != null) {
@@ -102,7 +111,22 @@ public class Sign implements Callable<Integer> {
       }
     }
     KeylessSigner.Builder signerBuilder;
-    if (target == null) {
+    // TODO(#1033): Get Rekor v2 service from TUF signing config when in prod
+    if (inToto) { // Attestation signing requires Rekor v2
+      var prodTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+      prodTufClient.update();
+      var prodSigningConfig = prodTufClient.getSigstoreSigningConfig();
+      var signingConfig =
+          ImmutableSigstoreSigningConfig.builder()
+              .from(prodSigningConfig)
+              .addTLogs(Service.of(URI.create("https://log2025-1.rekor.sigstore.dev"), 2))
+              .build();
+      signerBuilder =
+          KeylessSigner.builder()
+              .sigstorePublicDefaults()
+              .signingConfigProvider(() -> signingConfig)
+              .enableRekorV2(true);
+    } else if (target == null) {
       signerBuilder = new KeylessSigner.Builder().sigstorePublicDefaults().enableRekorV2(true);
     } else if ((target.trustedRoot != null && signingConfig == null)
         || (target.trustedRoot == null && signingConfig != null)) {
@@ -151,7 +175,12 @@ public class Sign implements Callable<Integer> {
           OidcClients.of(TokenStringOidcClient.from(identityToken)));
     }
     var signer = signerBuilder.build();
-    var bundle = signer.signFile(artifact);
+    Bundle bundle;
+    if (inToto) {
+      bundle = signer.attest(Files.readString(artifact, StandardCharsets.UTF_8));
+    } else {
+      bundle = signer.signFile(artifact);
+    }
     Files.write(bundleFile, bundle.toJson().getBytes(StandardCharsets.UTF_8));
     return 0;
   }
