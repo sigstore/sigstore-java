@@ -110,7 +110,7 @@ class SigstoreTufClientTest {
     client.update();
     Thread.sleep(3000);
     client.update();
-    Mockito.verify(mockUpdater, Mockito.times(2)).update();
+    Mockito.verify(mockUpdater, Mockito.times(2)).refresh();
   }
 
   @Test
@@ -120,7 +120,7 @@ class SigstoreTufClientTest {
 
     client.update();
     client.update();
-    Mockito.verify(mockUpdater, Mockito.times(1)).update();
+    Mockito.verify(mockUpdater, Mockito.times(1)).refresh();
   }
 
   private static Updater mockUpdater() throws IOException {

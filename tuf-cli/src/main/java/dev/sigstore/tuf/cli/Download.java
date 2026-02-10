@@ -52,9 +52,9 @@ public class Download implements Callable<Integer> {
             .setTargetStore(fsStore)
             .setClock(clock)
             .build();
-    // the java client isn't one shot like other clients, so downloadTarget doesn't call update
-    // for the sake of conformance updateMeta here
-    tuf.updateMeta();
+    // the java client isn't one shot like other clients, so downloadTarget doesn't call refresh
+    // for the sake of conformance, refresh here
+    tuf.refresh();
     tuf.downloadTarget(targetName);
     return 0;
   }

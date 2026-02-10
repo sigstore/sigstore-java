@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,13 +27,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 import dev.sigstore.http.URIFormat;
 import dev.sigstore.json.JsonParseException;
 import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.encryption.Verifier;
 import dev.sigstore.tuf.encryption.Verifiers;
+import dev.sigstore.tuf.model.DelegationRole;
 import dev.sigstore.tuf.model.Hashes;
+import dev.sigstore.tuf.model.ImmutableDelegationRole;
 import dev.sigstore.tuf.model.ImmutableKey;
 import dev.sigstore.tuf.model.ImmutableRootRole;
 import dev.sigstore.tuf.model.ImmutableSignature;
@@ -211,7 +215,7 @@ class UpdaterTest {
   public void testTimestampUpdate_throwMetaNotFoundException() throws Exception {
     setupMirror("synthetic/test-template", "2.root.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
-    var ex = assertThrows(FileNotFoundException.class, updater::update);
+    var ex = assertThrows(FileNotFoundException.class, updater::refresh);
     MatcherAssert.assertThat(
         ex.getMessage(), CoreMatchers.startsWith("file (timestamp.json) was not found at source"));
   }
@@ -223,7 +227,7 @@ class UpdaterTest {
     var ex =
         assertThrows(
             SignatureVerificationException.class,
-            updater::update,
+            updater::refresh,
             "The timestamp was not signed so should have thown a SignatureVerificationException.");
     assertEquals(0, ex.getVerifiedSignatures(), "verified signature threshold did not match");
     assertEquals(1, ex.getRequiredSignatures(), "required signatures found did not match");
@@ -237,7 +241,7 @@ class UpdaterTest {
     var ex =
         assertThrows(
             RollbackVersionException.class,
-            updater::update,
+            updater::refresh,
             "The repo in this test provides an older signed timestamp version that should have caused a RoleVersionException.");
     assertEquals(3, ex.getCurrentVersion(), "expected timestamp version did not match");
     assertEquals(1, ex.getFoundVersion(), "found timestamp version did not match");
@@ -253,7 +257,7 @@ class UpdaterTest {
 
     assertThrows(
         RoleExpiredException.class,
-        updater::update,
+        updater::refresh,
         "Expects a RoleExpiredException as the repo timestamp.json should be expired.");
   }
 
@@ -308,7 +312,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         InvalidHashesException.class,
-        updater::update,
+        updater::refresh,
         "snapshot.json edited and should fail hash test.");
   }
 
@@ -319,7 +323,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         SnapshotVersionMismatchException.class,
-        updater::update,
+        updater::refresh,
         "snapshot version should not match the timestamp metadata.");
   }
 
@@ -336,7 +340,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         SnapshotTargetMissingException.class,
-        updater::update,
+        updater::refresh,
         "All targets from previous versions of snapshot should be contained in future versions of snapshot.");
   }
 
@@ -356,7 +360,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         SnapshotTargetVersionException.class,
-        updater::update,
+        updater::refresh,
         "The new snapshot.json has a targets.json version that is lower than the current target and so we expect a SnapshotTargetVersionException.");
   }
 
@@ -380,7 +384,7 @@ class UpdaterTest {
             "2022-11-20T18:07:27Z"); // one day after
     assertThrows(
         RoleExpiredException.class,
-        updater::update,
+        updater::refresh,
         "Expects a RoleExpiredException as the repo snapshot.json should be expired.");
   }
 
@@ -390,7 +394,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         FileNotFoundException.class,
-        updater::update,
+        updater::refresh,
         "Expected remote with no target.json to throw FileNotFoundException.");
   }
 
@@ -405,7 +409,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         InvalidHashesException.class,
-        updater::update,
+        updater::refresh,
         "targets.json has been modified to have an invalid hash.");
   }
 
@@ -420,7 +424,7 @@ class UpdaterTest {
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     assertThrows(
         SnapshotVersionMismatchException.class,
-        updater::update,
+        updater::refresh,
         "targets version should not match the snapshot targets metadata.");
   }
 
@@ -440,7 +444,7 @@ class UpdaterTest {
             "2022-11-20T18:07:27Z"); // one day after
     assertThrows(
         RoleExpiredException.class,
-        updater::update,
+        updater::refresh,
         "targets are out of date and should cause RoleExpiredException.");
   }
 
@@ -455,7 +459,7 @@ class UpdaterTest {
     var updater =
         createTimeStaticUpdater(
             localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-20T18:07:27Z");
-    updater.updateMeta();
+    updater.refresh();
     var localTargets = updater.getMetaStore().getTargets();
     assertNotNull(localTargets);
     var remoteTargets =
@@ -477,8 +481,8 @@ class UpdaterTest {
     var ex =
         assertThrows(
             JsonParseException.class,
-            updater::update,
-            "targets.json data should be causing a gson error due to missing TargetData. If at some point we support nullable TargetData this test should be updated to expect TargetMetadataMissingException while calling downloadTargets().");
+            updater::refresh,
+            "targets.json data should be causing a gson error due to missing TargetData. If at some point we support nullable TargetData this test should be updated to expect TargetMetadataMissingException while calling downloadTarget().");
     MatcherAssert.assertThat(
         ex.getMessage(),
         CoreMatchers.endsWith(
@@ -494,10 +498,10 @@ class UpdaterTest {
         "3.snapshot.json",
         "3.targets.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
-    updater.updateMeta();
+    updater.refresh();
     assertThrows(
         FileNotFoundException.class,
-        () -> updater.downloadTargets(updater.getMetaStore().getTargets()),
+        () -> updater.downloadTarget("test.txt"),
         "the target file for download should be missing from the repo and cause an exception.");
   }
 
@@ -511,10 +515,10 @@ class UpdaterTest {
         "3.targets.json",
         "targets/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
-    updater.updateMeta();
+    updater.refresh();
     assertThrows(
         FileExceedsMaxLengthException.class,
-        () -> updater.downloadTargets(updater.getMetaStore().getTargets()),
+        () -> updater.downloadTarget("test.txt"),
         "The target file is expected to not match the length specified in targets.json target data.");
   }
 
@@ -528,10 +532,10 @@ class UpdaterTest {
         "3.targets.json",
         "targets/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
-    updater.updateMeta();
+    updater.refresh();
     assertThrows(
         InvalidHashesException.class,
-        () -> updater.downloadTargets(updater.getMetaStore().getTargets()),
+        () -> updater.downloadTarget("test.txt"),
         "The target file has been modified and should not match the expected hash");
   }
 
@@ -547,7 +551,10 @@ class UpdaterTest {
         "targets/32005f02eac21b4cf161a02495330b6c14b548622b5f7e19d59ecfa622de650603ecceea39ed86cc322749a813503a72ad14ce5462c822b511eaf2f2cd2ad8f2.test.txt.v2",
         "targets/53904bc6216230bf8da0ec42d34004a3f36764de698638641870e37d270e4fd13e1079285f8bca73c2857a279f6f7fbc82038274c3eb48ec5bb2da9b2e30491a.test2.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
-    updater.update();
+    updater.refresh();
+    updater.downloadTarget("test.txt");
+    updater.downloadTarget("test.txt.v2");
+    updater.downloadTarget("test2.txt");
     assertNotNull(updater.getTargetStore().readTarget("test.txt"));
     assertNotNull(updater.getTargetStore().readTarget("test.txt.v2"));
     assertNotNull(updater.getTargetStore().readTarget("test2.txt"));
@@ -570,7 +577,12 @@ class UpdaterTest {
             Resources.getResource("dev/sigstore/tuf/synthetic/targets-sha256-or-sha512/root.json")
                 .getPath());
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_ROOT);
-    assertDoesNotThrow(updater::update);
+    assertDoesNotThrow(
+        () -> {
+          updater.refresh();
+          updater.downloadTarget("test.txt");
+          updater.downloadTarget("test2.txt");
+        });
   }
 
   @Test
@@ -585,7 +597,7 @@ class UpdaterTest {
         "targets/32005f02eac21b4cf161a02495330b6c14b548622b5f7e19d59ecfa622de650603ecceea39ed86cc322749a813503a72ad14ce5462c822b511eaf2f2cd2ad8f2.test.txt.v2",
         "targets/53904bc6216230bf8da0ec42d34004a3f36764de698638641870e37d270e4fd13e1079285f8bca73c2857a279f6f7fbc82038274c3eb48ec5bb2da9b2e30491a.test2.txt");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
-    updater.updateMeta();
+    updater.refresh();
     updater.downloadTarget("test.txt");
     Assertions.assertEquals(1, countFilesInTargetsDir(updater));
     updater.downloadTarget("test2.txt");
@@ -606,9 +618,119 @@ class UpdaterTest {
         "1.targets.json",
         "targets/subdir/860de8f9a858eea7190fcfa1b53fe55914d3c38f17f8f542273012d19cc9509bb423f37b7c13c577a56339ad7f45273b479b1d0df837cb6e20a550c27cce0885.test.txt");
     var updater = createTimeStaticUpdater(localStorePath, root);
-    updater.updateMeta();
+    updater.refresh();
     updater.downloadTarget("subdir/test.txt");
     Assertions.assertEquals(1, countFilesInTargetsDir(updater));
+  }
+
+  private static final Path DELEGATION_TRUSTED_ROOT =
+      Path.of(
+          Resources.getResource("dev/sigstore/tuf/synthetic/delegation-trusted-root.json")
+              .getPath());
+
+  @Test
+  public void testMatches() {
+    assertTrue(Updater.matches("foo.txt", "foo.txt"));
+    assertTrue(Updater.matches("foo.txt", "*.txt"));
+    assertTrue(Updater.matches("dir/foo.txt", "dir/*.txt"));
+    assertFalse(Updater.matches("dir/foo.txt", "*.txt")); // TUF globs don't match across separators
+    assertTrue(Updater.matches("foo-1.txt", "foo-?.txt"));
+    assertFalse(Updater.matches("foo-11.txt", "foo-?.txt"));
+    assertTrue(Updater.matches("targets/foo.tgz", "targets/*.tgz"));
+    assertFalse(Updater.matches("targets/foo.txt", "targets/*.tgz"));
+
+    // Substring matching prevention
+    assertFalse(Updater.matches("foo.txt", "foo"));
+    assertFalse(Updater.matches("foo.txt", "txt"));
+    assertFalse(Updater.matches("prefix-foo.txt", "foo.txt"));
+
+    // ? should not cross directory boundaries
+    assertTrue(Updater.matches("foo1bar.txt", "foo?bar.txt"));
+    assertFalse(Updater.matches("foo/bar.txt", "foo?bar.txt"));
+
+    // Multiple wildcards
+    assertTrue(Updater.matches("a-b-c.txt", "a-*-*.txt"));
+    assertFalse(Updater.matches("a/b/c.txt", "a-*-*.txt"));
+    assertTrue(
+        Updater.matches(
+            "dir/foo.txt", "**/*.txt")); // ** doesn't cross separators, but matches "dir"
+    assertFalse(Updater.matches("a/b/c.txt", "**/*.txt"));
+    assertFalse(Updater.matches("dir/foo.txt", "dir/**/*.txt"));
+
+    // Regex character escaping
+    assertTrue(Updater.matches("foo[a].txt", "foo[a].txt"));
+    assertFalse(Updater.matches("fooa.txt", "foo[a].txt"));
+    assertTrue(Updater.matches("foo+bar$baz.txt", "foo+bar$baz.txt"));
+    assertFalse(Updater.matches("fooobar.txt", "foo+bar.txt"));
+  }
+
+  @Test
+  public void testDelegationResolution() throws Exception {
+    setupMirror(
+        "synthetic/delegation-basic",
+        "timestamp.json",
+        "1.snapshot.json",
+        "1.targets.json",
+        "1.release.json",
+        "targets/release/42bd420cc2f99e68e60005fa7c28fc2f60e4e04ee160d9dd3b98e72fc2954f98.artifact.txt");
+    var updater = createTimeStaticUpdater(localStorePath, DELEGATION_TRUSTED_ROOT);
+    updater.refresh();
+    updater.downloadTarget("release/artifact.txt");
+    assertNotNull(updater.getTargetStore().readTarget("release/artifact.txt"));
+  }
+
+  /**
+   * Tests that a terminating delegation stops the search. The test data has:
+   *
+   * <ul>
+   *   <li>release: paths=["release/*"], terminating=true
+   *   <li>fallback: paths=["*"], terminating=false
+   * </ul>
+   *
+   * <p>Searching for "release/missing.txt" matches the release delegation's path pattern, but since
+   * the release targets don't contain it and release is terminating, the search should stop without
+   * checking fallback.
+   */
+  @Test
+  public void testTerminatingDelegationStopsSearch() throws Exception {
+    setupMirror(
+        "synthetic/delegation-terminating",
+        "timestamp.json",
+        "1.snapshot.json",
+        "1.targets.json",
+        "1.release.json",
+        "1.fallback.json");
+    var updater = createTimeStaticUpdater(localStorePath, DELEGATION_TRUSTED_ROOT);
+    updater.refresh();
+    assertThrows(
+        TargetMetadataMissingException.class, () -> updater.downloadTarget("release/missing.txt"));
+  }
+
+  /**
+   * Tests that a non-terminating delegation allows the search to continue. The test data has:
+   *
+   * <ul>
+   *   <li>staging: paths=["*"], terminating=false
+   *   <li>production: paths=["*"], terminating=false
+   * </ul>
+   *
+   * <p>"found.txt" matches staging's "*" but is not found there. Since staging is non-terminating,
+   * search continues to production where the target is found.
+   */
+  @Test
+  public void testNonTerminatingDelegationContinuesSearch() throws Exception {
+    setupMirror(
+        "synthetic/delegation-non-terminating",
+        "timestamp.json",
+        "1.snapshot.json",
+        "1.targets.json",
+        "1.staging.json",
+        "1.production.json",
+        "targets/ce355849c5722b5468f50a99dab3c6031331140f63e02550ab2381aa0e2ee9e5.found.txt");
+    var updater = createTimeStaticUpdater(localStorePath, DELEGATION_TRUSTED_ROOT);
+    updater.refresh();
+    updater.downloadTarget("found.txt");
+    assertNotNull(updater.getTargetStore().readTarget("found.txt"));
   }
 
   private long countFilesInTargetsDir(Updater updater) throws IOException {
@@ -907,6 +1029,78 @@ class UpdaterTest {
         snapshot.getSignedMeta().getMeta().get("targets.json").getHashes().isEmpty());
     Assertions.assertTrue(
         snapshot.getSignedMeta().getMeta().get("targets.json").getLength().isEmpty());
+  }
+
+  @Test
+  public void testIsTargetInRole_pathHashPrefixes() {
+    Updater updater = createAlwaysVerifyingUpdater();
+    String targetName = "foo.txt";
+    // sha256 of "foo.txt" is ddab29ff2c393ee52855d21a240eb05f775df88e3ce347df759f0c4b80356c35
+    String hash =
+        Hashing.sha256().hashString(targetName, java.nio.charset.StandardCharsets.UTF_8).toString();
+    String prefix = hash.substring(0, 5);
+
+    DelegationRole roleWithPrefix =
+        ImmutableDelegationRole.builder()
+            .name("role1")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPathHashPrefixes(prefix)
+            .build();
+    assertTrue(updater.isTargetInRole(roleWithPrefix, targetName));
+
+    DelegationRole roleWithBadPrefix =
+        ImmutableDelegationRole.builder()
+            .name("role2")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPathHashPrefixes("bad")
+            .build();
+    assertFalse(updater.isTargetInRole(roleWithBadPrefix, targetName));
+  }
+
+  @Test
+  public void testIsTargetInRole_paths() {
+    Updater updater = createAlwaysVerifyingUpdater();
+
+    DelegationRole roleWithMatchingPath =
+        ImmutableDelegationRole.builder()
+            .name("role1")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPaths("*.txt")
+            .build();
+    assertTrue(updater.isTargetInRole(roleWithMatchingPath, "foo.txt"));
+    assertFalse(updater.isTargetInRole(roleWithMatchingPath, "dir/foo.txt"));
+
+    DelegationRole roleWithDirPath =
+        ImmutableDelegationRole.builder()
+            .name("role2")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPaths("targets/*.tgz")
+            .build();
+    assertTrue(updater.isTargetInRole(roleWithDirPath, "targets/foo.tgz"));
+    assertFalse(updater.isTargetInRole(roleWithDirPath, "targets/foo.txt"));
+    assertFalse(updater.isTargetInRole(roleWithDirPath, "foo.tgz"));
+  }
+
+  @Test
+  public void testIsTargetInRole_neitherPathsNorPrefixes() {
+    Updater updater = createAlwaysVerifyingUpdater();
+
+    DelegationRole roleWithNothing =
+        ImmutableDelegationRole.builder()
+            .name("empty")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .build();
+    assertFalse(updater.isTargetInRole(roleWithNothing, "anything.txt"));
   }
 
   @Test
