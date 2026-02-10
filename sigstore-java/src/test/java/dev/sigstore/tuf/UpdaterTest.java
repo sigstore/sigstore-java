@@ -19,6 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,13 +27,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 import dev.sigstore.http.URIFormat;
 import dev.sigstore.json.JsonParseException;
 import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.encryption.Verifier;
 import dev.sigstore.tuf.encryption.Verifiers;
+import dev.sigstore.tuf.model.DelegationRole;
 import dev.sigstore.tuf.model.Hashes;
+import dev.sigstore.tuf.model.ImmutableDelegationRole;
 import dev.sigstore.tuf.model.ImmutableKey;
 import dev.sigstore.tuf.model.ImmutableRootRole;
 import dev.sigstore.tuf.model.ImmutableSignature;
@@ -907,6 +911,78 @@ class UpdaterTest {
         snapshot.getSignedMeta().getMeta().get("targets.json").getHashes().isEmpty());
     Assertions.assertTrue(
         snapshot.getSignedMeta().getMeta().get("targets.json").getLength().isEmpty());
+  }
+
+  @Test
+  public void testIsTargetInRole_pathHashPrefixes() {
+    Updater updater = createAlwaysVerifyingUpdater();
+    String targetName = "foo.txt";
+    // sha256 of "foo.txt" is ddab29ff2c393ee52855d21a240eb05f775df88e3ce347df759f0c4b80356c35
+    String hash =
+        Hashing.sha256().hashString(targetName, java.nio.charset.StandardCharsets.UTF_8).toString();
+    String prefix = hash.substring(0, 5);
+
+    DelegationRole roleWithPrefix =
+        ImmutableDelegationRole.builder()
+            .name("role1")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPathHashPrefixes(prefix)
+            .build();
+    assertTrue(updater.isTargetInRole(roleWithPrefix, targetName));
+
+    DelegationRole roleWithBadPrefix =
+        ImmutableDelegationRole.builder()
+            .name("role2")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPathHashPrefixes("bad")
+            .build();
+    assertFalse(updater.isTargetInRole(roleWithBadPrefix, targetName));
+  }
+
+  @Test
+  public void testIsTargetInRole_paths() {
+    Updater updater = createAlwaysVerifyingUpdater();
+
+    DelegationRole roleWithMatchingPath =
+        ImmutableDelegationRole.builder()
+            .name("role1")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPaths("*.txt")
+            .build();
+    assertTrue(updater.isTargetInRole(roleWithMatchingPath, "foo.txt"));
+    assertFalse(updater.isTargetInRole(roleWithMatchingPath, "dir/foo.txt"));
+
+    DelegationRole roleWithDirPath =
+        ImmutableDelegationRole.builder()
+            .name("role2")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .addPaths("targets/*.tgz")
+            .build();
+    assertTrue(updater.isTargetInRole(roleWithDirPath, "targets/foo.tgz"));
+    assertFalse(updater.isTargetInRole(roleWithDirPath, "targets/foo.txt"));
+    assertFalse(updater.isTargetInRole(roleWithDirPath, "foo.tgz"));
+  }
+
+  @Test
+  public void testIsTargetInRole_neitherPathsNorPrefixes() {
+    Updater updater = createAlwaysVerifyingUpdater();
+
+    DelegationRole roleWithNothing =
+        ImmutableDelegationRole.builder()
+            .name("empty")
+            .addKeyids("key1")
+            .threshold(1)
+            .isTerminating(false)
+            .build();
+    assertFalse(updater.isTargetInRole(roleWithNothing, "anything.txt"));
   }
 
   @Test

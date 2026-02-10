@@ -27,6 +27,7 @@ import dev.sigstore.tuf.model.Targets;
 import dev.sigstore.tuf.model.Timestamp;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -59,6 +60,7 @@ public class Updater {
   // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in 5.3.3 of
   // spec.
   private static final int MAX_UPDATES = 1024;
+  private static final int MAX_DELEGATIONS = 32;
 
   private static final Logger log = Logger.getLogger(Updater.class.getName());
 
@@ -123,13 +125,14 @@ public class Updater {
 
   /**
    * Download a single target defined in targets. Will not re-download a target that is already
-   * cached locally. Does not handle delegated targets.
+   * cached locally. Supports delegated targets.
    */
   public void downloadTarget(String targetName) throws IOException, JsonParseException {
-    var targetData = trustedMetaStore.getTargets().getSignedMeta().getTargets().get(targetName);
-    if (targetData == null) {
+    var targetDataMaybe = findTargetData(targetName, trustedMetaStore.getTargets());
+    if (targetDataMaybe.isEmpty()) {
       throw new TargetMetadataMissingException(targetName);
     }
+    TargetData targetData = targetDataMaybe.get();
     if (targetStore.hasTarget(targetName)) {
       byte[] target = targetStore.readTarget(targetName);
       // TODO: Using exceptions for control flow here, we should have something that returns a true
@@ -507,25 +510,73 @@ public class Updater {
     trustedMetaStore.setTargets(targetsResult.getMetaResource());
   }
 
-  void downloadTargets(Targets targets)
+  void downloadTargets(Targets topLevelTargets)
       throws IOException,
           TargetMetadataMissingException,
           FileNotFoundException,
           JsonParseException {
-    // Skip #7 and go straight to downloading targets. It looks like delegations were removed from
-    // sigstore TUF data.
-    // {@see https://github.com/sigstore/sigstore/issues/562}
-    for (Map.Entry<String, TargetMeta.TargetData> entry :
-        targets.getSignedMeta().getTargets().entrySet()) {
-      String targetName = entry.getKey();
-      // 8) If target is missing metadata fail.
-      // Note: This can't actually happen due to the way GSON is setup the targets.json would fail
-      // to parse. Leaving this code in in-case we eventually allow it in de-serialization.
-      if (entry.getValue() == null) {
-        throw new TargetMetadataMissingException(targetName);
+    // Iterative preorder DFS with lazy loading, visited set, and total delegation limit.
+    var delegationsToVisit = new ArrayList<PendingDelegation>();
+    delegationsToVisit.add(PendingDelegation.ofLoaded(RootRole.TARGETS, topLevelTargets));
+    var visitedRoleNames = new HashSet<String>();
+
+    while (visitedRoleNames.size() <= MAX_DELEGATIONS && !delegationsToVisit.isEmpty()) {
+      var current = delegationsToVisit.remove(delegationsToVisit.size() - 1);
+
+      if (visitedRoleNames.contains(current.roleName)) {
+        continue;
       }
-      TargetMeta.TargetData targetData = entry.getValue();
-      downloadTarget(targetName, targetData);
+
+      // Load metadata lazily
+      Targets currentTargets;
+      if (current.preloaded != null) {
+        currentTargets = current.preloaded;
+      } else {
+        try {
+          currentTargets = updateDelegatedTargets(current.role, current.parent);
+        } catch (SnapshotTargetMissingException
+            | FileNotFoundException
+            | SignatureVerificationException
+            | RoleExpiredException e) {
+          log.log(
+              Level.FINE,
+              "Could not update delegated targets for role {0}, skipping: {1}",
+              new Object[] {current.roleName, e.getMessage()});
+          continue;
+        }
+      }
+
+      visitedRoleNames.add(current.roleName);
+
+      // Download all targets in this role
+      for (Map.Entry<String, TargetMeta.TargetData> entry :
+          currentTargets.getSignedMeta().getTargets().entrySet()) {
+        String targetName = entry.getKey();
+        // Note: This can't actually happen due to the way GSON is setup the targets.json would
+        // fail to parse. Leaving this code in in-case we eventually allow it in de-serialization.
+        if (entry.getValue() == null) {
+          throw new TargetMetadataMissingException(targetName);
+        }
+        downloadTarget(targetName, entry.getValue());
+      }
+
+      // Push child delegations lazily
+      var delegationsMaybe = currentTargets.getSignedMeta().getDelegations();
+      if (delegationsMaybe.isPresent()) {
+        var childRolesToVisit = new ArrayList<PendingDelegation>();
+        for (DelegationRole role : delegationsMaybe.get().getRoles()) {
+          childRolesToVisit.add(PendingDelegation.ofLazy(role, currentTargets));
+        }
+        java.util.Collections.reverse(childRolesToVisit);
+        delegationsToVisit.addAll(childRolesToVisit);
+      }
+    }
+
+    if (!delegationsToVisit.isEmpty()) {
+      log.log(
+          Level.WARNING,
+          "{0} roles left to visit but max delegations ({1}) reached during target download",
+          new Object[] {delegationsToVisit.size(), MAX_DELEGATIONS});
     }
   }
 
@@ -560,6 +611,256 @@ public class Updater {
     // when persisting targets use the targetname without sha512 prefix
     // https://theupdateframework.github.io/specification/latest/index.html#fetch-target
     targetStore.writeTarget(targetName, targetBytes);
+  }
+
+  /**
+   * Check whether a target name falls within the scope of a delegation role. Per the TUF spec,
+   * roles use either {@code paths} (glob patterns) or {@code path_hash_prefixes} (hex prefix match
+   * on SHA-256 of target name), but not both.
+   */
+  @VisibleForTesting
+  boolean isTargetInRole(DelegationRole role, String targetName) {
+    List<String> paths = role.getPaths();
+    List<String> prefixes = role.getPathHashPrefixes();
+
+    boolean hasPaths = !paths.isEmpty();
+    boolean hasPrefixes = !prefixes.isEmpty();
+
+    if (!hasPaths && !hasPrefixes) {
+      return false;
+    }
+
+    // Per TUF spec, paths and path_hash_prefixes are mutually exclusive.
+    // We check whichever is present; if both are present (invalid metadata),
+    // we require both to match as a conservative choice.
+    if (hasPaths) {
+      boolean pathMatched = false;
+      for (String pattern : paths) {
+        if (matches(targetName, pattern)) {
+          pathMatched = true;
+          break;
+        }
+      }
+      if (!pathMatched) {
+        return false;
+      }
+    }
+
+    if (hasPrefixes) {
+      String targetHash =
+          Hashing.sha256().hashString(targetName, StandardCharsets.UTF_8).toString();
+      boolean hashMatched = false;
+      for (String prefix : prefixes) {
+        if (targetHash.startsWith(prefix.toLowerCase(Locale.ROOT))) {
+          hashMatched = true;
+          break;
+        }
+      }
+      if (!hashMatched) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  @VisibleForTesting
+  static boolean matches(String targetName, String pattern) {
+    // Convert TUF glob to regex
+    // * -> [^/]*
+    // ? -> [^/]
+    // everything else escaped
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < pattern.length(); i++) {
+      char c = pattern.charAt(i);
+      if (c == '*') {
+        sb.append("[^/]*");
+      } else if (c == '?') {
+        sb.append("[^/]");
+      } else if (".[]{}()\\^$+|".indexOf(c) != -1) {
+        sb.append('\\').append(c);
+      } else {
+        sb.append(c);
+      }
+    }
+    return targetName.matches(sb.toString());
+  }
+
+  /** A pending delegation to visit: either a pre-loaded top-level targets or a lazy delegation. */
+  private static class PendingDelegation {
+    final String roleName;
+    final DelegationRole role;
+    final Targets parent;
+    final Targets preloaded;
+
+    private PendingDelegation(
+        String roleName, DelegationRole role, Targets parent, Targets preloaded) {
+      this.roleName = roleName;
+      this.role = role;
+      this.parent = parent;
+      this.preloaded = preloaded;
+    }
+
+    static PendingDelegation ofLoaded(String roleName, Targets targets) {
+      return new PendingDelegation(roleName, null, null, targets);
+    }
+
+    static PendingDelegation ofLazy(DelegationRole role, Targets parent) {
+      return new PendingDelegation(role.getName(), role, parent, null);
+    }
+  }
+
+  /**
+   * Iterative preorder depth-first walk of the delegation tree, matching Python TUF's
+   * _preorder_depth_first_walk. Limits total delegations visited (not just depth) and tracks visited
+   * roles to prevent cycles. Metadata is loaded lazily when a role is popped from the stack.
+   */
+  private Optional<TargetData> findTargetData(String targetName, Targets topLevelTargets)
+      throws IOException, JsonParseException {
+    var delegationsToVisit = new ArrayList<PendingDelegation>();
+    delegationsToVisit.add(PendingDelegation.ofLoaded(RootRole.TARGETS, topLevelTargets));
+    var visitedRoleNames = new HashSet<String>();
+
+    while (visitedRoleNames.size() <= MAX_DELEGATIONS && !delegationsToVisit.isEmpty()) {
+      var current = delegationsToVisit.remove(delegationsToVisit.size() - 1);
+
+      // Skip visited roles to prevent cycles
+      if (visitedRoleNames.contains(current.roleName)) {
+        log.log(Level.FINE, "Skipping already visited role {0}", current.roleName);
+        continue;
+      }
+
+      // Load metadata lazily (only when this role is actually visited)
+      Targets currentTargets;
+      if (current.preloaded != null) {
+        currentTargets = current.preloaded;
+      } else {
+        try {
+          currentTargets = updateDelegatedTargets(current.role, current.parent);
+        } catch (SnapshotTargetMissingException | FileNotFoundException e) {
+          log.log(
+              Level.FINE,
+              "Delegated targets metadata for role {0} not found, skipping: {1}",
+              new Object[] {current.roleName, e.getMessage()});
+          continue;
+        } catch (SignatureVerificationException | RoleExpiredException e) {
+          log.log(
+              Level.FINE,
+              "Delegated targets metadata for role {0} is invalid, skipping: {1}",
+              new Object[] {current.roleName, e.getMessage()});
+          continue;
+        }
+      }
+
+      // Check if target is in current role's targets
+      TargetData data = currentTargets.getSignedMeta().getTargets().get(targetName);
+      if (data != null) {
+        return Optional.of(data);
+      }
+
+      // Mark as visited after checking targets (matches Python behavior)
+      visitedRoleNames.add(current.roleName);
+
+      // Push child delegations lazily (metadata loaded only when popped)
+      var delegationsMaybe = currentTargets.getSignedMeta().getDelegations();
+      if (delegationsMaybe.isPresent()) {
+        Delegations delegations = delegationsMaybe.get();
+        var childRolesToVisit = new ArrayList<PendingDelegation>();
+        for (DelegationRole role : delegations.getRoles()) {
+          if (!isTargetInRole(role, targetName)) {
+            continue;
+          }
+          childRolesToVisit.add(PendingDelegation.ofLazy(role, currentTargets));
+          if (role.isTerminating()) {
+            delegationsToVisit.clear();
+            break;
+          }
+        }
+        // Push in reverse so first child is on top of stack (popped first)
+        java.util.Collections.reverse(childRolesToVisit);
+        delegationsToVisit.addAll(childRolesToVisit);
+      }
+    }
+
+    if (!delegationsToVisit.isEmpty()) {
+      log.log(
+          Level.WARNING,
+          "{0} roles left to visit but max delegations ({1}) reached while searching for {2}",
+          new Object[] {delegationsToVisit.size(), MAX_DELEGATIONS, targetName});
+    }
+
+    return Optional.empty();
+  }
+
+  private Targets updateDelegatedTargets(DelegationRole role, Targets parent)
+      throws IOException, JsonParseException {
+    String roleName = role.getName();
+    SnapshotMeta.SnapshotTarget snapshotTarget =
+        trustedMetaStore.getSnapshot().getSignedMeta().getMeta().get(roleName + ".json");
+    if (snapshotTarget == null) {
+      throw new SnapshotTargetMissingException(roleName + ".json");
+    }
+
+    Optional<Targets> localTargets = trustedMetaStore.findTargets(roleName);
+    if (localTargets.isPresent()) {
+      if (localTargets.get().getSignedMeta().getVersion() == snapshotTarget.getVersion()) {
+        return localTargets.get();
+      }
+      if (localTargets.get().getSignedMeta().getVersion() > snapshotTarget.getVersion()) {
+        throw new SnapshotTargetVersionException(
+            roleName, snapshotTarget.getVersion(), localTargets.get().getSignedMeta().getVersion());
+      }
+    }
+
+    // Fetch from remote
+    var targetsResultMaybe =
+        metaFetcher.getMeta(
+            roleName,
+            snapshotTarget.getVersion(),
+            Targets.class,
+            snapshotTarget.getLengthOrDefault());
+
+    if (targetsResultMaybe.isEmpty()) {
+      throw new FileNotFoundException(roleName + ".json", metaFetcher.getSource());
+    }
+    var targetsResult = targetsResultMaybe.get();
+
+    // Verify hash
+    if (snapshotTarget.getHashes().isPresent()) {
+      verifyHashes(
+          roleName + ".json", targetsResult.getRawBytes(), snapshotTarget.getHashes().get());
+    }
+
+    // Verify against parent's delegation keys/threshold
+    Delegations parentDelegations =
+        parent
+            .getSignedMeta()
+            .getDelegations()
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "Parent targets metadata has no delegations for role: " + role.getName()));
+    verifyDelegate(
+        targetsResult.getMetaResource().getSignatures(),
+        parentDelegations.getKeys(),
+        role,
+        targetsResult.getMetaResource().getCanonicalSignedBytes());
+
+    // Check version matches snapshot
+    if (targetsResult.getMetaResource().getSignedMeta().getVersion()
+        != snapshotTarget.getVersion()) {
+      throw new SnapshotVersionMismatchException(
+          snapshotTarget.getVersion(),
+          targetsResult.getMetaResource().getSignedMeta().getVersion());
+    }
+
+    // Check expiration
+    throwIfExpired(targetsResult.getMetaResource().getSignedMeta().getExpiresAsDate());
+
+    // Persist
+    trustedMetaStore.setTargets(roleName, targetsResult.getMetaResource());
+
+    return targetsResult.getMetaResource();
   }
 
   @VisibleForTesting
