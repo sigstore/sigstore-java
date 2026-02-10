@@ -27,20 +27,22 @@ import dev.sigstore.tuf.model.Targets;
 import dev.sigstore.tuf.model.Timestamp;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -59,6 +61,9 @@ public class Updater {
   // Limit the update loop to retrieve a max of 1024 subsequent versions as expressed in 5.3.3 of
   // spec.
   private static final int MAX_UPDATES = 1024;
+  private static final int MAX_DELEGATIONS = 32;
+  private static final Set<String> RESERVED_ROLE_NAMES =
+      Set.of(RootRole.ROOT, RootRole.SNAPSHOT, RootRole.TIMESTAMP, RootRole.TARGETS);
 
   private static final Logger log = Logger.getLogger(Updater.class.getName());
 
@@ -73,6 +78,10 @@ public class Updater {
 
   // Mutable State
   private ZonedDateTime updateStartTime;
+  private boolean refreshed;
+  // In-session cache of verified delegated targets (parentName -> (roleName -> Targets)),
+  // cleared on each refresh().
+  private final Map<String, Map<String, Targets>> trustedDelegations = new HashMap<>();
 
   Updater(
       Clock clock,
@@ -95,19 +104,10 @@ public class Updater {
     return new Builder();
   }
 
-  /** Update metadata and download all targets. */
-  public void update()
-      throws IOException,
-          NoSuchAlgorithmException,
-          InvalidKeySpecException,
-          InvalidKeyException,
-          JsonParseException {
-    updateMeta();
-    downloadTargets(trustedMetaStore.getTargets());
-  }
-
-  /** Update just metadata but do not download targets. */
-  public void updateMeta() throws IOException, JsonParseException {
+  /** Refresh metadata (root → timestamp → snapshot → targets) without downloading targets. */
+  public void refresh() throws IOException, JsonParseException {
+    refreshed = false;
+    trustedDelegations.clear();
     updateRoot();
     var oldTimestamp = trustedMetaStore.findTimestamp();
     updateTimestamp();
@@ -119,17 +119,23 @@ public class Updater {
       updateSnapshot();
       updateTargets();
     }
+    refreshed = true;
   }
 
   /**
    * Download a single target defined in targets. Will not re-download a target that is already
-   * cached locally. Does not handle delegated targets.
+   * cached locally. Supports delegated targets. If {@link #refresh()} has not been called yet on
+   * this updater, it will be called implicitly.
    */
   public void downloadTarget(String targetName) throws IOException, JsonParseException {
-    var targetData = trustedMetaStore.getTargets().getSignedMeta().getTargets().get(targetName);
-    if (targetData == null) {
+    if (!refreshed) {
+      refresh();
+    }
+    var targetDataMaybe = findTargetData(targetName, trustedMetaStore.getTargets());
+    if (targetDataMaybe.isEmpty()) {
       throw new TargetMetadataMissingException(targetName);
     }
+    TargetData targetData = targetDataMaybe.get();
     if (targetStore.hasTarget(targetName)) {
       byte[] target = targetStore.readTarget(targetName);
       // TODO: Using exceptions for control flow here, we should have something that returns a true
@@ -260,6 +266,9 @@ public class Updater {
       Role role,
       byte[] verificationMaterial)
       throws IOException {
+    if (role.getThreshold() < 1) {
+      throw new TufException("Role threshold must be at least 1, got: " + role.getThreshold());
+    }
     // use set to not count the same key multiple times towards the threshold.
     var goodSigs = new HashSet<>(role.getKeyids().size() * 4 / 3);
     // role.getKeyIds() defines the keys allowed to sign for this role.
@@ -507,39 +516,14 @@ public class Updater {
     trustedMetaStore.setTargets(targetsResult.getMetaResource());
   }
 
-  void downloadTargets(Targets targets)
-      throws IOException,
-          TargetMetadataMissingException,
-          FileNotFoundException,
-          JsonParseException {
-    // Skip #7 and go straight to downloading targets. It looks like delegations were removed from
-    // sigstore TUF data.
-    // {@see https://github.com/sigstore/sigstore/issues/562}
-    for (Map.Entry<String, TargetMeta.TargetData> entry :
-        targets.getSignedMeta().getTargets().entrySet()) {
-      String targetName = entry.getKey();
-      // 8) If target is missing metadata fail.
-      // Note: This can't actually happen due to the way GSON is setup the targets.json would fail
-      // to parse. Leaving this code in in-case we eventually allow it in de-serialization.
-      if (entry.getValue() == null) {
-        throw new TargetMetadataMissingException(targetName);
-      }
-      TargetMeta.TargetData targetData = entry.getValue();
-      downloadTarget(targetName, targetData);
-    }
-  }
-
   void downloadTarget(String targetName, TargetData targetData) throws IOException {
     var calculatedName = targetName;
     var calculatedPath = "";
-    // if target name includes directories then we have to process the path
-    if (targetName.contains("/")) {
-      var targetPath = Paths.get(targetName);
-      calculatedName = targetPath.getFileName().toString();
-      calculatedPath = targetPath.getParent().toString();
-      if (!calculatedPath.endsWith("/")) {
-        calculatedPath = calculatedPath + "/";
-      }
+    // TUF target paths are always '/'-separated URL paths, never OS paths.
+    int lastSlash = targetName.lastIndexOf('/');
+    if (lastSlash != -1) {
+      calculatedName = targetName.substring(lastSlash + 1);
+      calculatedPath = targetName.substring(0, lastSlash + 1);
     }
     // 9) Download target up to length specified in bytes. verify against hash.
     String versionedTargetName;
@@ -560,6 +544,266 @@ public class Updater {
     // when persisting targets use the targetname without sha512 prefix
     // https://theupdateframework.github.io/specification/latest/index.html#fetch-target
     targetStore.writeTarget(targetName, targetBytes);
+  }
+
+  /**
+   * Check whether a target name falls within the scope of a delegation role. Per the TUF spec,
+   * roles use either {@code paths} (glob patterns) or {@code path_hash_prefixes} (hex prefix match
+   * on SHA-256 of target name), but not both.
+   */
+  @VisibleForTesting
+  boolean isTargetInRole(DelegationRole role, String targetName) {
+    List<String> paths = role.getPaths();
+    List<String> prefixes = role.getPathHashPrefixes();
+
+    boolean hasPaths = !paths.isEmpty();
+    boolean hasPrefixes = !prefixes.isEmpty();
+
+    if (hasPaths && hasPrefixes) {
+      throw new TufException(
+          "Delegation role cannot specify both paths and path_hash_prefixes: " + role.getName());
+    }
+
+    if (hasPaths) {
+      for (String pattern : paths) {
+        if (matches(targetName, pattern)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (hasPrefixes) {
+      String targetHash =
+          Hashing.sha256().hashString(targetName, StandardCharsets.UTF_8).toString();
+      for (String prefix : prefixes) {
+        if (targetHash.startsWith(prefix.toLowerCase(Locale.ROOT))) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    return false;
+  }
+
+  @VisibleForTesting
+  static boolean matches(String targetName, String pattern) {
+    // Convert TUF glob to regex
+    // * -> [^/]*
+    // ? -> [^/]
+    // everything else escaped
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < pattern.length(); i++) {
+      char c = pattern.charAt(i);
+      if (c == '*') {
+        sb.append("[^/]*");
+      } else if (c == '?') {
+        sb.append("[^/]");
+      } else if (".[]{}()\\^$+|".indexOf(c) != -1) {
+        sb.append('\\').append(c);
+      } else {
+        sb.append(c);
+      }
+    }
+    return targetName.matches(sb.toString());
+  }
+
+  private static class PendingDelegation {
+    final DelegationRole role;
+    final String parentName;
+    final Map<String, Key> parentKeys;
+
+    PendingDelegation(DelegationRole role, String parentName, Map<String, Key> parentKeys) {
+      this.role = role;
+      this.parentName = parentName;
+      this.parentKeys = parentKeys;
+    }
+  }
+
+  /**
+   * Iterative preorder depth-first walk of the delegation tree, matching Python TUF's
+   * _preorder_depth_first_walk. Limits total delegations visited (not just depth) and tracks
+   * visited roles to prevent cycles. Metadata is loaded lazily when a role is popped from the
+   * stack.
+   */
+  private Optional<TargetData> findTargetData(String targetName, Targets topLevelTargets)
+      throws IOException, JsonParseException {
+    var visitedRoleNames = new HashSet<String>();
+    var delegationsToVisit = new ArrayList<PendingDelegation>();
+
+    // Check top-level targets first, then seed the stack with its delegations
+    TargetData topData = topLevelTargets.getSignedMeta().getTargets().get(targetName);
+    if (topData != null) {
+      return Optional.of(topData);
+    }
+    visitedRoleNames.add(RootRole.TARGETS);
+    pushChildDelegations(targetName, RootRole.TARGETS, topLevelTargets, delegationsToVisit);
+
+    while (visitedRoleNames.size() < MAX_DELEGATIONS && !delegationsToVisit.isEmpty()) {
+      var current = delegationsToVisit.remove(delegationsToVisit.size() - 1);
+      String roleName = current.role.getName();
+
+      // Skip visited roles to prevent cycles
+      if (visitedRoleNames.contains(roleName)) {
+        continue;
+      }
+
+      Targets currentTargets =
+          updateDelegatedTargets(current.role, current.parentName, current.parentKeys);
+
+      // Check if target is in current role's targets
+      TargetData data = currentTargets.getSignedMeta().getTargets().get(targetName);
+      if (data != null) {
+        return Optional.of(data);
+      }
+
+      // Mark as visited after checking targets (matches Python behavior)
+      visitedRoleNames.add(roleName);
+      pushChildDelegations(targetName, roleName, currentTargets, delegationsToVisit);
+    }
+
+    if (!delegationsToVisit.isEmpty()) {
+      log.log(
+          Level.WARNING,
+          () ->
+              String.format(
+                  Locale.ROOT,
+                  "TUF: %d roles left to visit but max delegations (%d) reached while searching for %s",
+                  delegationsToVisit.size(),
+                  MAX_DELEGATIONS,
+                  targetName));
+    }
+
+    return Optional.empty();
+  }
+
+  /**
+   * Pushes child delegations from {@code targets} onto {@code delegationsToVisit} for roles that
+   * match {@code targetName}. Pushes in reverse order so the first matching role is on top of the
+   * stack. Clears the stack if a terminating role is encountered.
+   */
+  private void pushChildDelegations(
+      String targetName,
+      String parentName,
+      Targets targets,
+      List<PendingDelegation> delegationsToVisit)
+      throws JsonParseException {
+    var delegationsMaybe = targets.getSignedMeta().getDelegations();
+    if (delegationsMaybe.isEmpty()) {
+      return;
+    }
+    var delegations = delegationsMaybe.get();
+    var children = new ArrayList<PendingDelegation>();
+    for (DelegationRole role : delegations.getRoles()) {
+      if (role.getName().isEmpty()
+          || RESERVED_ROLE_NAMES.contains(role.getName().toLowerCase(Locale.ROOT))) {
+        throw new TufException(
+            "Delegated role cannot be empty or use reserved top-level role name: "
+                + role.getName());
+      }
+      if (!isTargetInRole(role, targetName)) {
+        continue;
+      }
+      children.add(new PendingDelegation(role, parentName, delegations.getKeys()));
+      if (role.isTerminating()) {
+        delegationsToVisit.clear();
+        break;
+      }
+    }
+    // Push in reverse so first child is on top of stack (popped first)
+    Collections.reverse(children);
+    delegationsToVisit.addAll(children);
+  }
+
+  private Targets updateDelegatedTargets(
+      DelegationRole role, String parentName, Map<String, Key> parentKeys)
+      throws IOException, JsonParseException {
+    String roleName = role.getName();
+
+    // Return immediately if already verified for this parent in this session
+    Targets cachedForParent = trustedDelegations.getOrDefault(parentName, Map.of()).get(roleName);
+    if (cachedForParent != null) {
+      return cachedForParent;
+    }
+
+    SnapshotMeta.SnapshotTarget snapshotTarget =
+        trustedMetaStore.getSnapshot().getSignedMeta().getMeta().get(roleName + ".json");
+    if (snapshotTarget == null) {
+      throw new SnapshotTargetMissingException(roleName + ".json");
+    }
+
+    try {
+      Optional<Targets> localTargets = trustedMetaStore.findTargets(roleName);
+      if (localTargets.isPresent()) {
+        Targets local = localTargets.get();
+        int localVersion = local.getSignedMeta().getVersion();
+        if (localVersion == snapshotTarget.getVersion()) {
+          // Re-verify signatures and expiry before trusting cached metadata, consistent with go-tuf
+          // and python-tuf. Hash re-verification requires raw bytes not available from the
+          // deserialized cache; hashes were verified on first download.
+          verifyDelegate(local.getSignatures(), parentKeys, role, local.getCanonicalSignedBytes());
+          throwIfExpired(local.getSignedMeta().getExpiresAsDate());
+          trustedDelegations.computeIfAbsent(parentName, k -> new HashMap<>()).put(roleName, local);
+          return local;
+        }
+      }
+    } catch (IOException | JsonParseException | TufException e) {
+      log.log(
+          Level.FINE,
+          () ->
+              String.format(
+                  Locale.ROOT,
+                  "TUF: Cached delegated targets for role %s failed verification, re-fetching: %s",
+                  roleName,
+                  e.getMessage()));
+      // fall through to fetch from remote
+    }
+
+    // Fetch from remote
+    var targetsResultMaybe =
+        metaFetcher.getMeta(
+            roleName,
+            snapshotTarget.getVersion(),
+            Targets.class,
+            snapshotTarget.getLengthOrDefault());
+
+    if (targetsResultMaybe.isEmpty()) {
+      throw new FileNotFoundException(roleName + ".json", metaFetcher.getSource());
+    }
+    var targetsResult = targetsResultMaybe.get();
+
+    // Verify hash
+    if (snapshotTarget.getHashes().isPresent()) {
+      verifyHashes(
+          roleName + ".json", targetsResult.getRawBytes(), snapshotTarget.getHashes().get());
+    }
+
+    // Verify against parent's delegation keys/threshold
+    verifyDelegate(
+        targetsResult.getMetaResource().getSignatures(),
+        parentKeys,
+        role,
+        targetsResult.getMetaResource().getCanonicalSignedBytes());
+
+    // Check version matches snapshot
+    if (targetsResult.getMetaResource().getSignedMeta().getVersion()
+        != snapshotTarget.getVersion()) {
+      throw new SnapshotVersionMismatchException(
+          snapshotTarget.getVersion(),
+          targetsResult.getMetaResource().getSignedMeta().getVersion());
+    }
+
+    // Check expiration
+    throwIfExpired(targetsResult.getMetaResource().getSignedMeta().getExpiresAsDate());
+
+    // Persist and add to trusted set
+    trustedMetaStore.setTargets(roleName, targetsResult.getMetaResource());
+    trustedDelegations
+        .computeIfAbsent(parentName, k -> new HashMap<>())
+        .put(roleName, targetsResult.getMetaResource());
+
+    return targetsResult.getMetaResource();
   }
 
   @VisibleForTesting
