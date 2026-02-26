@@ -18,6 +18,7 @@ package dev.sigstore.cli;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.SigningConfigProvider;
 import dev.sigstore.TrustedRootProvider;
+import dev.sigstore.bundle.Bundle;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.TokenStringOidcClient;
 import dev.sigstore.tuf.RootProvider;
@@ -89,6 +90,12 @@ public class Sign implements Callable<Integer> {
       required = false)
   Path workingDirectory;
 
+  @Option(
+      names = {"--in-toto"},
+      description = "treat the artifact as an in-toto statement payload",
+      required = false)
+  boolean inToto;
+
   @Override
   public Integer call() throws Exception {
     if (workingDirectory != null) {
@@ -151,7 +158,12 @@ public class Sign implements Callable<Integer> {
           OidcClients.of(TokenStringOidcClient.from(identityToken)));
     }
     var signer = signerBuilder.build();
-    var bundle = signer.signFile(artifact);
+    Bundle bundle;
+    if (inToto) {
+      bundle = signer.attest(Files.readString(artifact, StandardCharsets.UTF_8));
+    } else {
+      bundle = signer.signFile(artifact);
+    }
     Files.write(bundleFile, bundle.toJson().getBytes(StandardCharsets.UTF_8));
     return 0;
   }
