@@ -35,8 +35,9 @@ application {
 
 distributions.main {
     contents {
-        from("tuf-cli.xfails") {
+        from("tuf-cli-server.xfails") {
             into("bin")
+            rename { "tuf-cli.xfails" }
         }
     }
 }

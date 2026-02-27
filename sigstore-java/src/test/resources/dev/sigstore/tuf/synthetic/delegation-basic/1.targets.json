@@ -1,0 +1,39 @@
+{
+ "signatures": [
+  {
+   "keyid": "fe1f0eb51412ccc170809b699ad3be8aae5dd43197f4f137de0faa9719d64fe0",
+   "sig": "30450220652c8d595de0212f12a384602a6c52e19abc427b01e171b60e3526999acbd158022100ee65b88ca9f792814d8c2bdc344a07b94bcc0270c3dfee1ecbb7ac77fb1c67cc"
+  }
+ ],
+ "signed": {
+  "_type": "targets",
+  "delegations": {
+   "keys": {
+    "f04bb0fd5e31cdfb17897c396ae0e1bf401ede45c40db0ac9fa7f0c92b4ce51b": {
+     "keytype": "ecdsa",
+     "keyval": {
+      "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1SXRpsjv6j7f00wCHICfD0g4GJGr\nHaZtdQkAthvCqaey56+jJnDF/4dHtuLjRHf6h3tBWNLkqNan7hMj1h7V0Q==\n-----END PUBLIC KEY-----\n"
+     },
+     "scheme": "ecdsa-sha2-nistp256"
+    }
+   },
+   "roles": [
+    {
+     "keyids": [
+      "f04bb0fd5e31cdfb17897c396ae0e1bf401ede45c40db0ac9fa7f0c92b4ce51b"
+     ],
+     "name": "release",
+     "paths": [
+      "release/*"
+     ],
+     "terminating": false,
+     "threshold": 1
+    }
+   ]
+  },
+  "expires": "2030-01-01T00:00:00Z",
+  "spec_version": "1.0",
+  "targets": {},
+  "version": 1
+ }
+}
