@@ -3,7 +3,7 @@
 
 plugins {
     id("build-logic.root-build")
-    id("com.gradleup.nmcp.aggregation") version "1.4.0"
+    id("com.gradleup.nmcp.aggregation") version "1.4.4"
     // The Kotlin Gradle plugin was loaded multiple times in different subprojects, which is not supported and may break the build.
     `embedded-kotlin` apply false
 }
