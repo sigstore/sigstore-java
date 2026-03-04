@@ -112,3 +112,45 @@ Sigstore Java and Sigstore Maven Plugin are signed with both PGP and sigstore.
 | Version Range | Issuer | Signer Id |
 | ------------- | --------- | ------ |
 | 1.0.0 - 2.X.X | https://token.actions.githubusercontent.com | https://github.com/sigstore/sigstore-java/.github/workflows/release-sigstore-java-from-tag.yaml@refs/tags/X.X.X |
+
+## Troubleshooting
+
+To ensure maximum compatibility with the public Sigstore infrastructure,
+ensure you are using the latest release of sigstore-java.
+
+### Common issues
+
+1. ```
+   Cannot verify bundles with timestamp verification material
+   ```
+   means an upgrade is necessary to verify this signature bundle as 
+   Rekor v2 log entries require external timestamps and can only be
+   verified by sigstore-java 2.0.0 or higher.
+1. ```
+   Cannot verify DSSE signature based bundles
+   ```
+   DSSE validation was introduced in sigstore-java 1.3.0, so older
+   versions may throw this error.
+1. ```
+   Returned log entry was inconsistent with request
+   ```
+   While this can be a legitimate error stemming from misconfigured
+   infrastructure, it can also happen due to irregularities in handling
+   line endings (`\r\n`) on Windows for sigstore-java 1.x.x. Upgrading
+   to 2.0.0 or higher should solve this problem.
+1. Offline verification is unsupported. By default, sigstore-java
+   checks for updates of the trusted key material when verifying and
+   you may encounter errors like:
+   ```
+   TUF repo failed to update
+   ```
+   While this is not recommended when using public sigstore infrastructure, 
+   you can configure the KeylessVerifier to run in "offline" mode by
+   programmatically configuring a `SigstoreTrustedRoot` (cached or custom) to
+   bypass querying the TUF repository.
+1. Offline signing is unsupported and there are no workarounds.
+
+### My problem is something else
+
+Please [open an issue](https://github.com/sigstore/sigstore-java/issues/new) or ask
+in the [#java](https://app.slack.com/client/T01CP44M5K9/C03239XUL92) slack channel.
