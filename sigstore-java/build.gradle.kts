@@ -34,7 +34,7 @@ dependencies {
     runtimeOnly("io.grpc:grpc-netty-shaded")
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
 
-    implementation("commons-codec:commons-codec:1.18.0")
+    implementation("commons-codec:commons-codec:1.21.0")
     implementation("com.google.code.gson:gson:2.13.2")
     implementation("org.bouncycastle:bcutil-jdk18on:1.83")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.83")
