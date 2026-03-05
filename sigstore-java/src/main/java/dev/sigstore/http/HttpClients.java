@@ -18,14 +18,17 @@ package dev.sigstore.http;
 import com.google.api.client.http.HttpBackOffIOExceptionHandler;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpTransport;
-import com.google.api.client.http.apache.v2.ApacheHttpTransport;
+import com.google.api.client.http.apache.v5.Apache5HttpTransport;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.ObjectParser;
 import dev.sigstore.forbidden.SuppressForbidden;
 import javax.annotation.Nullable;
-import org.apache.http.HttpHeaders;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
+import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.util.TimeValue;
 
 /** HttpClients generates Google Http Client objects from configuration. */
 public class HttpClients {
@@ -36,11 +39,27 @@ public class HttpClients {
    * you need to also configure the response parser}.
    */
   public static HttpTransport newHttpTransport(HttpParams httpParams) {
-    HttpClientBuilder hcb = ApacheHttpTransport.newDefaultHttpClientBuilder();
     if (httpParams.getAllowInsecureConnections()) {
-      hcb.setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE);
+      var connManager =
+          PoolingHttpClientConnectionManagerBuilder.create()
+              .setSSLSocketFactory(
+                  SSLConnectionSocketFactoryBuilder.create()
+                      .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                      .build())
+              .setMaxConnTotal(200)
+              .setMaxConnPerRoute(20)
+              .setDefaultConnectionConfig(
+                  ConnectionConfig.custom()
+                      .setTimeToLive(TimeValue.NEG_ONE_MILLISECOND)
+                      .setValidateAfterInactivity(TimeValue.NEG_ONE_MILLISECOND)
+                      .build())
+              .build();
+      return new Apache5HttpTransport(
+          Apache5HttpTransport.newDefaultHttpClientBuilder()
+              .setConnectionManager(connManager)
+              .build());
     }
-    return new ApacheHttpTransport(hcb.build());
+    return new Apache5HttpTransport(Apache5HttpTransport.newDefaultHttpClientBuilder().build());
   }
 
   /** Create a new get requests with the httpParams applied and retries. */

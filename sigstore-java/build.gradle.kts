@@ -16,7 +16,7 @@ dependencies {
     annotationProcessor("org.immutables:value:2.12.1")
 
     implementation(platform("com.google.http-client:google-http-client-bom:2.1.0"))
-    implementation("com.google.http-client:google-http-client-apache-v2")
+    implementation("com.google.http-client:google-http-client-apache-v5")
     implementation("com.google.http-client:google-http-client-gson")
 
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
