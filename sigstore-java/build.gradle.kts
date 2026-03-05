@@ -16,7 +16,7 @@ dependencies {
     annotationProcessor("org.immutables:value:2.12.2")
 
     implementation(platform("com.google.http-client:google-http-client-bom:2.1.1"))
-    implementation("com.google.http-client:google-http-client-apache-v2")
+    implementation("com.google.http-client:google-http-client-apache-v5")
     implementation("com.google.http-client:google-http-client-gson")
 
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
@@ -34,7 +34,6 @@ dependencies {
     runtimeOnly("io.grpc:grpc-netty-shaded")
     compileOnly("org.apache.tomcat:annotations-api:6.0.53") // java 9+ only
 
-    implementation("commons-codec:commons-codec:1.18.0")
     implementation("com.google.code.gson:gson:2.14.0")
     implementation("org.bouncycastle:bcutil-jdk18on:1.84")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.84")
