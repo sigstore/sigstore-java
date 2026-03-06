@@ -47,7 +47,7 @@ public class Refresh implements Callable<Integer> {
             .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(metadataUrl)))
             .setClock(clock)
             .build();
-    tuf.updateMeta();
+    tuf.refresh();
     return 0;
   }
 }
