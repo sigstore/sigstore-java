@@ -65,9 +65,10 @@ public class MetaFetcher {
   }
 
   private static String getFileName(String role, @Nullable Integer version) {
+    String encodedRole = TufNames.encode(role);
     return version == null
-        ? role + ".json"
-        : String.format(Locale.ROOT, "%d.%s.json", version, role);
+        ? encodedRole + ".json"
+        : String.format(Locale.ROOT, "%d.%s.json", version, encodedRole);
   }
 
   <T extends SignedTufMeta<? extends TufMeta>> Optional<MetaFetchResult<T>> getMeta(
