@@ -167,8 +167,8 @@ public abstract class FulcioCertificateMatcher implements CertificateMatcher {
             "Fulcio certificates SAN must be of type rfc822 or URI");
       }
       return (String) san.get(1);
-    } catch (CertificateParsingException cpe) {
-      throw new CertificateParsingException("Could not parse SAN from fulcio certificate", cpe);
+    } catch (CertificateParsingException | RuntimeException e) {
+      throw new CertificateParsingException("Could not parse SAN from fulcio certificate", e);
     }
   }
 
