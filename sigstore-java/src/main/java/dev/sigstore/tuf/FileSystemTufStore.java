@@ -23,8 +23,6 @@ import dev.sigstore.tuf.model.*;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -69,26 +67,22 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
 
   @Override
   public void writeTarget(String targetName, byte[] targetContents) throws IOException {
-    var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
-    Files.write(targetsDir.resolve(encoded), targetContents);
+    Files.write(targetsDir.resolve(TufNames.encode(targetName)), targetContents);
   }
 
   @Override
   public byte[] readTarget(String targetName) throws IOException {
-    var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
-    return Files.readAllBytes(targetsDir.resolve(encoded));
+    return Files.readAllBytes(targetsDir.resolve(TufNames.encode(targetName)));
   }
 
   @Override
   public InputStream getTargetInputSteam(String targetName) throws IOException {
-    var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
-    return Files.newInputStream(targetsDir.resolve(encoded));
+    return Files.newInputStream(targetsDir.resolve(TufNames.encode(targetName)));
   }
 
   @Override
   public boolean hasTarget(String targetName) throws IOException {
-    var encoded = URLEncoder.encode(targetName, StandardCharsets.UTF_8);
-    return Files.isRegularFile(targetsDir.resolve(encoded));
+    return Files.isRegularFile(targetsDir.resolve(TufNames.encode(targetName)));
   }
 
   @Override
@@ -99,7 +93,7 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   @Override
   public <T extends SignedTufMeta<?>> Optional<T> readMeta(String roleName, Class<T> tClass)
       throws IOException, JsonParseException {
-    Path roleFile = repoBaseDir.resolve(roleName + ".json");
+    Path roleFile = repoBaseDir.resolve(TufNames.encode(roleName) + ".json");
     if (!roleFile.toFile().exists()) {
       return Optional.empty();
     }
@@ -107,15 +101,15 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   }
 
   <T extends SignedTufMeta<?>> void storeRole(String roleName, T role) throws IOException {
-    try (BufferedWriter fileWriter =
-        Files.newBufferedWriter(repoBaseDir.resolve(roleName + ".json"))) {
+    Path roleFile = repoBaseDir.resolve(TufNames.encode(roleName) + ".json");
+    try (BufferedWriter fileWriter = Files.newBufferedWriter(roleFile)) {
       GSON.get().toJson(role, fileWriter);
     }
   }
 
   @Override
   public void clearMeta(String role) throws IOException {
-    Path metaFile = repoBaseDir.resolve(role + ".json");
+    Path metaFile = repoBaseDir.resolve(TufNames.encode(role) + ".json");
     if (Files.isRegularFile(metaFile)) {
       Files.delete(metaFile);
     }
