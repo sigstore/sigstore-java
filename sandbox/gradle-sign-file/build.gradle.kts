@@ -21,14 +21,12 @@ dependencies {
 val hello by tasks.registering(WriteProperties::class) {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Generates a sample $name.properties file to sign"
-    outputFile = layout.buildDirectory.file(
-        "props/$name.properties"
-    ).get().asFile
+    destinationFile.set(layout.buildDirectory.file("props/$name.properties"))
     property("hello", "world")
 }
 
 val signFile by tasks.registering(SigstoreSignFilesTask::class) {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Signs file via Sigstore"
-    signFile(hello.map { it.outputFile })
+    signFile(hello.map { it.destinationFile.get().asFile })
 }
