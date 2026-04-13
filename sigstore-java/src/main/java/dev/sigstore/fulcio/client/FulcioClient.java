@@ -15,9 +15,16 @@
  */
 package dev.sigstore.fulcio.client;
 
+import dev.sigstore.fulcio.v2.CertificateChain;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateParsingException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 
 /** A client to communicate with a fulcio service instance. */
 public interface FulcioClient {
@@ -26,4 +33,20 @@ public interface FulcioClient {
 
   CertPath signingCertificate(CertificateRequest request)
       throws InterruptedException, CertificateException;
+
+  static CertPath decodeCerts(CertificateChain certChain) throws CertificateException {
+    var certificateFactory = CertificateFactory.getInstance("X.509");
+    var certs = new ArrayList<X509Certificate>();
+    if (certChain.getCertificatesCount() == 0) {
+      throw new CertificateParsingException(
+          "no valid PEM certificates were found in response from Fulcio");
+    }
+    for (var cert : certChain.getCertificatesList()) {
+      certs.add(
+          (X509Certificate)
+              certificateFactory.generateCertificate(
+                  new ByteArrayInputStream(cert.getBytes(StandardCharsets.UTF_8))));
+    }
+    return certificateFactory.generateCertPath(certs);
+  }
 }

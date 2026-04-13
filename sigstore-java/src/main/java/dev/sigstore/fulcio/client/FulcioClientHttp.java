@@ -21,11 +21,9 @@ import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.SIGNED_C
 import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.util.Preconditions;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.fulcio.v2.CertificateChain;
 import dev.sigstore.fulcio.v2.CreateSigningCertificateRequest;
 import dev.sigstore.fulcio.v2.PublicKey;
 import dev.sigstore.fulcio.v2.PublicKeyRequest;
@@ -34,16 +32,10 @@ import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.trustroot.Service;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.CertificateParsingException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Locale;
 
@@ -132,17 +124,15 @@ public class FulcioClientHttp implements FulcioClient {
       httpRequest.getHeaders().set("Accept", "application/json");
       httpRequest.getHeaders().set("Content-Type", "application/json");
       httpRequest.getHeaders().set("Authorization", "Bearer " + request.getIdToken());
+      httpRequest.setThrowExceptionOnExecuteError(false);
 
       var resp = httpRequest.execute();
+      responseJson = resp.parseAsString();
       if (resp.getStatusCode() != 200) {
         throw new CertificateException(
             String.format(
-                Locale.ROOT,
-                "bad response from fulcio @ '%s' : %s",
-                endpoint,
-                resp.parseAsString()));
+                Locale.ROOT, "bad response from fulcio @ '%s' : %s", endpoint, responseJson));
       }
-      responseJson = resp.parseAsString();
     } catch (IOException e) {
       throw new CertificateException("Failed to request signing certificate from fulcio", e);
     }
@@ -162,23 +152,6 @@ public class FulcioClientHttp implements FulcioClient {
       throw new CertificateException("No certificate was found in response from fulcio");
     }
 
-    return decodeCerts(signingCert.getSignedCertificateEmbeddedSct().getChain());
-  }
-
-  @VisibleForTesting
-  CertPath decodeCerts(CertificateChain certChain) throws CertificateException {
-    var certificateFactory = CertificateFactory.getInstance("X.509");
-    var certs = new ArrayList<X509Certificate>();
-    if (certChain.getCertificatesCount() == 0) {
-      throw new CertificateParsingException(
-          "no valid PEM certificates were found in response from Fulcio");
-    }
-    for (var cert : certChain.getCertificatesList()) {
-      certs.add(
-          (X509Certificate)
-              certificateFactory.generateCertificate(
-                  new ByteArrayInputStream(cert.getBytes(StandardCharsets.UTF_8))));
-    }
-    return certificateFactory.generateCertPath(certs);
+    return FulcioClient.decodeCerts(signingCert.getSignedCertificateEmbeddedSct().getChain());
   }
 }
