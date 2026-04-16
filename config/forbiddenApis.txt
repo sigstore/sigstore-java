@@ -1,3 +1,5 @@
 com.google.protobuf.util.JsonFormat#parser() @ Use dev.sigstore.json.ProtoJson#parser() instead
 dev.sigstore.http.HttpClients#newHttpTransport(dev.sigstore.http.HttpParams) @ Use dev.sigstore.http.HttpClients#newRequestFactory(...) instead
 com.google.gson.GsonBuilder @ Use dev.sigstore.json.GsonSupplier.GSON instead
+java.net.URI#resolve(java.lang.String) @ Use dev.sigstore.http.URIFormat#appendPath(java.net.URI, java.lang.String) instead
+java.net.URI#resolve(java.net.URI) @ Use dev.sigstore.http.URIFormat#appendPath(java.net.URI, java.lang.String) instead
