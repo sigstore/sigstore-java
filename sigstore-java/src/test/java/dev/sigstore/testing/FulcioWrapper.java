@@ -55,6 +55,10 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
     return Service.of(URI.create("http://localhost:5554"), 1);
   }
 
+  public Service getHttpService() {
+    return Service.of(URI.create("http://localhost:5555"), 1);
+  }
+
   public CertPath getTrustBundle() throws CertificateException, IOException, InterruptedException {
     HttpRequest req =
         HttpRequest.newBuilder()

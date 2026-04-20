@@ -18,10 +18,8 @@ package dev.sigstore.fulcio.client;
 import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.SIGNED_CERTIFICATE_DETACHED_SCT;
 
 import com.google.api.client.util.Preconditions;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import dev.sigstore.fulcio.v2.CAGrpc;
-import dev.sigstore.fulcio.v2.CertificateChain;
 import dev.sigstore.fulcio.v2.CreateSigningCertificateRequest;
 import dev.sigstore.fulcio.v2.Credentials;
 import dev.sigstore.fulcio.v2.PublicKey;
@@ -29,14 +27,9 @@ import dev.sigstore.fulcio.v2.PublicKeyRequest;
 import dev.sigstore.http.GrpcChannels;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.trustroot.Service;
-import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.CertificateParsingException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
@@ -125,25 +118,9 @@ public class FulcioClientGrpc implements FulcioClient {
       if (certs.getCertificateCase() == SIGNED_CERTIFICATE_DETACHED_SCT) {
         throw new CertificateException("Detached SCTs are not supported");
       }
-      return decodeCerts(certs.getSignedCertificateEmbeddedSct().getChain());
+      return FulcioClient.decodeCerts(certs.getSignedCertificateEmbeddedSct().getChain());
     } finally {
       channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
     }
-  }
-
-  @VisibleForTesting
-  CertPath decodeCerts(CertificateChain certChain) throws CertificateException {
-    var certificateFactory = CertificateFactory.getInstance("X.509");
-    var certs = new ArrayList<X509Certificate>();
-    if (certChain.getCertificatesCount() == 0) {
-      throw new CertificateParsingException(
-          "no valid PEM certificates were found in response from Fulcio");
-    }
-    for (var cert : certChain.getCertificatesList().asByteStringList()) {
-      certs.add(
-          (X509Certificate)
-              certificateFactory.generateCertificate(new ByteArrayInputStream(cert.toByteArray())));
-    }
-    return certificateFactory.generateCertPath(certs);
   }
 }
