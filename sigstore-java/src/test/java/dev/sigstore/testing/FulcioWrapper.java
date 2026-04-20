@@ -17,6 +17,7 @@ package dev.sigstore.testing;
 
 import com.google.gson.Gson;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.http.URIFormat;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;
@@ -56,7 +57,10 @@ public class FulcioWrapper implements BeforeEachCallback, AfterEachCallback, Par
 
   public CertPath getTrustBundle() throws CertificateException, IOException, InterruptedException {
     HttpRequest req =
-        HttpRequest.newBuilder().uri(getURI().resolve("/api/v2/trustBundle")).GET().build();
+        HttpRequest.newBuilder()
+            .uri(URIFormat.appendPath(getURI(), "/api/v2/trustBundle"))
+            .GET()
+            .build();
     HttpResponse<String> response = HttpClient.newHttpClient().send(req, BodyHandlers.ofString());
 
     TrustBundle tb = new Gson().fromJson(response.body(), TrustBundle.class);

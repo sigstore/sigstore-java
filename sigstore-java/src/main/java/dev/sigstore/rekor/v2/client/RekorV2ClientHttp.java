@@ -24,6 +24,7 @@ import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
+import dev.sigstore.http.URIFormat;
 import dev.sigstore.proto.rekor.v2.CreateEntryRequest;
 import dev.sigstore.proto.rekor.v2.DSSERequestV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
@@ -88,7 +89,7 @@ public class RekorV2ClientHttp implements RekorV2Client {
   }
 
   private RekorEntry putEntry(CreateEntryRequest request) throws IOException, RekorParseException {
-    URI rekorPutEndpoint = uri.resolve(REKOR_ENTRIES_PATH);
+    URI rekorPutEndpoint = URIFormat.appendPath(uri, REKOR_ENTRIES_PATH);
 
     String jsonPayload = JsonFormat.printer().print(request);
 

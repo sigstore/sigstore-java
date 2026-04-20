@@ -15,6 +15,7 @@
  */
 package dev.sigstore.http;
 
+import dev.sigstore.forbidden.SuppressForbidden;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -64,6 +65,7 @@ public final class URIFormat {
    * @param path the path segment to append (e.g., "users" or "/users").
    * @return a new URI with the path appended (e.g., "http://example.com/api/users").
    */
+  @SuppressForbidden(reason = "URI#resolve")
   public static URI appendPath(URI base, String path) {
     String relativePath = path.replaceAll("^/+", "");
 

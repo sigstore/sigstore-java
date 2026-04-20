@@ -25,6 +25,7 @@ import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.util.Preconditions;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
+import dev.sigstore.http.URIFormat;
 import dev.sigstore.json.JsonParseException;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
@@ -79,7 +80,7 @@ public class RekorClientHttp implements RekorClient {
   @Override
   public RekorResponse putEntry(HashedRekordRequest hashedRekordRequest)
       throws IOException, RekorParseException {
-    URI rekorPutEndpoint = uri.resolve(REKOR_ENTRIES_PATH);
+    URI rekorPutEndpoint = URIFormat.appendPath(uri, REKOR_ENTRIES_PATH);
 
     HttpRequest req =
         HttpClients.newRequestFactory(httpParams)
@@ -100,7 +101,7 @@ public class RekorClientHttp implements RekorClient {
               resp.parseAsString()));
     }
 
-    URI rekorEntryUri = uri.resolve(resp.getHeaders().getLocation());
+    URI rekorEntryUri = URIFormat.appendPath(uri, resp.getHeaders().getLocation());
     String entry = resp.parseAsString();
     return RekorResponse.newRekorResponse(rekorEntryUri, entry);
   }
@@ -113,7 +114,7 @@ public class RekorClientHttp implements RekorClient {
 
   @Override
   public Optional<RekorEntry> getEntry(String UUID) throws IOException, RekorParseException {
-    URI getEntryURI = uri.resolve(REKOR_ENTRIES_PATH + "/" + UUID);
+    URI getEntryURI = URIFormat.appendPath(uri, REKOR_ENTRIES_PATH + "/" + UUID);
     HttpRequest req =
         HttpClients.newRequestFactory(httpParams).buildGetRequest(new GenericUrl(getEntryURI));
     req.getHeaders().set("Accept", "application/json");
@@ -132,7 +133,7 @@ public class RekorClientHttp implements RekorClient {
   public List<String> searchEntry(
       String email, String hash, String publicKeyFormat, String publicKeyContent)
       throws IOException, JsonParseException {
-    URI rekorSearchEndpoint = uri.resolve(REKOR_INDEX_SEARCH_PATH);
+    URI rekorSearchEndpoint = URIFormat.appendPath(uri, REKOR_INDEX_SEARCH_PATH);
 
     HashMap<String, Object> publicKeyParams = null;
     if (publicKeyContent != null) {
