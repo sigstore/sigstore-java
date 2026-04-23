@@ -30,6 +30,7 @@ import dev.sigstore.fulcio.v2.PublicKeyRequest;
 import dev.sigstore.fulcio.v2.SigningCertificate;
 import dev.sigstore.http.HttpClients;
 import dev.sigstore.http.HttpParams;
+import dev.sigstore.http.URIFormat;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
@@ -87,7 +88,7 @@ public class FulcioClientHttp implements FulcioClient {
    */
   @Override
   public CertPath signingCertificate(CertificateRequest request) throws CertificateException {
-    URI endpoint = uri.resolve(FULCIO_SIGNING_CERT_PATH);
+    URI endpoint = URIFormat.appendPath(uri, FULCIO_SIGNING_CERT_PATH);
 
     String pemEncodedPublicKey =
         "-----BEGIN PUBLIC KEY-----\n"
