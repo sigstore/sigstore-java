@@ -61,8 +61,10 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -183,20 +185,37 @@ public class KeylessVerifier {
       signature = dsseEnvelope.getSignature();
     }
 
-    verifyTimestamps(leafCert, bundle.getTimestamps(), signature);
-
     try {
       rekorVerifier.verifyEntry(rekorEntry);
     } catch (RekorVerificationException ex) {
       throw new KeylessVerificationException("Transparency log entry could not be verified", ex);
     }
+
+    // if entry was verified and has a SET, get time from it
+    var set = rekorEntry.getVerification().getSignedEntryTimestamp();
+    var entryTime = set != null ? rekorEntry.getIntegratedTimeInstant() : null;
+
+    verifyTimestamps(leafCert, bundle.getTimestamps(), entryTime, signature);
   }
 
   private void verifyTimestamps(
-      X509Certificate leafCert, List<Bundle.Timestamp> timestamps, byte[] signature)
+      X509Certificate leafCert,
+      List<Bundle.Timestamp> timestamps,
+      Instant entryTime,
+      byte[] signature)
       throws KeylessVerificationException {
-    if (timestamps == null || timestamps.isEmpty()) {
-      return;
+    if (timestamps.isEmpty() && entryTime == null) {
+      throw new KeylessVerificationException("No valid timestamps found in bundle");
+    }
+    if (entryTime != null) {
+      var entryDate = Date.from(entryTime);
+      try {
+        leafCert.checkValidity(entryDate);
+      } catch (CertificateNotYetValidException e) {
+        throw new KeylessVerificationException("Signing time was before certificate validity", e);
+      } catch (CertificateExpiredException e) {
+        throw new KeylessVerificationException("Signing time was after certificate expiry", e);
+      }
     }
     for (Bundle.Timestamp timestamp : timestamps) {
       byte[] tsBytes = timestamp.getRfc3161Timestamp();

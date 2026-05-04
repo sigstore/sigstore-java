@@ -71,7 +71,8 @@ public abstract class Bundle {
   @Value.Check
   protected void checkAtLeastOneTimestamp() {
     for (var entry : getEntries()) {
-      if (entry.getVerification().getSignedEntryTimestamp() != null) {
+      if (entry.getVerification().getSignedEntryTimestamp() != null
+          && entry.getIntegratedTime() > 0) {
         return;
       }
     }
