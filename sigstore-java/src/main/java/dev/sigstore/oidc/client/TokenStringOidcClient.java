@@ -55,10 +55,26 @@ public class TokenStringOidcClient implements OidcClient {
     try {
       var idToken = idTokenProvider.getTokenString();
       var jws = JsonWebSignature.parse(new GsonFactory(), idToken);
+      String email = (String) jws.getPayload().get("email");
+      String san;
+      if (email != null) {
+        Boolean emailVerified = (Boolean) jws.getPayload().get("email_verified");
+        if (Boolean.FALSE.equals(emailVerified)) {
+          throw new OidcException(
+              String.format(
+                  java.util.Locale.ROOT,
+                  "identity provider '%s' reports email address '%s' has not been verified",
+                  jws.getPayload().getIssuer(),
+                  email));
+        }
+        san = email;
+      } else {
+        san = jws.getPayload().getSubject();
+      }
       return ImmutableOidcToken.builder()
           .idToken(idToken)
           .issuer(jws.getPayload().getIssuer())
-          .subjectAlternativeName(jws.getPayload().getSubject())
+          .subjectAlternativeName(san)
           .build();
     } catch (IOException e) {
       throw new OidcException("Failed to parse JWT", e);
