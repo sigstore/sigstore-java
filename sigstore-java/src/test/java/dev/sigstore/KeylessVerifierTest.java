@@ -796,4 +796,25 @@ public class KeylessVerifierTest {
   private Bundle.Timestamp createTimestamp(byte[] rfc3161Bytes) {
     return () -> rfc3161Bytes;
   }
+
+  @Test
+  public void testVerify_certificateExpired_rekorV1() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource("dev/sigstore/samples/bundles/bundle-with-expired-cert.sigstore"),
+            StandardCharsets.UTF_8);
+
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () ->
+                verifier.verify(
+                    Path.of(artifact),
+                    Bundle.from(new StringReader(bundleFile)),
+                    VerificationOptions.empty()));
+    Assertions.assertEquals("Signing time was after certificate expiry", ex.getMessage());
+  }
 }
