@@ -10,6 +10,15 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [2.1.0] - 2026-05-21
+
+## Added
+- Add HTTP Fulcio client: https://github.com/sigstore/sigstore-java/pull/1176
+
+## Fixed
+- Re-add and enhance SET verification in KeylessVerifier: https://github.com/sigstore/sigstore-java/pull/1185
+
+
 # [2.0.0] - 2025-11-20
 
 ## Added
