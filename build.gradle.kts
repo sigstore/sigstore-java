@@ -29,6 +29,10 @@ nmcpAggregation {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     nmcpAggregation(project(":sigstore-java"))
     nmcpAggregation(project(":sigstore-maven-plugin"))
