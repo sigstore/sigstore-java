@@ -30,18 +30,26 @@ import java.nio.charset.StandardCharsets;
  */
 public class ConformanceTestingTokenProvider implements TokenStringOidcClient.TokenStringProvider {
 
-  public static ConformanceTestingTokenProvider newProvider() {
-    return new ConformanceTestingTokenProvider();
+  public static ConformanceTestingTokenProvider newProviderFromGithub() {
+    return new ConformanceTestingTokenProvider(
+        "https://raw.githubusercontent.com/sigstore-conformance/extremely-dangerous-public-oidc-beacon/refs/heads/current-token/oidc-token.txt");
   }
 
-  private ConformanceTestingTokenProvider() {}
+  public static ConformanceTestingTokenProvider newProviderFromGcp() {
+    return new ConformanceTestingTokenProvider(
+        "https://storage.googleapis.com/sigstore-conformance-testing-token/untrusted-testing-token.txt");
+  }
+
+  private final String tokenUrl;
+
+  private ConformanceTestingTokenProvider(String tokenUrl) {
+    this.tokenUrl = tokenUrl;
+  }
 
   @Override
   public String getTokenString() throws Exception {
     HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
-    URI fileUri =
-        new URI(
-            "https://raw.githubusercontent.com/sigstore-conformance/extremely-dangerous-public-oidc-beacon/refs/heads/current-token/oidc-token.txt");
+    URI fileUri = new URI(tokenUrl);
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(fileUri)
