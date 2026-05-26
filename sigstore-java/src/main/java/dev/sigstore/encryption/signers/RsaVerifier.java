@@ -15,15 +15,18 @@
  */
 package dev.sigstore.encryption.signers;
 
+import dev.sigstore.AlgorithmRegistry;
 import java.security.*;
 
 /** RSA verifier, instantiated by {@link Verifiers#newVerifier(PublicKey)}. */
 public class RsaVerifier implements Verifier {
 
   private final PublicKey publicKey;
+  private final AlgorithmRegistry.HashAlgorithm hashAlgorithm;
 
-  RsaVerifier(PublicKey publicKey) {
+  RsaVerifier(PublicKey publicKey, AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
     this.publicKey = publicKey;
+    this.hashAlgorithm = hashAlgorithm;
   }
 
   @Override
@@ -34,7 +37,7 @@ public class RsaVerifier implements Verifier {
   @Override
   public boolean verify(byte[] artifact, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    var verifier = Signature.getInstance("SHA256withRSA");
+    var verifier = Signature.getInstance(hashAlgorithm + "withRSA");
     verifier.initVerify(publicKey);
     verifier.update(artifact);
     return verifier.verify(signature);
