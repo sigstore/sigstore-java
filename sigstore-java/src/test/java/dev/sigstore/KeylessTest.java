@@ -161,6 +161,7 @@ public class KeylessTest {
     Assertions.assertNotNull(result.getDsseEnvelope().get());
     Assertions.assertEquals(payload, result.getDsseEnvelope().get().getPayloadAsString());
     Assertions.assertEquals(1, result.getEntries().size());
+    Assertions.assertEquals("hashedrekord", result.getEntries().get(0).getBodyDecoded().getKind());
     Assertions.assertEquals("0.0.2", result.getEntries().get(0).getBodyDecoded().getApiVersion());
 
     var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
@@ -190,7 +191,7 @@ public class KeylessTest {
   }
 
   private void verifySigningResult(List<Bundle> results, boolean enableRekorV2)
-      throws IOException, JsonParseException {
+      throws JsonParseException {
 
     Assertions.assertEquals(artifactDigests.size(), results.size());
 

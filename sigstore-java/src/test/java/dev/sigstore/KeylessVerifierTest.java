@@ -444,16 +444,19 @@ public class KeylessVerifierTest {
         Arguments.arguments(
             "bundle.dsse.rekor-v2.bad-signature.sigstore", "DSSE signature was not valid"),
         Arguments.arguments(
-            "bundle.dsse.rekor-v2.mismatched-payload.sigstore",
-            "Digest of DSSE payload in bundle does not match DSSE payload digest in log entry"),
+            "bundle.dsse.rekor-v2.mismatched-envelope.sigstore",
+            "Digest of DSSE.pae in bundle does not match digest in log entry"),
         Arguments.arguments(
             "bundle.dsse.rekor-v2.mismatched-signature.sigstore",
-            "Signature in DSSE envelope does not match signature in log entry spec"));
+            "Signature in DSSE envelope does not match signature in log entry"),
+        Arguments.arguments(
+            "bundle.dsse.rekor-v2.bad-entry-type.sigstore",
+            "Unsupported entry type: 'dsse:0.0.2' for DSSE bundle"));
   }
 
   @ParameterizedTest
   @MethodSource("badDsseProvider")
-  public void testVerify_dsseBundleInvalid(String bundleName, String expectedError)
+  public void testVerify_dsseBundleInvalid_rekor(String bundleName, String expectedError)
       throws Exception {
     var bundleFile =
         Resources.toString(
@@ -708,7 +711,7 @@ public class KeylessVerifierTest {
             Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.rekor-v2.sigstore"),
             StandardCharsets.UTF_8);
 
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
     verifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
@@ -721,7 +724,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var badArtifactDigest =
         Hashing.sha256().hashString("nonsense", StandardCharsets.UTF_8).asBytes();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
 
     var ex =
         Assertions.assertThrows(

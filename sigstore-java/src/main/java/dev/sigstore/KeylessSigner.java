@@ -45,7 +45,6 @@ import dev.sigstore.oidc.client.OidcToken;
 import dev.sigstore.oidc.client.OidcTokenMatcher;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.X509Certificate;
-import dev.sigstore.proto.rekor.v2.DSSERequestV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.proto.rekor.v2.Signature;
 import dev.sigstore.proto.rekor.v2.Verifier;
@@ -69,7 +68,6 @@ import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.tuf.SigstoreTufClient;
-import io.intoto.EnvelopeOuterClass;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -765,18 +763,20 @@ public class KeylessSigner implements AutoCloseable {
             .build();
 
     var pae = dsse.getPAE();
+    var paeDigest = Hashers.from(signingAlgorithm).hashBytes(pae).asBytes();
+    byte[] signature;
 
-    Bundle.DsseEnvelope dsseSigned;
     try {
-      var sig = signer.sign(pae);
-      dsseSigned =
-          ImmutableDsseEnvelope.builder()
-              .from(dsse)
-              .addSignatures(ImmutableSignature.builder().sig(sig).build())
-              .build();
+      signature = signer.signDigest(paeDigest);
     } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException ex) {
       throw new KeylessSignerException("Failed to sign artifact", ex);
     }
+
+    Bundle.DsseEnvelope dsseSigned =
+        ImmutableDsseEnvelope.builder()
+            .from(dsse)
+            .addSignatures(ImmutableSignature.builder().sig(signature).build())
+            .build();
 
     var verifier =
         Verifier.newBuilder()
@@ -785,17 +785,16 @@ public class KeylessSigner implements AutoCloseable {
             .setKeyDetails(ProtoMutators.toPublicKeyDetails(signingAlgorithm))
             .build();
 
-    var dsseRequest =
-        DSSERequestV002.newBuilder()
-            .setEnvelope(
-                EnvelopeOuterClass.Envelope.newBuilder()
-                    .setPayload(ByteString.copyFrom(dsseSigned.getPayload()))
-                    .setPayloadType(dsseSigned.getPayloadType())
-                    .addSignatures(
-                        EnvelopeOuterClass.Signature.newBuilder()
-                            .setSig(ByteString.copyFrom(dsseSigned.getSignature())))
-                    .build())
-            .addVerifiers(verifier)
+    var reqSignature =
+        Signature.newBuilder()
+            .setVerifier(verifier)
+            .setContent(ByteString.copyFrom(dsseSigned.getSignature()))
+            .build();
+
+    var hashedRekordRequest =
+        HashedRekordRequestV002.newBuilder()
+            .setSignature(reqSignature)
+            .setDigest(ByteString.copyFrom(paeDigest))
             .build();
 
     var hashFunction = Hashers.from(signingAlgorithm);
@@ -827,7 +826,7 @@ public class KeylessSigner implements AutoCloseable {
 
     RekorEntry entry;
     try {
-      entry = rekorV2Client.putEntry(dsseRequest);
+      entry = rekorV2Client.putEntry(hashedRekordRequest);
     } catch (IOException | RekorParseException ex) {
       throw new KeylessSignerException("Failed to put entry in rekor", ex);
     }
