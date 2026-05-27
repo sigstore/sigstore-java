@@ -15,15 +15,18 @@
  */
 package dev.sigstore.encryption.signers;
 
+import dev.sigstore.AlgorithmRegistry;
 import java.security.*;
 
 /** ECDSA verifier, instantiated by {@link Verifiers#newVerifier(PublicKey)}. */
 public class EcdsaVerifier implements Verifier {
 
   private final PublicKey publicKey;
+  private final AlgorithmRegistry.HashAlgorithm hashAlgorithm;
 
-  EcdsaVerifier(PublicKey publicKey) {
+  EcdsaVerifier(PublicKey publicKey, AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
     this.publicKey = publicKey;
+    this.hashAlgorithm = hashAlgorithm;
   }
 
   @Override
@@ -34,7 +37,7 @@ public class EcdsaVerifier implements Verifier {
   @Override
   public boolean verify(byte[] artifact, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    var verifier = Signature.getInstance("SHA256withECDSA");
+    var verifier = Signature.getInstance(hashAlgorithm + "withECDSA");
     verifier.initVerify(publicKey);
     verifier.update(artifact);
     return verifier.verify(signature);

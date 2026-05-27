@@ -15,6 +15,7 @@
  */
 package dev.sigstore.encryption.signers;
 
+import dev.sigstore.AlgorithmRegistry;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -25,10 +26,10 @@ public class Verifiers {
   /** Returns a new verifier for the provided public key to use during verification. */
   public static Verifier newVerifier(PublicKey publicKey) throws NoSuchAlgorithmException {
     if (publicKey.getAlgorithm().equals("RSA")) {
-      return new RsaVerifier(publicKey);
+      return new RsaVerifier(publicKey, AlgorithmRegistry.HashAlgorithm.SHA2_256);
     }
     if (publicKey.getAlgorithm().equals("EC") || publicKey.getAlgorithm().equals("ECDSA")) {
-      return new EcdsaVerifier(publicKey);
+      return new EcdsaVerifier(publicKey, AlgorithmRegistry.HashAlgorithm.SHA2_256);
     }
     if (publicKey.getAlgorithm().equals("Ed25519")) {
       return new Ed25519Verifier(publicKey);
