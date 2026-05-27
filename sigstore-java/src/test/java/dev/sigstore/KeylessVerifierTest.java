@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class KeylessVerifierTest {
 
@@ -174,7 +175,7 @@ public class KeylessVerifierTest {
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
 
-    var thrown =
+    var ex =
         Assertions.assertThrows(
             KeylessVerificationException.class,
             () ->
@@ -182,8 +183,8 @@ public class KeylessVerifierTest {
                     Path.of(artifact),
                     Bundle.from(new StringReader(modifiedBundleFile)),
                     VerificationOptions.empty()));
-    Assertions.assertTrue(
-        thrown.getMessage().startsWith("Unsupported digest algorithm in log entry: "));
+    MatcherAssert.assertThat(
+        ex.getMessage(), CoreMatchers.startsWith("Unsupported digest algorithm in log entry"));
   }
 
   @Test
@@ -576,7 +577,7 @@ public class KeylessVerifierTest {
                     Path.of(artifact),
                     Bundle.from(new StringReader(invalidBundleFile)),
                     VerificationOptions.empty()));
-    Assertions.assertEquals("Unsupported hashedrekord version: 0.0.3", ex.getMessage());
+    Assertions.assertEquals("Unsupported entry type: 'hashedrekord:0.0.3'", ex.getMessage());
   }
 
   @Test
@@ -816,5 +817,55 @@ public class KeylessVerifierTest {
                     Bundle.from(new StringReader(bundleFile)),
                     VerificationOptions.empty()));
     Assertions.assertEquals("Signing time was after certificate expiry", ex.getMessage());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "ECDSA_P256_SHA_256",
+        "ECDSA_P384_SHA_384",
+        "ECDSA_P521_SHA_512",
+        "RSA_PKCS1V15_2048_SHA256",
+        "RSA_PKCS1V15_3072_SHA256",
+        "RSA_PKCS1V15_4096_SHA256"
+      })
+  public void testVerify_algorithmRegistry(String keyAlgorithm) throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource(
+                "dev/sigstore/samples/bundles/PKIX_" + keyAlgorithm + ".sigstore.json"),
+            StandardCharsets.UTF_8);
+
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    verifier.verify(
+        Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
+  }
+
+  @Test
+  public void testVerify_wrongArtifactHashAlgorithm() throws Exception {
+    var bundleFile =
+        Resources.toString(
+            Resources.getResource(
+                "dev/sigstore/samples/bundles/PKIX_ECDSA_P256_SHA_256.sigstore.json"),
+            StandardCharsets.UTF_8);
+
+    var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
+    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+
+    var sha512 = Hashing.sha512().hashBytes(Files.readAllBytes(Path.of(artifact))).asBytes();
+
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () ->
+                verifier.verify(
+                    sha512,
+                    Bundle.from(new StringReader(bundleFile)),
+                    VerificationOptions.empty()));
+    MatcherAssert.assertThat(
+        ex.getMessage(),
+        CoreMatchers.startsWith(
+            "Provided artifact digest does not match digest used for verification"));
   }
 }

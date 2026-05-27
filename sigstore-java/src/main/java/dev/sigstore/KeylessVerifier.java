@@ -17,7 +17,6 @@ package dev.sigstore;
 
 import com.google.api.client.util.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
 import dev.sigstore.VerificationOptions.UncheckedCertificateException;
@@ -25,12 +24,13 @@ import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.Bundle.DsseEnvelope;
 import dev.sigstore.bundle.Bundle.MessageSignature;
 import dev.sigstore.dsse.InTotoPayload;
+import dev.sigstore.encryption.Hashers;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
 import dev.sigstore.json.JsonParseException;
-import dev.sigstore.proto.common.v1.HashAlgorithm;
+import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.rekor.v2.DSSELogEntryV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
 import dev.sigstore.proto.rekor.v2.Signature;
@@ -129,15 +129,50 @@ public class KeylessVerifier {
     }
   }
 
+  private AlgorithmRegistry.HashAlgorithm findHashAlgorithm(Bundle bundle)
+      throws KeylessVerificationException {
+    try {
+      var rekorEntry = bundle.getEntries().get(0);
+      var body = rekorEntry.getBodyDecoded();
+      if ("0.0.1".equals(body.getApiVersion())) {
+        if ("hashedrekord".equals(body.getKind())) {
+          var entry = RekorTypes.getHashedRekordV001(rekorEntry);
+          switch (entry.getData().getHash().getAlgorithm()) {
+            case SHA_256:
+              return AlgorithmRegistry.HashAlgorithm.SHA2_256;
+            case SHA_384:
+              return AlgorithmRegistry.HashAlgorithm.SHA2_384;
+            case SHA_512:
+              return AlgorithmRegistry.HashAlgorithm.SHA2_512;
+          }
+        } else if ("dsse".equals(body.getKind())) {
+          // dsse:0.0.1 is always sha256
+          return AlgorithmRegistry.HashAlgorithm.SHA2_256;
+        }
+      } else if ("0.0.2".equals(body.getApiVersion())) {
+        // rekor v2 entries must conform to the Algorithm Registry
+        var publicKey = Certificates.getLeaf(bundle.getCertPath()).getPublicKey();
+        var signingAlgorithm = AlgorithmRegistry.getSigningAlgorithm(publicKey);
+        return signingAlgorithm.getHashAlgorithm();
+      }
+      throw new KeylessVerificationException(
+          "Unsupported entry type: '" + body.getKind() + ":" + body.getApiVersion() + "'");
+    } catch (JsonParseException | RekorTypeException | UnsupportedAlgorithmException ex) {
+      throw new KeylessVerificationException(
+          "Could not determine hash algorithm from sigstore bundle", ex);
+    }
+  }
+
   /** Convenience wrapper around {@link #verify(byte[], Bundle, VerificationOptions)}. */
   public void verify(Path artifact, Bundle bundle, VerificationOptions options)
       throws KeylessVerificationException {
+    var hashAlgorithm = findHashAlgorithm(bundle);
     try {
-      byte[] artifactDigest =
-          Files.asByteSource(artifact.toFile()).hash(Hashing.sha256()).asBytes();
+      var artifactDigest =
+          Files.asByteSource(artifact.toFile()).hash(Hashers.from(hashAlgorithm)).asBytes();
       verify(artifactDigest, bundle, options);
-    } catch (IOException e) {
-      throw new KeylessVerificationException("Could not hash provided artifact path: " + artifact);
+    } catch (IOException ex) {
+      throw new KeylessVerificationException("Could not hash artifact: " + artifact, ex);
     }
   }
 
@@ -145,7 +180,8 @@ public class KeylessVerifier {
    * Verify that the inputs can attest to the validity of a signature using sigstore's keyless
    * infrastructure. If no exception is thrown, it should be assumed verification has passed.
    *
-   * @param artifactDigest the sha256 digest of the artifact that is being verified
+   * @param artifactDigest the digest of the artifact that is being verified, this must match the
+   *     scheme used to sign the artifact
    * @param bundle the sigstore signature bundle to verify
    * @param options the keyless verification data and options
    * @throws KeylessVerificationException if the signing information could not be verified
@@ -172,16 +208,17 @@ public class KeylessVerifier {
     // verify the certificate identity if options are present
     checkCertificateMatchers(leafCert, options.getCertificateMatchers());
 
+    var hashAlgorithm = findHashAlgorithm(bundle);
     var rekorEntry = bundle.getEntries().get(0);
 
     byte[] signature;
     if (bundle.getMessageSignature().isPresent()) { // hashedrekord
       var messageSignature = bundle.getMessageSignature().get();
-      checkMessageSignature(messageSignature, rekorEntry, artifactDigest, leafCert);
+      checkMessageSignature(messageSignature, rekorEntry, artifactDigest, hashAlgorithm, leafCert);
       signature = messageSignature.getSignature();
     } else { // dsse
       var dsseEnvelope = bundle.getDsseEnvelope().get();
-      checkDsseEnvelope(rekorEntry, dsseEnvelope, artifactDigest, leafCert);
+      checkDsseEnvelope(rekorEntry, dsseEnvelope, artifactDigest, hashAlgorithm, leafCert);
       signature = dsseEnvelope.getSignature();
     }
 
@@ -257,6 +294,7 @@ public class KeylessVerifier {
       MessageSignature messageSignature,
       RekorEntry rekorEntry,
       byte[] artifactDigest,
+      AlgorithmRegistry.HashAlgorithm hashAlgorithm,
       X509Certificate leafCert)
       throws KeylessVerificationException {
     // this ensures the provided artifact digest matches what may have come from a bundle (in
@@ -276,12 +314,13 @@ public class KeylessVerifier {
     // verify the signature over the artifact
     var signature = messageSignature.getSignature();
     try {
-      if (!Verifiers.newVerifier(leafCert.getPublicKey()).verifyDigest(artifactDigest, signature)) {
+      if (!Verifiers.newVerifier(leafCert.getPublicKey(), hashAlgorithm)
+          .verifyDigest(artifactDigest, signature)) {
         throw new KeylessVerificationException("Artifact signature was not valid");
       }
-    } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
-      throw new RuntimeException(ex);
-    } catch (SignatureException ex) {
+    } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+      throw new RuntimeException(e);
+    } catch (SignatureException | UnsupportedAlgorithmException ex) {
       throw new KeylessVerificationException(
           "Signature could not be processed: " + ex.getMessage(), ex);
     }
@@ -298,7 +337,7 @@ public class KeylessVerifier {
         RekorTypes.getHashedRekordV001(rekorEntry);
         var calculatedHashedRekord =
             HashedRekordRequest.newHashedRekordRequest(
-                    artifactDigest, Certificates.toPemBytes(leafCert), signature)
+                    artifactDigest, hashAlgorithm, Certificates.toPemBytes(leafCert), signature)
                 .toJsonPayload();
         var body =
             new String(Base64.getDecoder().decode(rekorEntry.getBody()), StandardCharsets.UTF_8);
@@ -321,9 +360,10 @@ public class KeylessVerifier {
             "Could not parse hashedrekord from log entry body", re);
       }
 
-      if (!logEntrySpec.getData().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
-        throw new KeylessVerificationException(
-            "Unsupported digest algorithm in log entry: " + logEntrySpec.getData().getAlgorithm());
+      try {
+        ProtoMutators.toHashAlgorithm(logEntrySpec.getData().getAlgorithm());
+      } catch (UnsupportedAlgorithmException ex) {
+        throw new KeylessVerificationException("Unsupported digest algorithm in log entry", ex);
       }
 
       if (!Arrays.equals(logEntrySpec.getData().getDigest().toByteArray(), artifactDigest)) {
@@ -360,6 +400,7 @@ public class KeylessVerifier {
       RekorEntry rekorEntry,
       DsseEnvelope dsseEnvelope,
       byte[] artifactDigest,
+      AlgorithmRegistry.HashAlgorithm hashAlgorithm,
       X509Certificate leafCert)
       throws KeylessVerificationException {
     // verify the artifact is in the subject list of the envelope
@@ -379,13 +420,16 @@ public class KeylessVerifier {
       throw new KeylessVerificationException("Could not parse DSSE payload", jpe);
     }
 
-    // find one sha256 hash in the subject list that matches the artifact hash
+    // find one hash in the subject list that matches the artifact hash
+    var hashName = hashAlgorithm.toLowercaseString();
+    var hashing = Hashers.from(hashAlgorithm);
+
     if (payload.getSubject().stream()
         .noneMatch(
             subject -> {
-              if (subject.getDigest().containsKey("sha256")) {
+              if (subject.getDigest().containsKey(hashName)) {
                 try {
-                  var digestBytes = Hex.decode(subject.getDigest().get("sha256"));
+                  var digestBytes = Hex.decode(subject.getDigest().get(hashName));
                   return Arrays.equals(artifactDigest, digestBytes);
                 } catch (DecoderException de) {
                   // ignore (assume false)
@@ -395,11 +439,13 @@ public class KeylessVerifier {
             })) {
       var providedHashes =
           payload.getSubject().stream()
-              .map(s -> s.getDigest().getOrDefault("sha256", "no-sha256-hash"))
+              .map(s -> s.getDigest().getOrDefault(hashName, "no-" + hashName + "-hash"))
               .collect(Collectors.joining(",", "[", "]"));
 
       throw new KeylessVerificationException(
-          "Provided artifact digest does not match any subject sha256 digests in DSSE payload"
+          "Provided artifact digest does not match any subject "
+              + hashName
+              + " digests in DSSE payload"
               + "\nprovided(hex) : "
               + Hex.toHexString(artifactDigest)
               + "\nverification  : "
@@ -413,13 +459,13 @@ public class KeylessVerifier {
               + dsseEnvelope.getSignatures().size());
     }
     try {
-      if (!Verifiers.newVerifier(leafCert.getPublicKey())
+      if (!Verifiers.newVerifier(leafCert.getPublicKey(), hashAlgorithm)
           .verify(dsseEnvelope.getPAE(), dsseEnvelope.getSignature())) {
         throw new KeylessVerificationException("DSSE signature was not valid");
       }
     } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
       throw new RuntimeException(ex);
-    } catch (SignatureException se) {
+    } catch (SignatureException | UnsupportedAlgorithmException se) {
       throw new KeylessVerificationException("Signature could not be processed", se);
     }
 
@@ -440,7 +486,7 @@ public class KeylessVerifier {
       var algorithm = rekorDsse.getPayloadHash().getAlgorithm();
       if (algorithm != PayloadHash.Algorithm.SHA_256) {
         throw new KeylessVerificationException(
-            "Cannot process DSSE entry with hashing algorithm " + algorithm.toString());
+            "Cannot process DSSE entry with payload hashing algorithm " + algorithm.toString());
       }
 
       // check if the digest over the dsse payload matches the digest in the transparency log entry
@@ -449,10 +495,10 @@ public class KeylessVerifier {
         payloadDigest = Hex.decode(rekorDsse.getPayloadHash().getValue());
       } catch (DecoderException de) {
         throw new KeylessVerificationException(
-            "Could not decode hex sha256 artifact hash in hashedrekord", de);
+            "Could not decode hex artifact hash in hashedrekord", de);
       }
 
-      byte[] calculatedDigest = Hashing.sha256().hashBytes(dsseEnvelope.getPayload()).asBytes();
+      byte[] calculatedDigest = hashing.hashBytes(dsseEnvelope.getPayload()).asBytes();
       if (!Arrays.equals(calculatedDigest, payloadDigest)) {
         throw new KeylessVerificationException(
             "Digest of DSSE payload in bundle does not match DSSE payload digest in log entry");
@@ -479,14 +525,14 @@ public class KeylessVerifier {
         throw new KeylessVerificationException("Could not parse DSSE from log entry body", re);
       }
 
-      if (!logEntrySpec.getPayloadHash().getAlgorithm().equals(HashAlgorithm.SHA2_256)) {
-        throw new KeylessVerificationException(
-            "Unsupported digest algorithm in log entry: "
-                + logEntrySpec.getPayloadHash().getAlgorithm());
+      try {
+        ProtoMutators.toHashAlgorithm(logEntrySpec.getPayloadHash().getAlgorithm());
+      } catch (UnsupportedAlgorithmException ex) {
+        throw new KeylessVerificationException("Unsupported digest algorithm in log entry", ex);
       }
 
       // check if the digest over the dsse payload matches the digest in the transparency log entry
-      byte[] calculatedDigest = Hashing.sha256().hashBytes(dsseEnvelope.getPayload()).asBytes();
+      byte[] calculatedDigest = hashing.hashBytes(dsseEnvelope.getPayload()).asBytes();
       if (!Arrays.equals(
           logEntrySpec.getPayloadHash().getDigest().toByteArray(), calculatedDigest)) {
         throw new KeylessVerificationException(

@@ -15,10 +15,10 @@
  */
 package dev.sigstore.encryption.signers;
 
+import dev.sigstore.UnsupportedAlgorithmException;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.security.Signature;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -53,7 +53,7 @@ public class VerifiersTest {
     var signature = genSignature(kp, "ed448");
     var exception =
         Assertions.assertThrows(
-            NoSuchAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
+            UnsupportedAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
     Assertions.assertEquals(
         "Cannot verify signatures for key type 'Ed448', this client only supports RSA, ECDSA, and Ed25519 verification",
         exception.getMessage());
@@ -66,7 +66,7 @@ public class VerifiersTest {
     var signature = genSignature(kp, "ed448");
     var exception =
         Assertions.assertThrows(
-            NoSuchAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
+            UnsupportedAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
     Assertions.assertEquals(
         "Cannot verify signatures for non-Ed25519 EdDSA key types, this client only supports RSA, ECDSA, and Ed25519 verification",
         exception.getMessage());
@@ -77,7 +77,7 @@ public class VerifiersTest {
     var kp = KeyPairGenerator.getInstance("DSA").generateKeyPair();
     var exception =
         Assertions.assertThrows(
-            NoSuchAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
+            UnsupportedAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
     Assertions.assertEquals(
         exception.getMessage(),
         "Cannot verify signatures for key type 'DSA', this client only supports RSA, ECDSA, and Ed25519 verification");

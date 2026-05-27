@@ -20,7 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.spec.ECGenParameterSpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.Test;
 
 public class AlgorithmRegistryTest {
@@ -76,6 +78,26 @@ public class AlgorithmRegistryTest {
   }
 
   @Test
+  public void testGetHashAlgorithm_EC_P384() throws Exception {
+    var keyPairGen = KeyPairGenerator.getInstance("EC");
+    keyPairGen.initialize(new ECGenParameterSpec("secp384r1"));
+    var publicKey = keyPairGen.generateKeyPair().getPublic();
+    assertEquals(
+        AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P384_SHA_384,
+        AlgorithmRegistry.getSigningAlgorithm(publicKey));
+  }
+
+  @Test
+  public void testGetHashAlgorithm_EC_P521() throws Exception {
+    var keyPairGen = KeyPairGenerator.getInstance("EC");
+    keyPairGen.initialize(new ECGenParameterSpec("secp521r1"));
+    var publicKey = keyPairGen.generateKeyPair().getPublic();
+    assertEquals(
+        AlgorithmRegistry.SigningAlgorithm.PKIX_ECDSA_P521_SHA_512,
+        AlgorithmRegistry.getSigningAlgorithm(publicKey));
+  }
+
+  @Test
   public void testGetHashAlgorithm_RSA_UnsupportedLength() throws Exception {
     var keyPairGen = KeyPairGenerator.getInstance("RSA");
     keyPairGen.initialize(1024);
@@ -109,9 +131,11 @@ public class AlgorithmRegistryTest {
   }
 
   @Test
-  public void testGetHashAlgorithm_EC_UnsupportedSize() throws Exception {
-    var keyPairGen = KeyPairGenerator.getInstance("EC");
-    keyPairGen.initialize(new ECGenParameterSpec("secp384r1"));
+  public void testGetHashAlgorithm_EC_UnsupportedCurve() throws Exception {
+    Security.addProvider(new BouncyCastleProvider());
+
+    var keyPairGen = KeyPairGenerator.getInstance("EC", "BC");
+    keyPairGen.initialize(new ECGenParameterSpec("secp256k1"));
     var publicKey = keyPairGen.generateKeyPair().getPublic();
     assertThrows(
         UnsupportedAlgorithmException.class,

@@ -15,6 +15,7 @@
  */
 package dev.sigstore.timestamp.client;
 
+import dev.sigstore.AlgorithmRegistry;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.tsp.TSPAlgorithms;
 
@@ -48,5 +49,20 @@ public enum HashAlgorithm {
       }
     }
     throw new UnsupportedHashAlgorithmException(oid.getId());
+  }
+
+  // this is just temporary to avoid messing with the timestamp package too much while we
+  // transition, this enum
+  // should really just be using AlgorithmRegistry as much as possible
+  public static HashAlgorithm from(AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
+    switch (hashAlgorithm) {
+      case SHA2_256:
+        return SHA256;
+      case SHA2_384:
+        return SHA384;
+      case SHA2_512:
+        return SHA512;
+    }
+    throw new IllegalArgumentException();
   }
 }

@@ -18,7 +18,7 @@ package dev.sigstore.encryption.signers;
 import dev.sigstore.AlgorithmRegistry;
 import java.security.*;
 
-/** RSA verifier, instantiated by {@link Verifiers#newVerifier(PublicKey)}. */
+/** RSA verifier, instantiated by {@link Verifiers}. */
 public class RsaVerifier implements Verifier {
 
   private final PublicKey publicKey;
@@ -46,6 +46,10 @@ public class RsaVerifier implements Verifier {
   @Override
   public boolean verifyDigest(byte[] digest, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    if (digest.length != hashAlgorithm.getLength()) {
+      throw new SignatureException(
+          "Artifact digest must be " + hashAlgorithm.getLength() + " bytes");
+    }
     var verifier = Signature.getInstance("NONEwithRSA");
     verifier.initVerify(publicKey);
     verifier.update(RsaSigner.PKCS1_SHA256_PADDING);

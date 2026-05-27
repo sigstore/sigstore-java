@@ -18,7 +18,6 @@ package dev.sigstore;
 import com.google.api.client.util.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.hash.Hashing;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -30,6 +29,7 @@ import dev.sigstore.bundle.ImmutableDsseEnvelope;
 import dev.sigstore.bundle.ImmutableSignature;
 import dev.sigstore.bundle.ImmutableTimestamp;
 import dev.sigstore.dsse.InTotoPayload;
+import dev.sigstore.encryption.Hashers;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -59,6 +59,7 @@ import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.rekor.v2.client.RekorV2Client;
 import dev.sigstore.rekor.v2.client.RekorV2ClientHttp;
+import dev.sigstore.timestamp.client.HashAlgorithm;
 import dev.sigstore.timestamp.client.ImmutableTimestampRequest;
 import dev.sigstore.timestamp.client.TimestampClient;
 import dev.sigstore.timestamp.client.TimestampClientHttp;
@@ -452,6 +453,8 @@ public class KeylessSigner implements AutoCloseable {
         lock.readLock().unlock();
       }
 
+      var hashFunction = Hashers.from(signingAlgorithm.getHashAlgorithm());
+
       var bundleBuilder =
           ImmutableBundle.builder()
               .certPath(signingCert)
@@ -465,11 +468,11 @@ public class KeylessSigner implements AutoCloseable {
         Preconditions.checkNotNull(
             timestampVerifier, "Timestamp verifier must be configured for Rekor v2");
 
-        var signatureDigest = Hashing.sha256().hashBytes(signature).asBytes();
+        var signatureDigest = hashFunction.hashBytes(signature).asBytes();
 
         var tsReq =
             ImmutableTimestampRequest.builder()
-                .hashAlgorithm(dev.sigstore.timestamp.client.HashAlgorithm.SHA256)
+                .hashAlgorithm(HashAlgorithm.from(signingAlgorithm.getHashAlgorithm()))
                 .hash(signatureDigest)
                 .build();
 
@@ -534,7 +537,10 @@ public class KeylessSigner implements AutoCloseable {
       } else if (rekorClient != null) { // Using Rekor v1
         var rekorRequest =
             HashedRekordRequest.newHashedRekordRequest(
-                artifactDigest, signingCertPemBytes, signature);
+                artifactDigest,
+                signingAlgorithm.getHashAlgorithm(),
+                signingCertPemBytes,
+                signature);
 
         RekorResponse rekorResponse;
         try {
@@ -654,11 +660,9 @@ public class KeylessSigner implements AutoCloseable {
     var digests = new ArrayList<byte[]>(artifacts.size());
     for (var artifact : artifacts) {
       var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
+      var hashFunction = Hashers.from(signingAlgorithm);
       try {
-        digests.add(
-            artifactByteSource
-                .hash(signingAlgorithm.getHashAlgorithm().getHashFunction())
-                .asBytes());
+        digests.add(artifactByteSource.hash(hashFunction).asBytes());
       } catch (IOException ex) {
         throw new KeylessSignerException("Failed to hash artifact " + artifact);
       }
@@ -795,11 +799,12 @@ public class KeylessSigner implements AutoCloseable {
             .addVerifiers(verifier)
             .build();
 
-    var signatureDigest = Hashing.sha256().hashBytes(dsseSigned.getSignature()).asBytes();
+    var hashFunction = Hashers.from(signingAlgorithm);
+    var signatureDigest = hashFunction.hashBytes(dsseSigned.getSignature()).asBytes();
 
     var tsReq =
         ImmutableTimestampRequest.builder()
-            .hashAlgorithm(dev.sigstore.timestamp.client.HashAlgorithm.SHA256)
+            .hashAlgorithm(HashAlgorithm.from(signingAlgorithm.getHashAlgorithm()))
             .hash(signatureDigest)
             .build();
 

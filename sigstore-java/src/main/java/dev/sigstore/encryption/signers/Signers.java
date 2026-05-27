@@ -35,6 +35,10 @@ public class Signers {
         return newRsaSigner(4096, AlgorithmRegistry.HashAlgorithm.SHA2_256);
       case PKIX_ECDSA_P256_SHA_256:
         return newEcdsaSigner("secp256r1", AlgorithmRegistry.HashAlgorithm.SHA2_256);
+      case PKIX_ECDSA_P384_SHA_384:
+        return newEcdsaSigner("secp384r1", AlgorithmRegistry.HashAlgorithm.SHA2_384);
+      case PKIX_ECDSA_P521_SHA_512:
+        return newEcdsaSigner("secp521r1", AlgorithmRegistry.HashAlgorithm.SHA2_512);
     }
     throw new IllegalStateException("Unknown algorithm: " + algorithm);
   }

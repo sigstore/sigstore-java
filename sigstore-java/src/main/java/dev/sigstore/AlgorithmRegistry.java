@@ -15,14 +15,26 @@
  */
 package dev.sigstore;
 
-import static com.google.common.hash.Hashing.sha256;
-
-import com.google.common.hash.HashFunction;
+import java.math.BigInteger;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Map;
 
 public class AlgorithmRegistry {
+
+  // order to differentiate between the various ec curves
+  private static final Map<BigInteger, SigningAlgorithm> ECDSA_ORDERS =
+      Map.of(
+          new BigInteger(
+                  "115792089210356248762697446949407573529996955224135760342422259061068512044369"),
+              SigningAlgorithm.PKIX_ECDSA_P256_SHA_256,
+          new BigInteger(
+                  "39402006196394479212279040100143613805079739270465446667946905279627659399113263569398956308152294913554433653942643"),
+              SigningAlgorithm.PKIX_ECDSA_P384_SHA_384,
+          new BigInteger(
+                  "6864797660130609714981900799081393217269435300143305409394463459185543183397655394245057746333217197532963996371363321113864768612440380340372808892707005449"),
+              SigningAlgorithm.PKIX_ECDSA_P521_SHA_512);
 
   /**
    * Determine the signing algorithm based on the public key.
@@ -53,11 +65,12 @@ public class AlgorithmRegistry {
     if ("EC".equals(algorithm) || "ECDSA".equals(algorithm)) {
       if (publicKey instanceof ECPublicKey) {
         var ecKey = (ECPublicKey) publicKey;
-        int fieldSize = ecKey.getParams().getCurve().getField().getFieldSize();
-        if (fieldSize == 256) {
-          return SigningAlgorithm.PKIX_ECDSA_P256_SHA_256;
+        var order = ecKey.getParams().getOrder();
+        var signingAlgorithm = ECDSA_ORDERS.get(order);
+        if (signingAlgorithm == null) {
+          throw new UnsupportedAlgorithmException("Unsupported EC key with order: " + order);
         }
-        throw new UnsupportedAlgorithmException("Unsupported EC field size: " + fieldSize);
+        return signingAlgorithm;
       }
       throw new IllegalStateException("EC/ECDSA key must be an instance of ECPublicKey");
     }
@@ -70,9 +83,9 @@ public class AlgorithmRegistry {
     PKIX_RSA_PKCS1V15_4096_SHA256(HashAlgorithm.SHA2_256),
 
     // ECDSA
-    PKIX_ECDSA_P256_SHA_256(HashAlgorithm.SHA2_256);
-    // TODO: PKIX_ECDSA_P384_SHA_384(HashAlgorithm.SHA2_384),
-    // TODO: PKIX_ECDSA_P521_SHA_512(HashAlgorithm.SHA2_512);
+    PKIX_ECDSA_P256_SHA_256(HashAlgorithm.SHA2_256),
+    PKIX_ECDSA_P384_SHA_384(HashAlgorithm.SHA2_384),
+    PKIX_ECDSA_P521_SHA_512(HashAlgorithm.SHA2_512);
 
     private final HashAlgorithm hashAlgorithm;
 
@@ -86,30 +99,30 @@ public class AlgorithmRegistry {
   }
 
   public enum HashAlgorithm {
-    SHA2_256("SHA256", 32, sha256());
-    // TODO: SHA2_384("SHA384", 48, sha384()),
-    // TODO: SHA2_512("SHA512", 64, sha512());
+    SHA2_256("SHA256", "sha256", 32),
+    SHA2_384("SHA384", "sha384", 48),
+    SHA2_512("SHA512", "sha512", 64);
 
     private final String name;
+    private final String lowercase;
     private final int length;
-    private final HashFunction hashFunction;
 
-    HashAlgorithm(String name, int length, HashFunction hashFunction) {
+    HashAlgorithm(String name, String lowercase, int length) {
       this.name = name;
+      this.lowercase = lowercase;
       this.length = length;
-      this.hashFunction = hashFunction;
     }
 
     public String toString() {
       return name;
     }
 
-    public int getLength() {
-      return length;
+    public String toLowercaseString() {
+      return lowercase;
     }
 
-    HashFunction getHashFunction() {
-      return hashFunction;
+    public int getLength() {
+      return length;
     }
   }
 }
