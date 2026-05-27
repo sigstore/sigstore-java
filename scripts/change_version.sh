@@ -6,6 +6,14 @@
 # this script is simple and should work for most usecases, but it may break if we do weird things
 set -Eeo pipefail
 
+sedi() {
+  if [ "$(uname)" = "Darwin" ]; then
+    sed -i "" "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 old_version=$(grep "^version=" gradle.properties | cut -d'=' -f2)
 other_old_version=$(grep "sigstoreJavaVersion.convention" sigstore-gradle/sigstore-gradle-sign-base-plugin/src/main/kotlin/dev/sigstore/sign/SigstoreSignExtension.kt | cut -d'"' -f2)
 if [[ "$old_version" != "$other_old_version" ]]; then
@@ -20,12 +28,12 @@ echo "old  : $old_version"
 echo "new  : $new_version"
 read -r -p "Run update? [y/N]: " yn
 go=${yn:-"n"}
-if [ "${go,,}" != "y" ]; then
+if [ "$go" != "y" ] && [ "$go" != "Y" ]; then
   echo "aborting"
   exit
 fi
 
 # update to latest dev version (change update_versions.sh if you change this section)
-sed -i "s/\(sigstoreJavaVersion.convention(\"\)$old_version/\1$new_version/" sigstore-gradle/sigstore-gradle-sign-base-plugin/src/main/kotlin/dev/sigstore/sign/SigstoreSignExtension.kt
-sed -i "s/version=$old_version/version=$new_version/" gradle.properties
+sedi "s/\(sigstoreJavaVersion.convention(\"\)$old_version/\1$new_version/" sigstore-gradle/sigstore-gradle-sign-base-plugin/src/main/kotlin/dev/sigstore/sign/SigstoreSignExtension.kt
+sedi "s/version=$old_version/version=$new_version/" gradle.properties
 

@@ -5,6 +5,14 @@
 # this script is simple and should work for most usecases, but it may break if we do weird things
 set -Eeo pipefail
 
+sedi() {
+  if [ "$(uname)" = "Darwin" ]; then
+    sed -i "" "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 calculated_release_version=$(grep "^version=" gradle.properties | cut -d'=' -f2)
 read -r -p "Enter released version [${calculated_release_version}]: " vin
 release_version=${vin:-${calculated_release_version}}
@@ -23,7 +31,7 @@ echo "latest  : $release_version"
 echo "next    : $next_version"
 read -r -p "Run update? [y/N]: " yn
 go=${yn:-"n"}
-if [ "${go,,}" != "y" ]; then
+if [ "$go" != "y" ] && [ "$go" != "Y" ]; then
   echo "aborting"
   exit
 fi
@@ -31,13 +39,13 @@ fi
 # sed below is probably accepting .'s in versions as regex any chars, but this works for our purposes
 
 # updates to new release version
-sed -i "s/\(sigstore-gradle-sign-plugin:\)$previous_version/\1$release_version/" build-logic/publishing/build.gradle.kts
-sed -i "s/\(<version>\)$previous_version/\1$release_version/" sigstore-maven-plugin/README.md
-sed -i "s/\(dev.sigstore.sign\") version \"\)$previous_version/\1$release_version/" sigstore-gradle/README.md
-sed -i "s/\(sigstore.version.*\)$previous_version/\1$release_version/" examples/hello-world/build.gradle.kts
-sed -i "s/\(<sigstore.version>\)$previous_version/\1$release_version/" examples/hello-world/pom.xml
+sedi "s/\(sigstore-gradle-sign-plugin:\)$previous_version/\1$release_version/" build-logic/publishing/build.gradle.kts
+sedi "s/\(<version>\)$previous_version/\1$release_version/" sigstore-maven-plugin/README.md
+sedi "s/\(dev.sigstore.sign\") version \"\)$previous_version/\1$release_version/" sigstore-gradle/README.md
+sedi "s/\(sigstore.version.*\)$previous_version/\1$release_version/" examples/hello-world/build.gradle.kts
+sedi "s/\(<sigstore.version>\)$previous_version/\1$release_version/" examples/hello-world/pom.xml
 
 # update to latest dev version (change change_version.sh if you change this section)
-sed -i "s/\(sigstoreJavaVersion.convention(\"\)$release_version/\1$next_version/" sigstore-gradle/sigstore-gradle-sign-base-plugin/src/main/kotlin/dev/sigstore/sign/SigstoreSignExtension.kt
-sed -i "s/version=$release_version/version=$next_version/" gradle.properties
+sedi "s/\(sigstoreJavaVersion.convention(\"\)$release_version/\1$next_version/" sigstore-gradle/sigstore-gradle-sign-base-plugin/src/main/kotlin/dev/sigstore/sign/SigstoreSignExtension.kt
+sedi "s/version=$release_version/version=$next_version/" gradle.properties
 
