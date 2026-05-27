@@ -15,11 +15,55 @@
  */
 package dev.sigstore;
 
-import static com.google.common.hash.Hashing.*;
+import static com.google.common.hash.Hashing.sha256;
 
 import com.google.common.hash.HashFunction;
+import java.security.PublicKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
 
 public class AlgorithmRegistry {
+
+  /**
+   * Determine the signing algorithm based on the public key.
+   *
+   * @param publicKey the public key
+   * @return the signing algorithm
+   * @throws UnsupportedAlgorithmException if the key algorithm or curve is not supported
+   * @throws IllegalStateException if the public key cannot be converted into a known type
+   */
+  public static SigningAlgorithm getSigningAlgorithm(PublicKey publicKey)
+      throws UnsupportedAlgorithmException {
+    String algorithm = publicKey.getAlgorithm();
+    if ("RSA".equals(algorithm)) {
+      if (publicKey instanceof RSAPublicKey) {
+        var rsaKey = (RSAPublicKey) publicKey;
+        int bitLength = rsaKey.getModulus().bitLength();
+        if (bitLength == 2048) {
+          return SigningAlgorithm.PKIX_RSA_PKCS1V15_2048_SHA256;
+        } else if (bitLength == 3072) {
+          return SigningAlgorithm.PKIX_RSA_PKCS1V15_3072_SHA256;
+        } else if (bitLength == 4096) {
+          return SigningAlgorithm.PKIX_RSA_PKCS1V15_4096_SHA256;
+        }
+        throw new UnsupportedAlgorithmException("Unsupported RSA bit length: " + bitLength);
+      }
+      throw new IllegalStateException("RSA key must be an instance of RSAPublicKey");
+    }
+    if ("EC".equals(algorithm) || "ECDSA".equals(algorithm)) {
+      if (publicKey instanceof ECPublicKey) {
+        var ecKey = (ECPublicKey) publicKey;
+        int fieldSize = ecKey.getParams().getCurve().getField().getFieldSize();
+        if (fieldSize == 256) {
+          return SigningAlgorithm.PKIX_ECDSA_P256_SHA_256;
+        }
+        throw new UnsupportedAlgorithmException("Unsupported EC field size: " + fieldSize);
+      }
+      throw new IllegalStateException("EC/ECDSA key must be an instance of ECPublicKey");
+    }
+    throw new UnsupportedAlgorithmException("Unsupported key algorithm: " + algorithm);
+  }
+
   public enum SigningAlgorithm {
     PKIX_RSA_PKCS1V15_2048_SHA256(HashAlgorithm.SHA2_256),
     PKIX_RSA_PKCS1V15_3072_SHA256(HashAlgorithm.SHA2_256),
@@ -36,7 +80,7 @@ public class AlgorithmRegistry {
       this.hashAlgorithm = hashAlgorithm;
     }
 
-    public HashAlgorithm getHashing() {
+    public HashAlgorithm getHashAlgorithm() {
       return hashAlgorithm;
     }
   }

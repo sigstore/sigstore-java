@@ -15,17 +15,15 @@
  */
 package dev.sigstore.fulcio.client;
 
-import com.google.common.collect.ImmutableMap;
+import dev.sigstore.AlgorithmRegistry;
+import dev.sigstore.UnsupportedAlgorithmException;
 import dev.sigstore.fulcio.v2.PublicKeyAlgorithm;
+import dev.sigstore.proto.ProtoMutators;
 import java.security.PublicKey;
-import java.util.Map;
 import org.immutables.value.Value;
 
 @Value.Immutable
 public interface CertificateRequest {
-  Map<String, PublicKeyAlgorithm> SUPPORTED_ALGORITHMS =
-      ImmutableMap.of("EC", PublicKeyAlgorithm.ECDSA, "RSA", PublicKeyAlgorithm.RSA_PSS);
-
   PublicKey getPublicKey();
 
   PublicKeyAlgorithm getPublicKeyAlgorithm();
@@ -37,23 +35,19 @@ public interface CertificateRequest {
   /**
    * Create a certificate request
    *
-   * @param publicKey An ECDSA public key
+   * @param publicKey A public key to verify {@code proofOfPossession}
    * @param idToken An oidc token obtained from an oauth provider
    * @param proofOfPossession The subject or email address from {@code idToken}, signed by the
    *     private key counterpart of {@code publicKey} in asn1 notation
-   * @throws UnsupportedAlgorithmException if key type is not in {@link
-   *     CertificateRequest#SUPPORTED_ALGORITHMS}
+   * @throws UnsupportedAlgorithmException if key type is not in {@link AlgorithmRegistry}
    */
   static CertificateRequest newCertificateRequest(
       PublicKey publicKey, String idToken, byte[] proofOfPossession)
       throws UnsupportedAlgorithmException {
-    if (!SUPPORTED_ALGORITHMS.containsKey(publicKey.getAlgorithm())) {
-      throw new UnsupportedAlgorithmException(
-          SUPPORTED_ALGORITHMS.keySet(), publicKey.getAlgorithm());
-    }
+    var signingAlgorithm = AlgorithmRegistry.getSigningAlgorithm(publicKey);
     return ImmutableCertificateRequest.builder()
         .publicKey(publicKey)
-        .publicKeyAlgorithm(SUPPORTED_ALGORITHMS.get(publicKey.getAlgorithm()))
+        .publicKeyAlgorithm(ProtoMutators.toPublicKeyAlgorithm(signingAlgorithm))
         .idToken(idToken)
         .proofOfPossession(proofOfPossession)
         .build();

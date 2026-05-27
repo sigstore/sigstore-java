@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.fulcio.client;
-
-import java.util.Arrays;
-import java.util.Set;
+package dev.sigstore;
 
 public class UnsupportedAlgorithmException extends Exception {
-  public UnsupportedAlgorithmException(Set<String> allowedAlgorithms, String algorithm) {
-    super(
-        algorithm
-            + " is not from supported list of "
-            + Arrays.toString(allowedAlgorithms.toArray()));
+  public UnsupportedAlgorithmException(String message) {
+    super(message);
+  }
+
+  public UnsupportedAlgorithmException(String message, Throwable cause) {
+    super(message, cause);
   }
 }
