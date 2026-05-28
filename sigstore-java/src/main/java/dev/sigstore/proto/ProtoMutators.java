@@ -21,6 +21,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.fulcio.v2.PublicKeyAlgorithm;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
 import dev.sigstore.proto.common.v1.PublicKeyDetails;
 import dev.sigstore.proto.common.v1.X509Certificate;
@@ -82,6 +83,19 @@ public class ProtoMutators {
         return PublicKeyDetails.PKIX_RSA_PKCS1V15_4096_SHA256;
       case PKIX_ECDSA_P256_SHA_256:
         return PublicKeyDetails.PKIX_ECDSA_P256_SHA_256;
+    }
+    throw new IllegalStateException("Unknown algorithm: " + algorithm);
+  }
+
+  public static PublicKeyAlgorithm toPublicKeyAlgorithm(
+      AlgorithmRegistry.SigningAlgorithm algorithm) {
+    switch (algorithm) {
+      case PKIX_RSA_PKCS1V15_2048_SHA256:
+      case PKIX_RSA_PKCS1V15_3072_SHA256:
+      case PKIX_RSA_PKCS1V15_4096_SHA256:
+        return PublicKeyAlgorithm.RSA_PSS;
+      case PKIX_ECDSA_P256_SHA_256:
+        return PublicKeyAlgorithm.ECDSA;
     }
     throw new IllegalStateException("Unknown algorithm: " + algorithm);
   }

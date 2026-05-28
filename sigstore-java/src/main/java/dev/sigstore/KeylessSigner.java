@@ -38,7 +38,6 @@ import dev.sigstore.fulcio.client.FulcioClient;
 import dev.sigstore.fulcio.client.FulcioClientGrpc;
 import dev.sigstore.fulcio.client.FulcioVerificationException;
 import dev.sigstore.fulcio.client.FulcioVerifier;
-import dev.sigstore.fulcio.client.UnsupportedAlgorithmException;
 import dev.sigstore.json.JsonParseException;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.OidcException;
@@ -337,7 +336,7 @@ public class KeylessSigner implements AutoCloseable {
         oidcClients = OidcClients.from(oidcService.get());
       }
 
-      if (!signingAlgorithm.getHashing().equals(AlgorithmRegistry.HashAlgorithm.SHA2_256)) {
+      if (!signingAlgorithm.getHashAlgorithm().equals(AlgorithmRegistry.HashAlgorithm.SHA2_256)) {
         throw new SigstoreConfigurationException("Signing algorithm must use sha256");
       }
 
@@ -402,7 +401,7 @@ public class KeylessSigner implements AutoCloseable {
     }
 
     for (var digest : artifactDigests) {
-      if (signingAlgorithm.getHashing().getLength() != digest.length) {
+      if (signingAlgorithm.getHashAlgorithm().getLength() != digest.length) {
         throw new KeylessSignerException(
             "Invalid digest length: "
                 + digest.length
@@ -457,7 +456,8 @@ public class KeylessSigner implements AutoCloseable {
           ImmutableBundle.builder()
               .certPath(signingCert)
               .messageSignature(
-                  MessageSignature.of(signingAlgorithm.getHashing(), artifactDigest, signature));
+                  MessageSignature.of(
+                      signingAlgorithm.getHashAlgorithm(), artifactDigest, signature));
 
       if (rekorV2Client != null) { // Using Rekor v2 and a TSA
         Preconditions.checkNotNull(
@@ -656,7 +656,9 @@ public class KeylessSigner implements AutoCloseable {
       var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
       try {
         digests.add(
-            artifactByteSource.hash(signingAlgorithm.getHashing().getHashFunction()).asBytes());
+            artifactByteSource
+                .hash(signingAlgorithm.getHashAlgorithm().getHashFunction())
+                .asBytes());
       } catch (IOException ex) {
         throw new KeylessSignerException("Failed to hash artifact " + artifact);
       }
