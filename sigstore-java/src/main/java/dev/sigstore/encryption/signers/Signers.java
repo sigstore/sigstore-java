@@ -28,11 +28,11 @@ public class Signers {
   public static Signer from(AlgorithmRegistry.SigningAlgorithm algorithm) {
     switch (algorithm) {
       case PKIX_RSA_PKCS1V15_2048_SHA256:
-        return newRsaSigner(2048, AlgorithmRegistry.HashAlgorithm.SHA2_256);
+        return newRsaSigner(2048);
       case PKIX_RSA_PKCS1V15_3072_SHA256:
-        return newRsaSigner(3072, AlgorithmRegistry.HashAlgorithm.SHA2_256);
+        return newRsaSigner(3072);
       case PKIX_RSA_PKCS1V15_4096_SHA256:
-        return newRsaSigner(4096, AlgorithmRegistry.HashAlgorithm.SHA2_256);
+        return newRsaSigner(4096);
       case PKIX_ECDSA_P256_SHA_256:
         return newEcdsaSigner("secp256r1", AlgorithmRegistry.HashAlgorithm.SHA2_256);
       case PKIX_ECDSA_P384_SHA_384:
@@ -53,12 +53,12 @@ public class Signers {
     }
   }
 
-  /** Create a new RSA signer with 2048 bit keysize. */
-  static RsaSigner newRsaSigner(int keysize, AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
+  /** Create a new RSA signer with 2048 bit keysize. Hash Algorithm is always SHA256. */
+  static RsaSigner newRsaSigner(int keysize) {
     try {
       KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
       keyGen.initialize(keysize);
-      return new RsaSigner(keyGen.generateKeyPair(), hashAlgorithm);
+      return new RsaSigner(keyGen.generateKeyPair());
     } catch (NoSuchAlgorithmException nse) {
       throw new RuntimeException("No RSA algorithm found in Runtime", nse);
     }

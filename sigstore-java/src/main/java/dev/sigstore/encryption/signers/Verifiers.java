@@ -29,8 +29,7 @@ public class Verifiers {
    */
   public static Verifier newVerifier(PublicKey publicKey) throws UnsupportedAlgorithmException {
     if (publicKey.getAlgorithm().equals("RSA")) {
-      return new RsaVerifier(
-          publicKey, AlgorithmRegistry.getSigningAlgorithm(publicKey).getHashAlgorithm());
+      return new RsaVerifier(publicKey);
     }
     if (publicKey.getAlgorithm().equals("EC") || publicKey.getAlgorithm().equals("ECDSA")) {
       return new EcdsaVerifier(
@@ -61,8 +60,9 @@ public class Verifiers {
   public static Verifier newVerifier(
       PublicKey publicKey, AlgorithmRegistry.HashAlgorithm hashAlgorithm)
       throws UnsupportedAlgorithmException {
-    if (publicKey.getAlgorithm().equals("RSA")) {
-      return new RsaVerifier(publicKey, hashAlgorithm);
+    if (publicKey.getAlgorithm().equals("RSA")
+        && AlgorithmRegistry.HashAlgorithm.SHA2_256.equals(hashAlgorithm)) {
+      return new RsaVerifier(publicKey);
     }
     if (publicKey.getAlgorithm().equals("EC") || publicKey.getAlgorithm().equals("ECDSA")) {
       return new EcdsaVerifier(publicKey, hashAlgorithm);
@@ -70,6 +70,6 @@ public class Verifiers {
     throw new UnsupportedAlgorithmException(
         "Cannot verify signatures for key type '"
             + publicKey.getAlgorithm()
-            + "', this client only supports RSA, ECDSA verification when specifying hash algorithm");
+            + "', this client only supports RSA with SHA256 or ECDSA verification when specifying hash algorithm");
   }
 }

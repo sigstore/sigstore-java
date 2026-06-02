@@ -16,17 +16,18 @@
 package dev.sigstore.encryption;
 
 import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import dev.sigstore.AlgorithmRegistry;
 
 public class Hashers {
   public static HashFunction from(AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
     switch (hashAlgorithm) {
       case SHA2_256:
-        return com.google.common.hash.Hashing.sha256();
+        return Hashing.sha256();
       case SHA2_384:
-        return com.google.common.hash.Hashing.sha384();
+        return Hashing.sha384();
       case SHA2_512:
-        return com.google.common.hash.Hashing.sha512();
+        return Hashing.sha512();
     }
     throw new IllegalStateException();
   }
