@@ -15,9 +15,6 @@
  */
 package dev.sigstore;
 
-import static com.google.common.hash.Hashing.sha256;
-
-import com.google.common.hash.HashFunction;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
@@ -71,8 +68,6 @@ public class AlgorithmRegistry {
 
     // ECDSA
     PKIX_ECDSA_P256_SHA_256(HashAlgorithm.SHA2_256);
-    // TODO: PKIX_ECDSA_P384_SHA_384(HashAlgorithm.SHA2_384),
-    // TODO: PKIX_ECDSA_P521_SHA_512(HashAlgorithm.SHA2_512);
 
     private final HashAlgorithm hashAlgorithm;
 
@@ -86,18 +81,14 @@ public class AlgorithmRegistry {
   }
 
   public enum HashAlgorithm {
-    SHA2_256("SHA256", 32, sha256());
-    // TODO: SHA2_384("SHA384", 48, sha384()),
-    // TODO: SHA2_512("SHA512", 64, sha512());
+    SHA2_256("SHA256", 32);
 
     private final String name;
     private final int length;
-    private final HashFunction hashFunction;
 
-    HashAlgorithm(String name, int length, HashFunction hashFunction) {
+    HashAlgorithm(String name, int length) {
       this.name = name;
       this.length = length;
-      this.hashFunction = hashFunction;
     }
 
     public String toString() {
@@ -106,10 +97,6 @@ public class AlgorithmRegistry {
 
     public int getLength() {
       return length;
-    }
-
-    HashFunction getHashFunction() {
-      return hashFunction;
     }
   }
 }

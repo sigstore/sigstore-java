@@ -30,6 +30,7 @@ import dev.sigstore.bundle.ImmutableDsseEnvelope;
 import dev.sigstore.bundle.ImmutableSignature;
 import dev.sigstore.bundle.ImmutableTimestamp;
 import dev.sigstore.dsse.InTotoPayload;
+import dev.sigstore.encryption.Hashers;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
@@ -654,11 +655,9 @@ public class KeylessSigner implements AutoCloseable {
     var digests = new ArrayList<byte[]>(artifacts.size());
     for (var artifact : artifacts) {
       var artifactByteSource = com.google.common.io.Files.asByteSource(artifact.toFile());
+      var hashFunction = Hashers.from(signingAlgorithm);
       try {
-        digests.add(
-            artifactByteSource
-                .hash(signingAlgorithm.getHashAlgorithm().getHashFunction())
-                .asBytes());
+        digests.add(artifactByteSource.hash(hashFunction).asBytes());
       } catch (IOException ex) {
         throw new KeylessSignerException("Failed to hash artifact " + artifact);
       }
