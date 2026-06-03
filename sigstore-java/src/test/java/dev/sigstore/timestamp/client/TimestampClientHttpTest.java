@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.tuf.SigstoreTufClient;
 import java.nio.charset.StandardCharsets;
@@ -45,7 +46,7 @@ public class TimestampClientHttpTest {
     tsReq =
         ImmutableTimestampRequest.builder()
             .hash(artifactHashBytes)
-            .hashAlgorithm(HashAlgorithm.SHA256)
+            .hashAlgorithm(AlgorithmRegistry.HashAlgorithm.SHA2_256)
             .build();
   }
 
@@ -74,7 +75,7 @@ public class TimestampClientHttpTest {
 
     assertEquals(tsReq.getNonce(), tsInfo.getNonce());
 
-    var expectedOid = tsReq.getHashAlgorithm().getOid();
+    var expectedOid = HashAlgorithm.toOid(tsReq.getHashAlgorithm());
     assertEquals(expectedOid, tsInfo.getMessageImprintAlgOID());
   }
 
@@ -83,7 +84,7 @@ public class TimestampClientHttpTest {
     var tsReqWithIncorrectDigestLength =
         ImmutableTimestampRequest.builder()
             .hash(tsReq.getHash())
-            .hashAlgorithm(HashAlgorithm.SHA512)
+            .hashAlgorithm(AlgorithmRegistry.HashAlgorithm.SHA2_512)
             .nonce(tsReq.getNonce())
             .build();
 

@@ -59,7 +59,6 @@ import dev.sigstore.rekor.client.RekorVerificationException;
 import dev.sigstore.rekor.client.RekorVerifier;
 import dev.sigstore.rekor.v2.client.RekorV2Client;
 import dev.sigstore.rekor.v2.client.RekorV2ClientHttp;
-import dev.sigstore.timestamp.client.HashAlgorithm;
 import dev.sigstore.timestamp.client.ImmutableTimestampRequest;
 import dev.sigstore.timestamp.client.TimestampClient;
 import dev.sigstore.timestamp.client.TimestampClientHttp;
@@ -472,7 +471,7 @@ public class KeylessSigner implements AutoCloseable {
 
         var tsReq =
             ImmutableTimestampRequest.builder()
-                .hashAlgorithm(HashAlgorithm.from(signingAlgorithm.getHashAlgorithm()))
+                .hashAlgorithm(signingAlgorithm.getHashAlgorithm())
                 .hash(signatureDigest)
                 .build();
 
@@ -804,7 +803,7 @@ public class KeylessSigner implements AutoCloseable {
 
     var tsReq =
         ImmutableTimestampRequest.builder()
-            .hashAlgorithm(HashAlgorithm.from(signingAlgorithm.getHashAlgorithm()))
+            .hashAlgorithm(signingAlgorithm.getHashAlgorithm())
             .hash(signatureDigest)
             .build();
 
