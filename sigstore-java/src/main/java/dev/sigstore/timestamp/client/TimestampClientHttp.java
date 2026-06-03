@@ -81,7 +81,7 @@ public class TimestampClientHttp implements TimestampClient {
     TimeStampRequestGenerator bcTsReqGen = new TimeStampRequestGenerator();
 
     // Prepare and send the timestamp request
-    var bcAlgorithmOid = tsReq.getHashAlgorithm().getOid();
+    var bcAlgorithmOid = HashAlgorithm.toOid(tsReq.getHashAlgorithm());
     var artifactHashBytes = tsReq.getHash();
     var nonce = tsReq.getNonce();
     bcTsReqGen.setCertReq(tsReq.requestCertificates());

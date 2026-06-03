@@ -16,53 +16,38 @@
 package dev.sigstore.timestamp.client;
 
 import dev.sigstore.AlgorithmRegistry;
+import dev.sigstore.UnsupportedAlgorithmException;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.tsp.TSPAlgorithms;
 
 /** Supported hash algorithms for timestamp requests. */
-public enum HashAlgorithm {
-  SHA256("SHA256", TSPAlgorithms.SHA256),
-  SHA384("SHA384", TSPAlgorithms.SHA384),
-  SHA512("SHA512", TSPAlgorithms.SHA512);
+public class HashAlgorithm {
+  private HashAlgorithm() {}
 
-  private final String algorithmName;
-  private final ASN1ObjectIdentifier oid;
-
-  HashAlgorithm(String algorithmName, ASN1ObjectIdentifier oid) {
-    this.algorithmName = algorithmName;
-    this.oid = oid;
-  }
-
-  public String getAlgorithmName() {
-    return algorithmName;
-  }
-
-  public ASN1ObjectIdentifier getOid() {
-    return oid;
-  }
-
-  public static HashAlgorithm from(ASN1ObjectIdentifier oid)
-      throws UnsupportedHashAlgorithmException {
-    for (HashAlgorithm value : values()) {
-      if (value.getOid().equals(oid)) {
-        return value;
-      }
-    }
-    throw new UnsupportedHashAlgorithmException(oid.getId());
-  }
-
-  // this is just temporary to avoid messing with the timestamp package too much while we
-  // transition, this enum
-  // should really just be using AlgorithmRegistry as much as possible
-  public static HashAlgorithm from(AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
+  public static ASN1ObjectIdentifier toOid(AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
     switch (hashAlgorithm) {
       case SHA2_256:
-        return SHA256;
+        return TSPAlgorithms.SHA256;
       case SHA2_384:
-        return SHA384;
+        return TSPAlgorithms.SHA384;
       case SHA2_512:
-        return SHA512;
+        return TSPAlgorithms.SHA512;
     }
     throw new IllegalArgumentException();
+  }
+
+  public static AlgorithmRegistry.HashAlgorithm fromOid(ASN1ObjectIdentifier oid)
+      throws UnsupportedAlgorithmException {
+    if (oid.equals(TSPAlgorithms.SHA256)) {
+      return AlgorithmRegistry.HashAlgorithm.SHA2_256;
+    }
+    if (oid.equals(TSPAlgorithms.SHA384)) {
+      return AlgorithmRegistry.HashAlgorithm.SHA2_384;
+    }
+    if (oid.equals(TSPAlgorithms.SHA512)) {
+      return AlgorithmRegistry.HashAlgorithm.SHA2_512;
+    }
+    throw new UnsupportedAlgorithmException(
+        "Unsupported timestamp hashing algorithm oid: " + oid.getId());
   }
 }

@@ -15,7 +15,9 @@
  */
 package dev.sigstore.timestamp.client;
 
-import com.google.common.hash.Hashing;
+import dev.sigstore.AlgorithmRegistry;
+import dev.sigstore.UnsupportedAlgorithmException;
+import dev.sigstore.encryption.Hashers;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.trustroot.CertificateAuthority;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
@@ -147,26 +149,13 @@ public class TimestampVerifier {
 
     // Validate the message imprint digest in the token
     var oid = tsToken.getTimeStampInfo().getMessageImprintAlgOID();
-    HashAlgorithm hashAlgorithm;
+    AlgorithmRegistry.HashAlgorithm hashAlgorithm;
     try {
-      hashAlgorithm = HashAlgorithm.from(oid);
-    } catch (UnsupportedHashAlgorithmException e) {
+      hashAlgorithm = HashAlgorithm.fromOid(oid);
+    } catch (UnsupportedAlgorithmException e) {
       throw new TimestampVerificationException(e);
     }
-    byte[] artifactDigest;
-    switch (hashAlgorithm) {
-      case SHA256:
-        artifactDigest = Hashing.sha256().hashBytes(artifact).asBytes();
-        break;
-      case SHA384:
-        artifactDigest = Hashing.sha384().hashBytes(artifact).asBytes();
-        break;
-      case SHA512:
-        artifactDigest = Hashing.sha512().hashBytes(artifact).asBytes();
-        break;
-      default:
-        throw new IllegalStateException(); // We shouldn't be here.
-    }
+    byte[] artifactDigest = Hashers.from(hashAlgorithm).hashBytes(artifact).asBytes();
     validateTokenMessageImprintDigest(tsToken, artifactDigest);
   }
 

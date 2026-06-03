@@ -15,6 +15,7 @@
  */
 package dev.sigstore.timestamp.client;
 
+import dev.sigstore.AlgorithmRegistry;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import org.immutables.value.Value;
@@ -23,7 +24,7 @@ import org.immutables.value.Value.Immutable;
 @Immutable
 public interface TimestampRequest {
   /** The hash algorithm used to hash the artifact. */
-  HashAlgorithm getHashAlgorithm();
+  AlgorithmRegistry.HashAlgorithm getHashAlgorithm();
 
   /**
    * The hash of the artifact to be timestamped. For sigstore-java, this typically refers to the
