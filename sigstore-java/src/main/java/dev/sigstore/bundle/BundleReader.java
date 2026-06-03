@@ -19,7 +19,6 @@ import com.google.protobuf.ByteString;
 import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.ProtoMutators;
-import dev.sigstore.proto.common.v1.HashAlgorithm;
 import dev.sigstore.rekor.client.ImmutableInclusionProof;
 import dev.sigstore.rekor.client.ImmutableRekorEntry;
 import dev.sigstore.rekor.client.ImmutableVerification;
@@ -115,19 +114,26 @@ class BundleReader {
       var signature = protoBundle.getMessageSignature().getSignature().toByteArray();
       if (protoBundle.getMessageSignature().hasMessageDigest()) {
         var hashAlgorithm = protoBundle.getMessageSignature().getMessageDigest().getAlgorithm();
-        if (hashAlgorithm != HashAlgorithm.SHA2_256) {
-          throw new BundleParseException(
-              "Cannot read message digests of type "
-                  + hashAlgorithm
-                  + ", only "
-                  + HashAlgorithm.SHA2_256
-                  + " is supported");
+        AlgorithmRegistry.HashAlgorithm alg;
+        switch (hashAlgorithm) {
+          case SHA2_256:
+            alg = AlgorithmRegistry.HashAlgorithm.SHA2_256;
+            break;
+          case SHA2_384:
+            alg = AlgorithmRegistry.HashAlgorithm.SHA2_384;
+            break;
+          case SHA2_512:
+            alg = AlgorithmRegistry.HashAlgorithm.SHA2_512;
+            break;
+          default:
+            throw new BundleParseException(
+                "Cannot read message digests of type " + hashAlgorithm + ", unsupported algorithm");
         }
         var messageSignature =
             ImmutableMessageSignature.builder()
                 .messageDigest(
                     ImmutableMessageDigest.builder()
-                        .hashAlgorithm(AlgorithmRegistry.HashAlgorithm.SHA2_256)
+                        .hashAlgorithm(alg)
                         .digest(
                             protoBundle
                                 .getMessageSignature()

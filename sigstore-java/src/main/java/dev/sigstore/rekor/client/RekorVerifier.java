@@ -16,6 +16,7 @@
 package dev.sigstore.rekor.client;
 
 import com.google.common.hash.Hashing;
+import dev.sigstore.UnsupportedAlgorithmException;
 import dev.sigstore.encryption.signers.Verifiers;
 import dev.sigstore.merkle.InclusionProofVerificationException;
 import dev.sigstore.merkle.InclusionProofVerifier;
@@ -83,6 +84,7 @@ public class RekorVerifier {
       } catch (InvalidKeySpecException
           | InvalidKeyException
           | SignatureException
+          | UnsupportedAlgorithmException
           | NoSuchAlgorithmException e) {
         throw new RekorVerificationException("Entry SET verification failed: " + e.getMessage(), e);
       }
@@ -179,6 +181,7 @@ public class RekorVerifier {
     } catch (NoSuchAlgorithmException
         | InvalidKeySpecException
         | SignatureException
+        | UnsupportedAlgorithmException
         | InvalidKeyException ex) {
       throw new RekorVerificationException("Could not verify checkpoint signature", ex);
     }

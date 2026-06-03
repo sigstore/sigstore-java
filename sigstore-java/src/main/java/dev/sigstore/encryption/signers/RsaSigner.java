@@ -26,11 +26,9 @@ public class RsaSigner implements Signer {
   static final byte[] PKCS1_SHA256_PADDING = Hex.decode("3031300d060960864801650304020105000420");
 
   private final KeyPair keyPair;
-  private final AlgorithmRegistry.HashAlgorithm hashAlgorithm;
 
-  RsaSigner(KeyPair keyPair, AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
+  RsaSigner(KeyPair keyPair) {
     this.keyPair = keyPair;
-    this.hashAlgorithm = hashAlgorithm;
   }
 
   @Override
@@ -41,7 +39,7 @@ public class RsaSigner implements Signer {
   @Override
   public byte[] sign(byte[] artifact)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    Signature signature = Signature.getInstance(hashAlgorithm + "withRSA");
+    Signature signature = Signature.getInstance("SHA256withRSA");
     signature.initSign(keyPair.getPrivate());
     signature.update(artifact);
     return signature.sign();
@@ -50,9 +48,11 @@ public class RsaSigner implements Signer {
   @Override
   public byte[] signDigest(byte[] artifactDigest)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    if (artifactDigest.length != hashAlgorithm.getLength()) {
+    if (artifactDigest.length != AlgorithmRegistry.HashAlgorithm.SHA2_256.getLength()) {
       throw new SignatureException(
-          "Artifact digest must be " + hashAlgorithm.getLength() + " bytes");
+          "Artifact digest must be "
+              + AlgorithmRegistry.HashAlgorithm.SHA2_256.getLength()
+              + " bytes");
     }
     Signature signature = Signature.getInstance("NONEwithRSA");
     signature.initSign(keyPair.getPrivate());

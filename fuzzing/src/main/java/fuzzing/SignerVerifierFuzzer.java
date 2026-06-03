@@ -17,6 +17,7 @@ package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import dev.sigstore.AlgorithmRegistry;
+import dev.sigstore.UnsupportedAlgorithmException;
 import dev.sigstore.encryption.signers.Signer;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.encryption.signers.Verifier;
@@ -39,7 +40,10 @@ public class SignerVerifierFuzzer {
 
       var unused1 = verifier.verify(byteArray, signature1);
       var unused2 = verifier.verifyDigest(byteArray, signature2);
-    } catch (InvalidKeyException | NoSuchAlgorithmException | SignatureException e) {
+    } catch (InvalidKeyException
+        | NoSuchAlgorithmException
+        | SignatureException
+        | UnsupportedAlgorithmException e) {
       // Known exception
     }
   }

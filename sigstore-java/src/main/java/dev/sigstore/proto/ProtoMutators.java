@@ -15,11 +15,10 @@
  */
 package dev.sigstore.proto;
 
-import static dev.sigstore.proto.common.v1.HashAlgorithm.*;
-
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import dev.sigstore.AlgorithmRegistry;
+import dev.sigstore.UnsupportedAlgorithmException;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.fulcio.v2.PublicKeyAlgorithm;
 import dev.sigstore.proto.common.v1.HashAlgorithm;
@@ -67,10 +66,28 @@ public class ProtoMutators {
   }
 
   public static HashAlgorithm toProtoHashAlgorithm(AlgorithmRegistry.HashAlgorithm algorithm) {
-    if (Objects.requireNonNull(algorithm) == AlgorithmRegistry.HashAlgorithm.SHA2_256) {
-      return SHA2_256;
+    switch (Objects.requireNonNull(algorithm)) {
+      case SHA2_256:
+        return HashAlgorithm.SHA2_256;
+      case SHA2_384:
+        return HashAlgorithm.SHA2_384;
+      case SHA2_512:
+        return HashAlgorithm.SHA2_512;
     }
     throw new IllegalStateException("Unknown hash algorithm: " + algorithm);
+  }
+
+  public static AlgorithmRegistry.HashAlgorithm toHashAlgorithm(HashAlgorithm hashAlgorithm)
+      throws UnsupportedAlgorithmException {
+    switch (Objects.requireNonNull(hashAlgorithm)) {
+      case SHA2_256:
+        return AlgorithmRegistry.HashAlgorithm.SHA2_256;
+      case SHA2_384:
+        return AlgorithmRegistry.HashAlgorithm.SHA2_384;
+      case SHA2_512:
+        return AlgorithmRegistry.HashAlgorithm.SHA2_512;
+    }
+    throw new UnsupportedAlgorithmException("Unsupported hash algorithm: " + hashAlgorithm);
   }
 
   public static PublicKeyDetails toPublicKeyDetails(AlgorithmRegistry.SigningAlgorithm algorithm) {
@@ -83,6 +100,10 @@ public class ProtoMutators {
         return PublicKeyDetails.PKIX_RSA_PKCS1V15_4096_SHA256;
       case PKIX_ECDSA_P256_SHA_256:
         return PublicKeyDetails.PKIX_ECDSA_P256_SHA_256;
+      case PKIX_ECDSA_P384_SHA_384:
+        return PublicKeyDetails.PKIX_ECDSA_P384_SHA_384;
+      case PKIX_ECDSA_P521_SHA_512:
+        return PublicKeyDetails.PKIX_ECDSA_P521_SHA_512;
     }
     throw new IllegalStateException("Unknown algorithm: " + algorithm);
   }

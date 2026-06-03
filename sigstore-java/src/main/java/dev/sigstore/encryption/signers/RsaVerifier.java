@@ -18,15 +18,13 @@ package dev.sigstore.encryption.signers;
 import dev.sigstore.AlgorithmRegistry;
 import java.security.*;
 
-/** RSA verifier, instantiated by {@link Verifiers#newVerifier(PublicKey)}. */
+/** RSA verifier, instantiated by {@link Verifiers}. */
 public class RsaVerifier implements Verifier {
 
   private final PublicKey publicKey;
-  private final AlgorithmRegistry.HashAlgorithm hashAlgorithm;
 
-  RsaVerifier(PublicKey publicKey, AlgorithmRegistry.HashAlgorithm hashAlgorithm) {
+  RsaVerifier(PublicKey publicKey) {
     this.publicKey = publicKey;
-    this.hashAlgorithm = hashAlgorithm;
   }
 
   @Override
@@ -37,7 +35,7 @@ public class RsaVerifier implements Verifier {
   @Override
   public boolean verify(byte[] artifact, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    var verifier = Signature.getInstance(hashAlgorithm + "withRSA");
+    var verifier = Signature.getInstance("SHA256withRSA");
     verifier.initVerify(publicKey);
     verifier.update(artifact);
     return verifier.verify(signature);
@@ -46,6 +44,12 @@ public class RsaVerifier implements Verifier {
   @Override
   public boolean verifyDigest(byte[] digest, byte[] signature)
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    if (digest.length != AlgorithmRegistry.HashAlgorithm.SHA2_256.getLength()) {
+      throw new SignatureException(
+          "Artifact digest must be "
+              + AlgorithmRegistry.HashAlgorithm.SHA2_256.getLength()
+              + " bytes");
+    }
     var verifier = Signature.getInstance("NONEwithRSA");
     verifier.initVerify(publicKey);
     verifier.update(RsaSigner.PKCS1_SHA256_PADDING);

@@ -17,8 +17,8 @@ package dev.sigstore.encryption.signers;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.AlgorithmRegistry;
+import dev.sigstore.UnsupportedAlgorithmException;
 import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,7 +30,7 @@ public class SignerTest {
   private static final byte[] CONTENT = "abcdef".getBytes(StandardCharsets.UTF_8);
   private static final byte[] CONTENT_DIGEST = Hashing.sha256().hashBytes(CONTENT).asBytes();
 
-  static Stream<Arguments> signerProvider() throws NoSuchAlgorithmException {
+  static Stream<Arguments> signerProvider() throws UnsupportedAlgorithmException {
     var rsaSigner2048 =
         Signers.from(AlgorithmRegistry.SigningAlgorithm.PKIX_RSA_PKCS1V15_2048_SHA256);
     var rsaSigner3072 =

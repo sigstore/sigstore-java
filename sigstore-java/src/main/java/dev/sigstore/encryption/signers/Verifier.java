@@ -25,7 +25,7 @@ public interface Verifier {
   PublicKey getPublicKey();
 
   /**
-   * Verify an artifact. Implementations will hash the artifact with sha256 before verifying.
+   * Verify an artifact. Implementations will hash the artifact before verifying.
    *
    * @param artifact the artifact that was signed
    * @param signature the signature associated with the artifact
@@ -36,10 +36,10 @@ public interface Verifier {
       throws NoSuchAlgorithmException, InvalidKeyException, SignatureException;
 
   /**
-   * Verify an artifact using the artifact's sha256 digest. Implementations do not further hash the
-   * input.
+   * Verify an artifact using the artifact's digest. Implementations do not further hash the input,
+   * but may check the hash length is consistent with the Verifier's configuration.
    *
-   * @param artifactDigest the sha256 digest of the artifact that was signed
+   * @param artifactDigest the digest of the artifact that was signed
    * @param signature the signature associated with the artifact
    * @return true if the signature is valid, false otherwise
    */
