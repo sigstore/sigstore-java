@@ -26,7 +26,6 @@ import dev.sigstore.http.HttpParams;
 import dev.sigstore.http.ImmutableHttpParams;
 import dev.sigstore.http.URIFormat;
 import dev.sigstore.proto.rekor.v2.CreateEntryRequest;
-import dev.sigstore.proto.rekor.v2.DSSERequestV002;
 import dev.sigstore.proto.rekor.v2.HashedRekordRequestV002;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.rekor.client.RekorParseException;
@@ -81,11 +80,6 @@ public class RekorV2ClientHttp implements RekorV2Client {
       throws IOException, RekorParseException {
     return putEntry(
         CreateEntryRequest.newBuilder().setHashedRekordRequestV002(hashedRekordRequest).build());
-  }
-
-  @Override
-  public RekorEntry putEntry(DSSERequestV002 dsseRequest) throws IOException, RekorParseException {
-    return putEntry(CreateEntryRequest.newBuilder().setDsseRequestV002(dsseRequest).build());
   }
 
   private RekorEntry putEntry(CreateEntryRequest request) throws IOException, RekorParseException {

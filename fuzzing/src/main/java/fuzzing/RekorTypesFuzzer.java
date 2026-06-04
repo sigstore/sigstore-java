@@ -50,9 +50,6 @@ public class RekorTypesFuzzer {
         case 2:
           RekorTypes.getHashedRekordV002(entry);
           break;
-        case 3:
-          RekorTypes.getDsseV002(entry);
-          break;
       }
     } catch (URISyntaxException | RekorTypeException | RekorParseException e) {
       // Known exception
