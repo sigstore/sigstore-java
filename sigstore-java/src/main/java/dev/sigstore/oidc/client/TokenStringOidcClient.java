@@ -42,18 +42,29 @@ public class TokenStringOidcClient implements OidcClient {
   }
 
   public static TokenStringOidcClient from(String token) {
-    return new TokenStringOidcClient(() -> token);
+    return new TokenStringOidcClient(
+        new TokenStringProvider() {
+          @Override
+          public String getTokenString(Map<String, String> env) throws Exception {
+            return token;
+          }
+
+          @Override
+          public boolean isEnabled(Map<String, String> env) {
+            return true;
+          }
+        });
   }
 
   @Override
   public boolean isEnabled(Map<String, String> env) {
-    return true;
+    return idTokenProvider.isEnabled(env);
   }
 
   @Override
   public OidcToken getIDToken(Map<String, String> env) throws OidcException {
     try {
-      var idToken = idTokenProvider.getTokenString();
+      var idToken = idTokenProvider.getTokenString(env);
       var jws = JsonWebSignature.parse(new GsonFactory(), idToken);
       String email = (String) jws.getPayload().get("email");
       String san;
@@ -83,8 +94,9 @@ public class TokenStringOidcClient implements OidcClient {
     }
   }
 
-  @FunctionalInterface
   public interface TokenStringProvider {
-    String getTokenString() throws Exception;
+    String getTokenString(Map<String, String> env) throws Exception;
+
+    boolean isEnabled(Map<String, String> env);
   }
 }

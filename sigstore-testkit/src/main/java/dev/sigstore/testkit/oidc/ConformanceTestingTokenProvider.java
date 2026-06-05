@@ -22,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * A token provider that will grab the "unsafe" token from sigstore github conformance testing. This
@@ -47,7 +48,12 @@ public class ConformanceTestingTokenProvider implements TokenStringOidcClient.To
   }
 
   @Override
-  public String getTokenString() throws Exception {
+  public boolean isEnabled(Map<String, String> env) {
+    return true;
+  }
+
+  @Override
+  public String getTokenString(Map<String, String> env) throws Exception {
     HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
     URI fileUri = new URI(tokenUrl);
     HttpRequest request =
