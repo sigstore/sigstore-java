@@ -38,6 +38,7 @@ public class OidcClients {
    */
   public static OidcClients from(Service oidcService) {
     return of(
+        TokenStringOidcClient.from(EnvTokenProvider.of()),
         GithubActionsOidcClient.builder().build(),
         WebOidcClient.builder().setIssuer(oidcService).build());
   }

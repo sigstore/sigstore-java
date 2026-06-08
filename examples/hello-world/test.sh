@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -Eeo pipefail
-export MAVEN_GPG_KEY=$(cat ../pgp/private.key)
+MAVEN_GPG_KEY=$(cat ../pgp/private.key)
+export MAVEN_GPG_KEY
 export MAVEN_GPG_PASSPHRASE=pass123
 export ORG_GRADLE_PROJECT_signingKey=$MAVEN_GPG_KEY
 export ORG_GRADLE_PROJECT_signingPassword=$MAVEN_GPG_PASSPHRASE
+SIGSTORE_JAVA_ID_TOKEN=$(curl -f https://storage.googleapis.com/sigstore-conformance-testing-token/untrusted-testing-token.txt)
+export SIGSTORE_JAVA_ID_TOKEN
 set -x
 # gradle
 ./gradlew clean publishMavenPublicationToExamplesRepository --stacktrace $@
