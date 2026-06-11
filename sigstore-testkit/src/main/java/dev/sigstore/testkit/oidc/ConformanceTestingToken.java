@@ -29,33 +29,27 @@ import java.util.Map;
  * should never be used by actual signers and should only be available in tests. Use this with the
  * {@link TokenStringOidcClient}.
  */
-public class ConformanceTestingTokenProvider implements TokenStringOidcClient.TokenStringProvider {
+public class ConformanceTestingToken {
 
-  public static ConformanceTestingTokenProvider newProviderFromGithub() {
-    return new ConformanceTestingTokenProvider(
-        "https://raw.githubusercontent.com/sigstore-conformance/extremely-dangerous-public-oidc-beacon/refs/heads/current-token/oidc-token.txt");
+  public static TokenStringOidcClient.TokenStringProvider newProvider() {
+    return new TokenStringOidcClient.TokenStringProvider() {
+      @Override
+      public String getTokenString(Map<String, String> env) throws Exception {
+        return getToken();
+      }
+
+      @Override
+      public boolean isEnabled(Map<String, String> env) {
+        return true;
+      }
+    };
   }
 
-  public static ConformanceTestingTokenProvider newProviderFromGcp() {
-    return new ConformanceTestingTokenProvider(
-        "https://storage.googleapis.com/sigstore-conformance-testing-token/untrusted-testing-token.txt");
-  }
-
-  private final String tokenUrl;
-
-  private ConformanceTestingTokenProvider(String tokenUrl) {
-    this.tokenUrl = tokenUrl;
-  }
-
-  @Override
-  public boolean isEnabled(Map<String, String> env) {
-    return true;
-  }
-
-  @Override
-  public String getTokenString(Map<String, String> env) throws Exception {
+  public static String getToken() throws Exception {
     HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
-    URI fileUri = new URI(tokenUrl);
+    URI fileUri =
+        new URI(
+            "https://storage.googleapis.com/sigstore-conformance-testing-token/untrusted-testing-token.txt");
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(fileUri)

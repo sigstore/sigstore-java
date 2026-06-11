@@ -28,7 +28,7 @@ import org.apache.maven.it.util.ResourceExtractor;
 
 /**
  * Initialize a test project verifier. You should use this to inject the right local repository into
- * settings.xml and the proejct version into pom.xml. Works with the test Maven projects in the
+ * settings.xml and the project version into pom.xml. Works with the test Maven projects in the
  * {@code resources/maven/projects} directory.
  */
 public class MavenTestProject {

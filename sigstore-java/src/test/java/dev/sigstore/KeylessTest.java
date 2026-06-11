@@ -19,9 +19,12 @@ import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.dsse.InTotoPayload;
 import dev.sigstore.json.JsonParseException;
+import dev.sigstore.oidc.client.OidcClients;
+import dev.sigstore.oidc.client.TokenStringOidcClient;
 import dev.sigstore.testkit.annotations.DisabledIfSkipStaging;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
+import dev.sigstore.testkit.oidc.ConformanceTestingToken;
 import dev.sigstore.trustroot.ImmutableSigstoreSigningConfig;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.tuf.SigstoreTufClient;
@@ -50,6 +53,9 @@ public class KeylessTest {
   public static List<byte[]> artifactDigests;
   public static String payload;
 
+  private static final OidcClients CONFORMANCE_TOKEN_CLIENT =
+      OidcClients.of(TokenStringOidcClient.from(ConformanceTestingToken.newProvider()));
+
   @BeforeAll
   public static void setupArtifact() throws IOException {
     artifactDigests = new ArrayList<>();
@@ -75,7 +81,7 @@ public class KeylessTest {
 
   @Test
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
-  public void sign_production() throws Exception {
+  public void sign_production_and_test_oidc() throws Exception {
     var signer = KeylessSigner.builder().sigstorePublicDefaults().build();
     var results = signer.sign(artifactDigests);
 
@@ -93,7 +99,6 @@ public class KeylessTest {
    * Should be merged into "sign_production" above when ready.
    */
   @Test
-  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void sign_production_rekorV2() throws Exception {
     // TODO(#1033): Get Rekor v2 service from TUF signing config when in prod
     var prodTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
@@ -107,6 +112,7 @@ public class KeylessTest {
     var signer =
         KeylessSigner.builder()
             .sigstorePublicDefaults()
+            .forceCredentialProviders(CONFORMANCE_TOKEN_CLIENT)
             .signingConfigProvider(() -> signingConfig)
             .enableRekorV2(true)
             .build();
@@ -123,11 +129,14 @@ public class KeylessTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   @DisabledIfSkipStaging
   public void sign_staging(boolean enableRekorV2) throws Exception {
     var signer =
-        KeylessSigner.builder().sigstoreStagingDefaults().enableRekorV2(enableRekorV2).build();
+        KeylessSigner.builder()
+            .sigstoreStagingDefaults()
+            .forceCredentialProviders(CONFORMANCE_TOKEN_CLIENT)
+            .enableRekorV2(enableRekorV2)
+            .build();
     var results = signer.sign(artifactDigests);
     verifySigningResult(results, enableRekorV2);
 
@@ -139,7 +148,6 @@ public class KeylessTest {
   }
 
   @Test
-  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   public void attest_production() throws Exception {
     // TODO(#1033): Get Rekor v2 service from TUF signing config when in prod
     var prodTufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
@@ -153,6 +161,7 @@ public class KeylessTest {
     var signer =
         KeylessSigner.builder()
             .sigstorePublicDefaults()
+            .forceCredentialProviders(CONFORMANCE_TOKEN_CLIENT)
             .signingConfigProvider(() -> signingConfig)
             .enableRekorV2(true)
             .build();
@@ -172,10 +181,14 @@ public class KeylessTest {
   }
 
   @Test
-  @EnabledIfOidcExists(provider = OidcProviderType.ANY)
   @DisabledIfSkipStaging
   public void attest_staging() throws Exception {
-    var signer = KeylessSigner.builder().sigstoreStagingDefaults().enableRekorV2(true).build();
+    var signer =
+        KeylessSigner.builder()
+            .sigstoreStagingDefaults()
+            .forceCredentialProviders(CONFORMANCE_TOKEN_CLIENT)
+            .enableRekorV2(true)
+            .build();
     var result = signer.attest(payload);
 
     Assertions.assertNotNull(result.getDsseEnvelope().get());

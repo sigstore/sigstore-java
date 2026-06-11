@@ -4,6 +4,8 @@ Simple sigstore signing examples
 
 These examples sign with sigstore (and PGP as required by Maven Central)
 
+In CI: These example use env `SIGSTORE_JAVA_ID_TOKEN` from test.sh to use a throwaway id token
+
 ## gradle
 
 ```
