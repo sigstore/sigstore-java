@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     implementation(project(":sigstore-java"))
-    implementation("info.picocli:picocli:4.7.6")
+    implementation("info.picocli:picocli:4.7.7")
     implementation("com.google.guava:guava:33.5.0-jre")
 
     implementation(platform("com.google.oauth-client:google-oauth-client-bom:1.39.0"))
@@ -22,7 +22,7 @@ dependencies {
 
     implementation("org.slf4j:slf4j-simple:2.0.17")
 
-    annotationProcessor("info.picocli:picocli-codegen:4.7.6")
+    annotationProcessor("info.picocli:picocli-codegen:4.7.7")
 }
 
 tasks.compileJava {
