@@ -10,6 +10,15 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [2.2.0] - 2026-06-10
+
+## Added
+- Users can now use environment variable `SIGSTORE_JAVA_ID_TOKEN` to pass in a raw token to the signer: https://github.com/sigstore/sigstore-java/pull/1204
+- Support more signing algorithms from the registry: https://github.com/sigstore/sigstore-java/pull/1197, https://github.com/sigstore/sigstore-java/pull/1198
+
+## Changed
+- DSSE types logged with rekor v2 will use `hashedrekord` as the log entry type, the `dsse` log type is no longer in use for rekor v2: https://github.com/sigstore/sigstore-java/pull/1202
+
 # [2.1.0] - 2026-05-21
 
 ## Added

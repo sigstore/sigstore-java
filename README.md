@@ -33,6 +33,12 @@ Bundle result = signer.signFile(testArtifact);
 String bundleJson = result.toJson();
 ```
 
+##### ID Token
+Signing will use identity tokens from these sources in the following order of priority:
+- `SIGSTORE_JAVA_ID_TOKEN`: a raw token provided as an environment variable
+- GitHub Actions: a token from github actions when the permission `idtoken: write` is set
+- Interactive Web Flow: an broswer based oidc flow requiring user input
+
 #### Artifact Verification
 
 ##### Get artifact and bundle
