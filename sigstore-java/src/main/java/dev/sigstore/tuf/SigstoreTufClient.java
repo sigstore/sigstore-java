@@ -26,9 +26,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -149,12 +146,10 @@ public class SigstoreTufClient {
   /** Force an update, ignoring any cache validity. */
   public void forceUpdate() throws SigstoreConfigurationException {
     try {
-      updater.update();
-    } catch (IOException
-        | NoSuchAlgorithmException
-        | InvalidKeySpecException
-        | InvalidKeyException
-        | JsonParseException ex) {
+      updater.refresh();
+      updater.downloadTarget(TRUST_ROOT_FILENAME);
+      updater.downloadTarget(SIGNING_CONFIG_FILENAME);
+    } catch (IOException | JsonParseException ex) {
       throw new SigstoreConfigurationException("TUF repo failed to update", ex);
     }
     lastUpdate = Instant.now();
