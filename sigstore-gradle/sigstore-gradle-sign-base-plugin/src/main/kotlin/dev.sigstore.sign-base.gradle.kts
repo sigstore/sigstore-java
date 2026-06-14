@@ -30,7 +30,7 @@ gradle.sharedServices.registerIfAbsent(SigstoreSigningService.SERVICE_NAME, Sigs
     }
 }
 
-val sigstoreClient by configurations.creating {
+val sigstoreClient = configurations.create("sigstoreClient") {
     description = "Declares sigstore client dependencies"
     isCanBeResolved = false
     isCanBeConsumed = false
@@ -41,7 +41,7 @@ val sigstoreClient by configurations.creating {
     }
 }
 
-val sigstoreClientClasspath by configurations.creating {
+val sigstoreClientClasspath = configurations.create("sigstoreClientClasspath") {
     description = "Resolves Sigstore dependencies"
     isCanBeResolved = true
     isCanBeConsumed = false

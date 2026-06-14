@@ -11,7 +11,7 @@ java {
     }
 }
 
-val dokkaJar by tasks.registering(Jar::class) {
+val dokkaJar = tasks.register("dokkaJar", Jar::class) {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Assembles a jar archive containing javadoc"
     from(tasks.dokkaGeneratePublicationJavadoc)

@@ -18,14 +18,14 @@ dependencies {
     // sigstoreClientClasspath("dev.sigstore:sigstore-java:0.1.0")
 }
 
-val hello by tasks.registering(WriteProperties::class) {
+val hello = tasks.register("hello", WriteProperties::class) {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Generates a sample $name.properties file to sign"
     destinationFile.set(layout.buildDirectory.file("props/$name.properties"))
     property("hello", "world")
 }
 
-val signFile by tasks.registering(SigstoreSignFilesTask::class) {
+val signFile = tasks.register("signFile", SigstoreSignFilesTask::class) {
     group = LifecycleBasePlugin.BUILD_GROUP
     description = "Signs file via Sigstore"
     signFile(hello.map { it.destinationFile.get().asFile })
