@@ -7,13 +7,13 @@ plugins {
     java
 }
 
-val sigstoreMavenPluginRuntime by configurations.creating {
+val sigstoreMavenPluginRuntime = configurations.create("sigstoreMavenPluginRuntime") {
     description = "declares dependencies that will be useful for testing purposes"
     isCanBeConsumed = false
     isCanBeResolved = false
 }
 
-val sigstoreMavenPluginTestClasspath by configurations.creating {
+val sigstoreMavenPluginTestClasspath = configurations.create("sigstoreMavenPluginTestClasspath") {
     description = "sigstore-maven-plugin in local repository for testing purposes"
     isCanBeConsumed = false
     isCanBeResolved = true

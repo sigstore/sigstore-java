@@ -14,7 +14,7 @@ allprojects {
     version = calculatedVersion
 }
 
-val parameters by tasks.registering {
+val parameters = tasks.register("parameters") {
     group = HelpTasksPlugin.HELP_GROUP
     description = "Displays build parameters (i.e. -P flags) that can be used to customize the build"
     dependsOn(gradle.includedBuild("build-logic").task(":build-parameters:parameters"))

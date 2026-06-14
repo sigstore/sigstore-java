@@ -38,13 +38,13 @@ class PluginSmokeTest : BaseGradleTest() {
     fun `sign task dsl`() {
         project {
             apply(plugin = "dev.sigstore.sign-base")
-            val hello by tasks.registering(WriteProperties::class) {
+            val hello = tasks.register("hello", WriteProperties::class) {
                 destinationFile = layout.buildDirectory.file("props/$name.properties")
                 property("hello", "world")
             }
 
             // It should be eagerly created to access signOutput
-            val signFile by tasks.registering(SigstoreSignFilesTask::class) {
+            val signFile = tasks.register("signFile", SigstoreSignFilesTask::class) {
                 signFile(hello.map { it.destinationFile.asFile.get() })
             }
 

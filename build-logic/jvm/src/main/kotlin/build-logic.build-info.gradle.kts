@@ -4,7 +4,7 @@ plugins {
     java
 }
 
-val generateBuildInfo by tasks.registering(BuildInfoTask::class) {
+val generateBuildInfo = tasks.register("generateBuildInfo", BuildInfoTask::class) {
     version.set(project.version.toString())
     genDir.set(project.layout.buildDirectory.dir("generated/buildinfo"))
 }
