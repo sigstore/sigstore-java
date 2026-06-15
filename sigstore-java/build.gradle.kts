@@ -11,9 +11,9 @@ plugins {
 description = "A Java client for signing and verifying using Sigstore"
 
 dependencies {
-    compileOnly("org.immutables:gson:2.12.1")
-    compileOnly("org.immutables:value-annotations:2.12.1")
-    annotationProcessor("org.immutables:value:2.12.1")
+    compileOnly("org.immutables:gson:2.12.2")
+    compileOnly("org.immutables:value-annotations:2.12.2")
+    annotationProcessor("org.immutables:value:2.12.2")
 
     implementation(platform("com.google.http-client:google-http-client-bom:2.1.0"))
     implementation("com.google.http-client:google-http-client-apache-v2")
