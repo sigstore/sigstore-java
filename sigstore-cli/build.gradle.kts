@@ -20,7 +20,7 @@ dependencies {
 
     implementation("org.eclipse.jetty:jetty-server:12.1.10")
 
-    implementation("org.slf4j:slf4j-simple:2.0.17")
+    implementation("org.slf4j:slf4j-simple:2.0.18")
 
     annotationProcessor("info.picocli:picocli-codegen:4.7.6")
 }
