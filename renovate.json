@@ -5,34 +5,21 @@
   ],
   "labels": ["dependencies"],
   "schedule": ["every 3 weeks on Monday"],
+  "vulnerabilityAlerts": {
+    "description": "Security updates bypass the packageRules grouping below (Renovate resets their groupName), so apply the same groupId grouping to them here.",
+    "groupName": "{{{replace ':.*' '' depName}}} security"
+  },
   "packageRules": [
     {
-      "matchPackagePrefixes": ["org.immutables"],
-      "groupName": "immutables"
-    },
-    {
-      "matchPackagePrefixes": ["org.bouncycastle"],
-      "groupName": "bouncycastle"
+      "description": "Group every Maven update by its groupId by default. The more specific rules below run later and override this where a group must span several groupIds, pin a version, or stay disabled.",
+      "matchDatasources": [
+        "maven"
+      ],
+      "groupName": "{{{replace ':.*' '' depName}}}"
     },
     {
       "matchPackagePrefixes": ["io.grpc", "com.google.protobuf", "com.google.api.grpc"],
       "groupName": "protobuf_grpc"
-    },
-    {
-      "matchPackagePrefixes": ["info.picocli"],
-      "groupName": "picocli"
-    },
-    {
-      "matchPackagePrefixes": ["io.github.netmikey.logunit"],
-      "groupName": "logunit"
-    },
-    {
-      "matchPackagePrefixes": ["org.apache.maven"],
-      "groupName": "maven"
-    },
-    {
-      "matchPackagePrefixes": ["com.gradleup.nmcp"],
-      "groupName": "gradleup_nmcp"
     }
   ]
 }
