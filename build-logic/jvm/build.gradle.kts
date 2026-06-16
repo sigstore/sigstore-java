@@ -9,7 +9,7 @@ repositories {
 dependencies {
     implementation(project(":basics"))
     implementation(project(":build-parameters"))
-    implementation("com.diffplug.spotless:com.diffplug.spotless.gradle.plugin:8.1.0")
+    implementation("com.diffplug.spotless:com.diffplug.spotless.gradle.plugin:8.7.0")
     implementation("com.github.vlsi.gradle-extensions:com.github.vlsi.gradle-extensions.gradle.plugin:3.0.2")
     implementation("de.thetaphi.forbiddenapis:de.thetaphi.forbiddenapis.gradle.plugin:3.10")
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin")
