@@ -18,16 +18,17 @@ package dev.sigstore.gradle
 
 import dev.sigstore.testkit.BaseGradleTest
 import dev.sigstore.testkit.TestedGradleAndSigstoreJava
-import dev.sigstore.testkit.annotations.EnabledIfOidcExists
+import dev.sigstore.testkit.oidc.ConformanceTestingToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
-@EnabledIfOidcExists
 class SigstorePublishSignTest : BaseGradleTest() {
     @ParameterizedTest
     @MethodSource("gradleAndSigstoreJavaVersions")
     fun `sign file`(case: TestedGradleAndSigstoreJava) {
+        val oidcToken = ConformanceTestingToken.getToken()
+        gradleRunner.withEnvironment(mapOf("SIGSTORE_JAVA_ID_TOKEN" to oidcToken))
         writeBuildGradle(
             """
             plugins {

@@ -19,14 +19,13 @@ package dev.sigstore.gradle
 import dev.sigstore.testkit.BaseGradleTest
 import dev.sigstore.testkit.TestedGradle
 import dev.sigstore.testkit.TestedGradleAndSigstoreJava
-import dev.sigstore.testkit.annotations.EnabledIfOidcExists
+import dev.sigstore.testkit.oidc.ConformanceTestingToken
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.SoftAssertions
 import org.gradle.util.GradleVersion
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
-@EnabledIfOidcExists
 class RemoveSigstoreAscTest : BaseGradleTest() {
     companion object {
         @JvmStatic
@@ -102,6 +101,8 @@ class RemoveSigstoreAscTest : BaseGradleTest() {
     }
 
     private fun prepareBuildScripts(case: TestedGradleAndSigstoreJava) {
+        val oidcToken = ConformanceTestingToken.getToken()
+        gradleRunner.withEnvironment(mapOf("SIGSTORE_JAVA_ID_TOKEN" to oidcToken))
         writeBuildGradle(
             """
             plugins {

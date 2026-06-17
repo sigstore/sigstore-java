@@ -17,9 +17,6 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-release
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
-    permissions:
-      id-token: write
-
     steps:
     - name: Enable long paths in Git
       if: runner.os == 'Windows'
