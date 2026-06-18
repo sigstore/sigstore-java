@@ -110,12 +110,20 @@ public class TrustedMetaStore {
     metaStore.writeMeta(RootRole.TARGETS, targets);
   }
 
+  public void setTargets(String roleName, Targets targets) throws IOException {
+    metaStore.writeMeta(roleName, targets);
+  }
+
   public Targets getTargets() throws IOException, JsonParseException {
     return getMeta(RootRole.TARGETS, Targets.class);
   }
 
   public Optional<Targets> findTargets() throws IOException, JsonParseException {
     return metaStore.readMeta(RootRole.TARGETS, Targets.class);
+  }
+
+  public Optional<Targets> findTargets(String roleName) throws IOException, JsonParseException {
+    return metaStore.readMeta(roleName, Targets.class);
   }
 
   public void clearMetaDueToKeyRotation() throws IOException {

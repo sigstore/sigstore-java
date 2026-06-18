@@ -1,0 +1,57 @@
+{
+ "signatures": [
+  {
+   "keyid": "fe1f0eb51412ccc170809b699ad3be8aae5dd43197f4f137de0faa9719d64fe0",
+   "sig": "3045022100b6ee8dd2ca48ed3d9566bb5cc0a4fcae18d39464af0e316a6eba0197190822160220439141227defe6dec0981faa8e2886ebe4d9afc671a7a80acb0f2287a58800b6"
+  }
+ ],
+ "signed": {
+  "_type": "targets",
+  "delegations": {
+   "keys": {
+    "8509519c38cd6ffe42a68629f8f57659e504ba0914c2b777e932736e4137c0fa": {
+     "keytype": "ecdsa",
+     "keyval": {
+      "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2XX0VeWv3ROuMwMzTndUqg+FBn7m\nElMMr31IPFyutAbCQmXhtdM04PrEAOXcedZcC3ZAKr6NSiPMIDIHyqXUiA==\n-----END PUBLIC KEY-----\n"
+     },
+     "scheme": "ecdsa-sha2-nistp256"
+    },
+    "90ea2df54a9135dd5545a58a9e21b870b30e09bc8acec974698ee4bc02bfbdae": {
+     "keytype": "ecdsa",
+     "keyval": {
+      "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE93EiJ6AYFfydaHoanlFdnFMj6pJ4\nOyu6xGJXoJseswLwcsSfr72Txqh0EFUlS+MHSlPQtks+eoIR2pk7R2NdMg==\n-----END PUBLIC KEY-----\n"
+     },
+     "scheme": "ecdsa-sha2-nistp256"
+    }
+   },
+   "roles": [
+    {
+     "keyids": [
+      "8509519c38cd6ffe42a68629f8f57659e504ba0914c2b777e932736e4137c0fa"
+     ],
+     "name": "staging",
+     "paths": [
+      "*"
+     ],
+     "terminating": false,
+     "threshold": 1
+    },
+    {
+     "keyids": [
+      "90ea2df54a9135dd5545a58a9e21b870b30e09bc8acec974698ee4bc02bfbdae"
+     ],
+     "name": "production",
+     "paths": [
+      "*"
+     ],
+     "terminating": false,
+     "threshold": 1
+    }
+   ]
+  },
+  "expires": "2030-01-01T00:00:00Z",
+  "spec_version": "1.0",
+  "targets": {},
+  "version": 1
+ }
+}
