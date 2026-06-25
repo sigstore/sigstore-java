@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
   "labels": ["dependencies"],
   "schedule": ["every 3 weeks on Monday"],
@@ -18,8 +18,12 @@
       "groupName": "{{{replace ':.*' '' depName}}}"
     },
     {
-      "matchPackagePrefixes": ["io.grpc", "com.google.protobuf", "com.google.api.grpc"],
-      "groupName": "protobuf_grpc"
+      "groupName": "protobuf_grpc",
+      "matchPackageNames": [
+        "io.grpc{/,}**",
+        "com.google.protobuf{/,}**",
+        "com.google.api.grpc{/,}**"
+      ]
     }
   ]
 }
