@@ -7,7 +7,7 @@ plugins {
     // The Kotlin Gradle plugin was loaded multiple times in different subprojects, which is not supported and may break the build.
     `embedded-kotlin` apply false
     // The Spotless plugin uses a shared build service. Load it at the root project level to avoid classloader collision in subprojects.
-    id("com.diffplug.spotless") version "8.6.0" apply false
+    id("com.diffplug.spotless") version "8.8.0" apply false
 }
 
 val calculatedVersion = property("version") as String + (if (hasProperty("release")) "" else "-SNAPSHOT")
