@@ -15,7 +15,7 @@ dependencies {
     compileOnly("org.immutables:value-annotations:2.12.2")
     annotationProcessor("org.immutables:value:2.12.2")
 
-    implementation(platform("com.google.http-client:google-http-client-bom:2.1.0"))
+    implementation(platform("com.google.http-client:google-http-client-bom:2.1.1"))
     implementation("com.google.http-client:google-http-client-apache-v2")
     implementation("com.google.http-client:google-http-client-gson")
 
