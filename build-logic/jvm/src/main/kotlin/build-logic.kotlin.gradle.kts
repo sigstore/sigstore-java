@@ -24,10 +24,17 @@ autostyle {
     }
 }
 
-tasks.withType<KotlinJvmCompile>().configureEach {
+tasks.named<KotlinJvmCompile>("compileKotlin") {
     compilerOptions {
         val targetJdkRelease = buildParameters.targetJavaVersion.toString()
         freeCompilerArgs.add("-Xjdk-release=$targetJdkRelease")
-        jvmTarget = JvmTarget.fromTarget(targetJdkRelease)
+        jvmTarget.set(JvmTarget.fromTarget(targetJdkRelease))
+    }
+}
+
+tasks.named<KotlinJvmCompile>("compileTestKotlin") {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjdk-release=17")
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }

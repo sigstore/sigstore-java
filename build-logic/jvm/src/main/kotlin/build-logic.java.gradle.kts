@@ -25,7 +25,7 @@ tasks.configureEach<JavaExec> {
 
 spotless {
     java {
-        googleJavaFormat("1.24.0")
+        googleJavaFormat("1.35.0")
         licenseHeaderFile("$rootDir/config/licenseHeader")
         // Note if submodule needs to add more exclusions, it should list ALL of them since
         // Spotless does not have "addTargetExclude" method
@@ -36,14 +36,17 @@ spotless {
 tasks.withType<JavaCompile>().configureEach {
     inputs.property("java.version", System.getProperty("java.version"))
     inputs.property("java.vm.version", System.getProperty("java.vm.version"))
-    options.apply {
-        encoding = "UTF-8"
-        compilerArgs.add("-Xlint:deprecation")
-        if (buildParameters.failOnJavacWarning) {
-            compilerArgs.add("-Werror")
-        }
+    options.encoding = "UTF-8"
+    options.compilerArgs.add("-Xlint:deprecation")
+    if (buildParameters.failOnJavacWarning) {
+        options.compilerArgs.add("-Werror")
+    }
+    options.release.set(buildParameters.targetJavaVersion)
+}
 
-        release.set(buildParameters.targetJavaVersion)
+plugins.withId("java") {
+    tasks.named<JavaCompile>("compileTestJava") {
+        options.release.set(17)
     }
 }
 

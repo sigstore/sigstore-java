@@ -1,4 +1,5 @@
 import buildparameters.BuildParametersExtension
+import org.gradle.api.InvalidUserDataException
 import org.gradle.api.JavaVersion
 
 class ToolchainProperties(
@@ -17,9 +18,16 @@ val BuildParametersExtension.buildJdkVersion: Int
     get() = buildJdk?.version ?: JavaVersion.current().majorVersion.toInt()
 
 val BuildParametersExtension.testJdk: ToolchainProperties?
-    get() = jdkTestVersion.orNull?.takeIf { it != 0 }
-        ?.let { ToolchainProperties(it, jdkTestVendor.orNull, jdkTestImplementation.orNull) }
-        ?: buildJdk
+    get() {
+        val requestedVersion = jdkTestVersion.orNull?.takeIf { it != 0 }
+        val finalVersion = requestedVersion ?: buildJdkVersion
+        if (finalVersion < 17) {
+            throw InvalidUserDataException("Unit tests require at least Java 17. Resolved: $finalVersion")
+        }
+        return requestedVersion?.let { ToolchainProperties(it, jdkTestVendor.orNull, jdkTestImplementation.orNull) }
+            ?: buildJdk
+    }
 
 val BuildParametersExtension.testJdkVersion: Int
-    get() = jdkTestVersion.orNull ?: buildJdkVersion
+    get() = testJdk?.version ?: buildJdkVersion
+
