@@ -18,34 +18,25 @@ package dev.sigstore.oidc.client;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.google.common.io.Resources;
 import dev.sigstore.trustroot.Service;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import no.nav.security.mock.oauth2.MockOAuth2Server;
 import no.nav.security.mock.oauth2.OAuth2Config;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
+@EnabledForJreRange(min = JRE.JAVA_17)
 public class WebOidcClientNonceTest {
-
-  private MockOAuth2Server server;
-
-  @AfterEach
-  void teardown() throws IOException {
-    if (server != null) {
-      server.shutdown();
-    }
-  }
 
   @Test
   void testNonceVerificationSuccess() throws Exception {
     String config =
         Resources.toString(
             Resources.getResource("dev/sigstore/oidc/server/config.json"), StandardCharsets.UTF_8);
-    server = new MockOAuth2Server(OAuth2Config.Companion.fromJson(config));
+    var server = new MockOAuth2Server(OAuth2Config.Companion.fromJson(config));
     server.start();
-
     try (var webClient = new WebClient()) {
       var oidcClient =
           WebOidcClient.builder()
@@ -55,6 +46,8 @@ public class WebOidcClientNonceTest {
 
       var token = oidcClient.getIDToken(Map.of());
       Assertions.assertNotNull(token.getIdToken());
+    } finally {
+      server.shutdown();
     }
   }
 
@@ -64,9 +57,8 @@ public class WebOidcClientNonceTest {
         Resources.toString(
             Resources.getResource("dev/sigstore/oidc/server/config-bad-nonce.json"),
             StandardCharsets.UTF_8);
-    server = new MockOAuth2Server(OAuth2Config.Companion.fromJson(config));
+    var server = new MockOAuth2Server(OAuth2Config.Companion.fromJson(config));
     server.start();
-
     try (var webClient = new WebClient()) {
       var oidcClient =
           WebOidcClient.builder()
@@ -81,6 +73,8 @@ public class WebOidcClientNonceTest {
                 oidcClient.getIDToken(Map.of());
               });
       Assertions.assertTrue(exception.getMessage().contains("nonce in id token does not match"));
+    } finally {
+      server.shutdown();
     }
   }
 }

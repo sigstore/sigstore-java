@@ -22,4 +22,7 @@ tasks.withType<Test>().configureEach {
     if (project.hasProperty("skipStaging")) {
         systemProperty("sigstore-java.test.skipStaging", project.findProperty("skipStaging")!!)
     }
+    if (buildParameters.testJdkVersion >= 23) {
+        jvmArgs("--sun-misc-unsafe-memory-access=deny")
+    }
 }

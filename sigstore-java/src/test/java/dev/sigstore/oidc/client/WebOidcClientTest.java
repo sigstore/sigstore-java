@@ -23,9 +23,12 @@ import java.net.URI;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.event.Level;
 
+@EnabledForJreRange(min = JRE.JAVA_17)
 public class WebOidcClientTest {
 
   @RegisterExtension

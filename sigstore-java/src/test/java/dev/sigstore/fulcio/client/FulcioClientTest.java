@@ -31,10 +31,13 @@ import java.security.cert.CertificateException;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@EnabledForJreRange(min = JRE.JAVA_17)
 public class FulcioClientTest {
 
   static Stream<org.junit.jupiter.api.Named<Function<FulcioWrapper, FulcioClient>>> clients() {
