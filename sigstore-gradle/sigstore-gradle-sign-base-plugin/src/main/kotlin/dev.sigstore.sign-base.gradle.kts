@@ -16,14 +16,15 @@
  */
 import dev.sigstore.sign.SigstoreSignExtension
 import dev.sigstore.sign.services.SigstoreSigningService
+import dev.sigstore.sign.tasks.SigstoreSignFilesTask
 
 // https://github.com/gradle/gradle/pull/16627
 inline fun <reified T: Named> AttributeContainer.attribute(attr: Attribute<T>, value: String) =
     attribute(attr, objects.named<T>(value))
 
-val sigstoreSign = extensions.create("sigstoreSign", SigstoreSignExtension::class, project)
+val sigstoreSign = extensions.create("sigstoreSign", SigstoreSignExtension::class)
 
-gradle.sharedServices.registerIfAbsent(SigstoreSigningService.SERVICE_NAME, SigstoreSigningService::class) {
+val service = gradle.sharedServices.registerIfAbsent(SigstoreSigningService.SERVICE_NAME, SigstoreSigningService::class) {
     parameters {
         // Prevents concurrent execution of tasks that use the service, so we ensure there's only one signing task active at a time
         maxParallelUsages.set(1)
@@ -41,7 +42,7 @@ val sigstoreClient = configurations.create("sigstoreClient") {
     }
 }
 
-val sigstoreClientClasspath = configurations.create("sigstoreClientClasspath") {
+val sigstoreClientClasspathConf = configurations.register("sigstoreClientClasspath") {
     description = "Resolves Sigstore dependencies"
     isCanBeResolved = true
     isCanBeConsumed = false
@@ -53,4 +54,16 @@ val sigstoreClientClasspath = configurations.create("sigstoreClientClasspath") {
         attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
         attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, JavaVersion.current().majorVersion.toInt())
     }
+}
+
+private val PROPERTY_SET_PROVIDER = Property::class.java.getMethod("set", Provider::class.java)
+
+tasks.withType<SigstoreSignFilesTask>().configureEach {
+    // Use reflection to resolve set(Provider) vs set(Object) ambiguity
+    // Needed, because Type is `Any` to workaround https://github.com/gradle/gradle/issues/17559
+    PROPERTY_SET_PROVIDER.invoke(signingService, service)
+    // See https://docs.gradle.org/current/userguide/build_services.html
+    usesService(service)
+
+    sigstoreClientClasspath.from(sigstoreClientClasspathConf)
 }
