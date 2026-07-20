@@ -56,13 +56,9 @@ val sigstoreClientClasspathConf = configurations.register("sigstoreClientClasspa
     }
 }
 
-private val PROPERTY_SET_PROVIDER = Property::class.java.getMethod("set", Provider::class.java)
-
 tasks.withType<SigstoreSignFilesTask>().configureEach {
-    // Use reflection to resolve set(Provider) vs set(Object) ambiguity
-    // Needed, because Type is `Any` to workaround https://github.com/gradle/gradle/issues/17559
-    PROPERTY_SET_PROVIDER.invoke(signingService, service)
     // See https://docs.gradle.org/current/userguide/build_services.html
+    signingService.set(service)
     usesService(service)
 
     sigstoreClientClasspath.from(sigstoreClientClasspathConf)
