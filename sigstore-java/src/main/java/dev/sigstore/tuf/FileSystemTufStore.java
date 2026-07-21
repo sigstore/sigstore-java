@@ -92,13 +92,13 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
   }
 
   @Override
-  public void writeMeta(String roleName, SignedTufMeta<?> meta) throws IOException {
+  public void writeMeta(String roleName, SignedTufMeta<? extends TufMeta> meta) throws IOException {
     storeRole(roleName, meta);
   }
 
   @Override
-  public <T extends SignedTufMeta<?>> Optional<T> readMeta(String roleName, Class<T> tClass)
-      throws IOException, JsonParseException {
+  public <T extends SignedTufMeta<? extends TufMeta>> Optional<T> readMeta(
+      String roleName, Class<T> tClass) throws IOException, JsonParseException {
     Path roleFile = repoBaseDir.resolve(roleName + ".json");
     if (!roleFile.toFile().exists()) {
       return Optional.empty();
@@ -106,7 +106,8 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
     return Optional.of(GSON.get().fromJson(Files.readString(roleFile), tClass));
   }
 
-  <T extends SignedTufMeta<?>> void storeRole(String roleName, T role) throws IOException {
+  <T extends SignedTufMeta<? extends TufMeta>> void storeRole(String roleName, T role)
+      throws IOException {
     try (BufferedWriter fileWriter =
         Files.newBufferedWriter(repoBaseDir.resolve(roleName + ".json"))) {
       GSON.get().toJson(role, fileWriter);
