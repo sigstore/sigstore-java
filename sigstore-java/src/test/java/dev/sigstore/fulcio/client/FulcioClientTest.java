@@ -26,11 +26,8 @@ import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;
 import dev.sigstore.testing.grpc.GrpcTypes;
-import dev.sigstore.trustroot.Service;
-import dev.sigstore.tuf.SigstoreTufClient;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
-import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -108,11 +105,6 @@ public class FulcioClientTest {
             Resources.toString(
                 Resources.getResource("dev/sigstore/samples/fulcio-response/valid/certWithSct.pem"),
                 StandardCharsets.UTF_8));
-
-    var tufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
-    tufClient.update();
-    var signingConfig = tufClient.getSigstoreSigningConfig();
-    var fulcioService = Service.select(signingConfig.getCas(), List.of(1)).get();
 
     var certPath = FulcioClient.decodeCerts(certs);
     Assertions.assertTrue(Certificates.getEmbeddedSCTs(Certificates.getLeaf(certPath)).isPresent());
