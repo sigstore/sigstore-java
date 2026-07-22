@@ -3,7 +3,8 @@
 # TODO: this should be a gradle plugin
 
 # build the fuzzing classes and extract dependencies into $OUT
-./gradlew :fuzzing:copyToFuzzOut -x test -PfuzzOut="$OUT"
+# Exclude spotlessCheck because GJF 1.35.0+ requires JDK 21+ to run, which would crash the build in CIFuzz (currently running on JDK 17).
+./gradlew :fuzzing:copyToFuzzOut -x test -x spotlessCheck -PfuzzOut="$OUT"
 ALL_JARS=""
 for jarfile in $(find $OUT -name *.jar)
 do
