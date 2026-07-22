@@ -40,6 +40,11 @@ public class RekorTypesFuzzer {
         entry = RekorEntry.fromTLogEntryJson(string);
       }
 
+      if (entry == null) {
+        // these parsers require a non-null entry
+        return;
+      }
+
       switch (type) {
         case 0:
           RekorTypes.getHashedRekordV001(entry);
