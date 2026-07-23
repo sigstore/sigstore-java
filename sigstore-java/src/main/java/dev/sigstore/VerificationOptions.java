@@ -20,6 +20,7 @@ import dev.sigstore.fulcio.client.ImmutableFulcioCertificateMatcher;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.function.Predicate;
+import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 
 @Immutable(singleton = true)
@@ -27,6 +28,24 @@ public interface VerificationOptions {
 
   /** An allow list of certificate identities to match with. */
   List<CertificateMatcher> getCertificateMatchers();
+
+  /**
+   * Whether to allow verifying a bundle that contains no transparency-log entry, relying solely on
+   * a signed RFC 3161 timestamp for trusted time. Defaults to {@code false}, matching the Sigstore
+   * public-good instance where a transparency-log entry is always present and required.
+   *
+   * <p>Enabling this weakens the guarantees: without a transparency-log entry the signature is not
+   * publicly monitorable/auditable. Only enable it for bundles from instances that intentionally do
+   * not publish to a transparency log (for example, GitHub's Sigstore instance for private
+   * repositories), and pair it with a pinned trusted root. A signed timestamp is still required.
+   *
+   * <p>This only relaxes the <em>requirement</em> that a transparency-log entry exists; a
+   * transparency-log entry that <em>is</em> present in the bundle is still fully verified.
+   */
+  @Default
+  default boolean allowNonTransparencyLogVerification() {
+    return false;
+  }
 
   /**
    * An interface for allowing matching of certificates. Use {@link #fulcio()} to instantiate the

@@ -50,9 +50,11 @@ class BundleReader {
 
     bundleBuilder.mediaType(protoBundle.getMediaType());
 
-    if (protoBundle.getVerificationMaterial().getTlogEntriesCount() == 0) {
-      throw new BundleParseException("Could not find any tlog entries in bundle json");
-    }
+    // A bundle may legitimately carry no transparency-log entry (for example, GitHub's Sigstore
+    // instance for private repositories, which relies on a signed RFC 3161 timestamp instead).
+    // Such bundles are parsed here; whether their absence is acceptable is a verification-time
+    // policy decision (see VerificationOptions#allowNonTransparencyLogVerification), not a parse
+    // error. Any tlog entries that ARE present must still be well-formed (inclusion proof required).
     for (var bundleEntry : protoBundle.getVerificationMaterial().getTlogEntriesList()) {
       if (!bundleEntry.hasInclusionProof()) {
         // all consumed bundles must have an inclusion proof

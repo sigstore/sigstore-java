@@ -150,7 +150,30 @@ public class FulcioVerifier {
    */
   public void verifySigningCertificate(CertPath signingCertificate)
       throws FulcioVerificationException, IOException {
+    verifySigningCertificate(signingCertificate, false);
+  }
+
+  /**
+   * Verify a signing certificate, optionally tolerating a trust root that provides no certificate
+   * transparency logs.
+   *
+   * @param signingCertificate the chain to verify
+   * @param allowEmptyCtLogs when {@code true} and the configured trust root declares <em>no</em> CT
+   *     logs, SCT verification is skipped. This is required for Sigstore instances that do not use
+   *     certificate transparency (for example, GitHub's Sigstore instance for private repositories,
+   *     whose trust root carries zero CT logs and whose certificates embed no SCT). When {@code
+   *     false} (the default) a missing CT log is an error, preserving the strict behavior for the
+   *     public-good instance. If the trust root <em>does</em> provide CT logs, SCTs are always
+   *     verified regardless of this flag.
+   */
+  public void verifySigningCertificate(CertPath signingCertificate, boolean allowEmptyCtLogs)
+      throws FulcioVerificationException, IOException {
     CertPath fullCertPath = validateCertPath(signingCertificate);
+    if (ctLogs.isEmpty() && allowEmptyCtLogs) {
+      // The trust root declares no certificate-transparency logs, so there is nothing to verify an
+      // SCT against. Trusted time is established elsewhere (a signed RFC 3161 timestamp).
+      return;
+    }
     verifySct(fullCertPath);
   }
 
