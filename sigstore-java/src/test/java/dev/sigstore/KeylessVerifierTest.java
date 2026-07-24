@@ -20,7 +20,9 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.Resources;
 import com.google.gson.JsonParser;
+import dev.sigstore.VerificationOptions.CTLogOptions;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
+import dev.sigstore.VerificationOptions.TLogOptions;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.signers.Signers;
@@ -419,7 +421,9 @@ public class KeylessVerifierTest {
                             .issuer(StringMatcher.string("not-match-again"))
                             .build())));
     Assertions.assertEquals(
-        "No provided certificate identities matched values in certificate: [{issuer:'String: not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String: not-match-again'}]",
+        "No provided certificate identities matched values in certificate: [{issuer:'String:"
+            + " not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String:"
+            + " not-match-again'}]",
         ex.getMessage());
   }
 
@@ -530,8 +534,7 @@ public class KeylessVerifierTest {
             KeylessVerificationException.class,
             () -> verifier.verify(Path.of(artifact), testBundle, VerificationOptions.empty()));
     MatcherAssert.assertThat(
-        ex.getMessage(),
-        CoreMatchers.startsWith("Bundle does not contain a transparency log entry"));
+        ex.getMessage(), CoreMatchers.startsWith("No transparency log entry found"));
   }
 
   @Test
@@ -559,7 +562,8 @@ public class KeylessVerifierTest {
                     Bundle.from(new StringReader(invalidBundleFile)),
                     VerificationOptions.empty()));
     Assertions.assertEquals(
-        "DSSE envelope must have payload type application/vnd.in-toto+json, but found 'application/json'",
+        "DSSE envelope must have payload type application/vnd.in-toto+json, but found"
+            + " 'application/json'",
         ex.getMessage());
   }
 
@@ -590,7 +594,7 @@ public class KeylessVerifierTest {
                     Path.of(artifact),
                     Bundle.from(new StringReader(invalidBundleFile)),
                     VerificationOptions.empty()));
-    Assertions.assertEquals("Unsupported entry type: 'hashedrekord:0.0.3'", ex.getMessage());
+    Assertions.assertEquals("Unsupported hashedrekord version: 0.0.3", ex.getMessage());
   }
 
   @Test
@@ -761,7 +765,8 @@ public class KeylessVerifierTest {
 
     var validRfc3161Timestamps =
         "\"rfc3161Timestamps\": [{\n"
-            + "        \"signedTimestamp\": \"MIIC1DADAgEAMIICywYJKoZIhvcNAQcCoIICvDCCArgCAQMxDTALBglghkgBZQMEAgEwgcIGCyqGSIb3DQEJEAEEoIGyBIGvMIGsAgEBBgkrBgEEAYO/MAIwMTANBglghkgBZQMEAgEFAAQgtF/jtMHzKroX8UjkT/BViNcIlC5Y7za/y4n5cjasXD0CFQCxAdEfFrtmTuy4mcW7QjLeeOAUXhgPMjAyNTA3MDIxODUxNTFaMAMCAQECCE0pZTAXtl1eoDKkMDAuMRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxFTATBgNVBAMTDHNpZ3N0b3JlLXRzYaAAMYIB2zCCAdcCAQEwUTA5MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxIDAeBgNVBAMTF3NpZ3N0b3JlLXRzYS1zZWxmc2lnbmVkAhQKNaEGYdXiQXPGiZan8n3yfgN8pzALBglghkgBZQMEAgGggfwwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMBwGCSqGSIb3DQEJBTEPFw0yNTA3MDIxODUxNTFaMC8GCSqGSIb3DQEJBDEiBCCiICYObTnM098xx9niiVyPo+gxp4FTvN94z4K6gH/LgjCBjgYLKoZIhvcNAQkQAi8xfzB9MHsweQQgBvT/4Ef+s1mZtzOw16MjUBz8GOTAM2aoRdd1NudLJ0QwVTA9pDswOTEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MSAwHgYDVQQDExdzaWdzdG9yZS10c2Etc2VsZnNpZ25lZAIUCjWhBmHV4kFzxomWp/J98n4DfKcwCgYIKoZIzj0EAwIEZzBlAjB0/hfB4Hm4GO5SZYuDzCtgnNdXQkETtx/QTtILM09awUdez2kQNmCAkLtPBf8ojB8CMQDfRBy5WNohfrWNDh0o+NBR7Yj67vsUyBS1WK5nT5QatouJQ3PbtSJN3Kk8xsiVxFc=\"\n"
+            + "        \"signedTimestamp\":"
+            + " \"MIIC1DADAgEAMIICywYJKoZIhvcNAQcCoIICvDCCArgCAQMxDTALBglghkgBZQMEAgEwgcIGCyqGSIb3DQEJEAEEoIGyBIGvMIGsAgEBBgkrBgEEAYO/MAIwMTANBglghkgBZQMEAgEFAAQgtF/jtMHzKroX8UjkT/BViNcIlC5Y7za/y4n5cjasXD0CFQCxAdEfFrtmTuy4mcW7QjLeeOAUXhgPMjAyNTA3MDIxODUxNTFaMAMCAQECCE0pZTAXtl1eoDKkMDAuMRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxFTATBgNVBAMTDHNpZ3N0b3JlLXRzYaAAMYIB2zCCAdcCAQEwUTA5MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxIDAeBgNVBAMTF3NpZ3N0b3JlLXRzYS1zZWxmc2lnbmVkAhQKNaEGYdXiQXPGiZan8n3yfgN8pzALBglghkgBZQMEAgGggfwwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMBwGCSqGSIb3DQEJBTEPFw0yNTA3MDIxODUxNTFaMC8GCSqGSIb3DQEJBDEiBCCiICYObTnM098xx9niiVyPo+gxp4FTvN94z4K6gH/LgjCBjgYLKoZIhvcNAQkQAi8xfzB9MHsweQQgBvT/4Ef+s1mZtzOw16MjUBz8GOTAM2aoRdd1NudLJ0QwVTA9pDswOTEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MSAwHgYDVQQDExdzaWdzdG9yZS10c2Etc2VsZnNpZ25lZAIUCjWhBmHV4kFzxomWp/J98n4DfKcwCgYIKoZIzj0EAwIEZzBlAjB0/hfB4Hm4GO5SZYuDzCtgnNdXQkETtx/QTtILM09awUdez2kQNmCAkLtPBf8ojB8CMQDfRBy5WNohfrWNDh0o+NBR7Yj67vsUyBS1WK5nT5QatouJQ3PbtSJN3Kk8xsiVxFc=\"\n"
             + "      }]";
     var noRfc3161Timestamps = "\"rfc3161Timestamps\": []";
     var invalidBundleFile = bundleFile.replace(validRfc3161Timestamps, noRfc3161Timestamps);
@@ -888,9 +893,9 @@ public class KeylessVerifierTest {
   // does not use certificate transparency: the bundle carries zero tlog entries and relies on a
   // signed RFC 3161 timestamp for trusted time, and the trust root that GitHub distributes for it
   // (via `gh attestation trusted-root`) contains zero CT logs. Verifying such a bundle therefore
-  // requires opting in via VerificationOptions.allowNonTransparencyLogVerification(true).
+  // requires a policy that disables both transparency-log and certificate-transparency checks.
   //
-  // The zip is the exact release asset (unmodified) and contains two files:
+  // The zip file contains two files:
   //   - attestation.sigstore.json : the sigstore bundle (DSSE, in-toto SLSA provenance predicate)
   //   - trusted_root.jsonl        : the trust roots as JSON Lines. `gh attestation trusted-root`
   //                                 emits more than one (public-good and GitHub); sigstore-java
@@ -912,8 +917,7 @@ public class KeylessVerifierTest {
     var bundle = gitHubPrivateBundle();
     var verifier = gitHubPrivateVerifier(tempDir);
     var options =
-        VerificationOptions.builder()
-            .allowNonTransparencyLogVerification(true)
+        gitHubPrivateOptions()
             .addCertificateMatchers(
                 CertificateMatcher.fulcio()
                     .subjectAlternativeName(StringMatcher.string(GH_PRIVATE_SIGNER_SAN))
@@ -950,11 +954,10 @@ public class KeylessVerifierTest {
       throws Exception {
     var bundle = gitHubPrivateBundle();
     var verifier = gitHubPrivateVerifier(tempDir);
-    var options = VerificationOptions.builder().allowNonTransparencyLogVerification(true).build();
+    var options = gitHubPrivateOptions().build();
 
-    // Opting in only relaxes the transparency-log requirement; the artifact digest must still be
-    // one
-    // of the attested subjects.
+    // Relaxing the tlog/CT requirements does not relax the rest: the artifact digest must still be
+    // one of the attested subjects.
     var badArtifactDigest =
         Hashing.sha256().hashString("nonsense", StandardCharsets.UTF_8).asBytes();
     var ex =
@@ -965,6 +968,13 @@ public class KeylessVerifierTest {
         ex.getMessage(),
         CoreMatchers.startsWith(
             "Provided artifact digest does not match any subject sha256 digests in DSSE payload"));
+  }
+
+  // A private-deployment policy: neither a transparency-log entry nor an SCT is required.
+  private static ImmutableVerificationOptions.Builder gitHubPrivateOptions() {
+    return VerificationOptions.builder()
+        .tLogOptions(TLogOptions.builder().isEnabled(false).build())
+        .ctLogOptions(CTLogOptions.builder().isEnabled(false).build());
   }
 
   private static Bundle gitHubPrivateBundle() throws Exception {

@@ -29,22 +29,38 @@ public interface VerificationOptions {
   /** An allow list of certificate identities to match with. */
   List<CertificateMatcher> getCertificateMatchers();
 
-  /**
-   * Whether to allow verifying a bundle that contains no transparency-log entry, relying solely on
-   * a signed RFC 3161 timestamp for trusted time. Defaults to {@code false}, matching the Sigstore
-   * public-good instance where a transparency-log entry is always present and required.
-   *
-   * <p>Enabling this weakens the guarantees: without a transparency-log entry the signature is not
-   * publicly monitorable/auditable. Only enable it for bundles from instances that intentionally do
-   * not publish to a transparency log (for example, GitHub's Sigstore instance for private
-   * repositories), and pair it with a pinned trusted root. A signed timestamp is still required.
-   *
-   * <p>This only relaxes the <em>requirement</em> that a transparency-log entry exists; a
-   * transparency-log entry that <em>is</em> present in the bundle is still fully verified.
-   */
+  /** Transparency-log (rekor) verification policy; defaults to requiring an entry. */
   @Default
-  default boolean allowNonTransparencyLogVerification() {
-    return false;
+  default TLogOptions getTLogOptions() {
+    return TLogOptions.builder().isEnabled(true).build();
+  }
+
+  /** Certificate-transparency (SCT) verification policy; defaults to requiring an SCT. */
+  @Default
+  default CTLogOptions getCtLogOptions() {
+    return CTLogOptions.builder().isEnabled(true).build();
+  }
+
+  /** Transparency-log verification options. */
+  @Immutable
+  interface TLogOptions {
+    /** Whether a transparency-log entry is required and verified. */
+    boolean isEnabled();
+
+    static ImmutableTLogOptions.Builder builder() {
+      return ImmutableTLogOptions.builder();
+    }
+  }
+
+  /** Certificate-transparency verification options. */
+  @Immutable
+  interface CTLogOptions {
+    /** Whether a certificate-transparency log entry (SCT) is required and verified. */
+    boolean isEnabled();
+
+    static ImmutableCTLogOptions.Builder builder() {
+      return ImmutableCTLogOptions.builder();
+    }
   }
 
   /**

@@ -132,43 +132,31 @@ public class KeylessVerifier {
   private AlgorithmRegistry.HashAlgorithm findHashAlgorithm(Bundle bundle)
       throws KeylessVerificationException {
     try {
-      // When the bundle has no transparency-log entry (e.g. a signed-timestamp-only bundle),
-      // derive the hash algorithm without one: DSSE bundles use SHA-256 (as in the dsse:0.0.1
-      // case below), otherwise fall back to the signing certificate's algorithm. Whether such a
-      // bundle is permitted at all is enforced in verify(...) via
-      // VerificationOptions#allowNonTransparencyLogVerification.
-      if (bundle.getEntries().isEmpty()) {
-        if (bundle.getDsseEnvelope().isPresent()) {
-          return AlgorithmRegistry.HashAlgorithm.SHA2_256;
-        }
-        var publicKey = Certificates.getLeaf(bundle.getCertPath()).getPublicKey();
-        return AlgorithmRegistry.getSigningAlgorithm(publicKey).getHashAlgorithm();
-      }
-      var rekorEntry = bundle.getEntries().get(0);
-      var body = rekorEntry.getBodyDecoded();
-      if ("0.0.1".equals(body.getApiVersion())) {
-        if ("hashedrekord".equals(body.getKind())) {
-          var entry = RekorTypes.getHashedRekordV001(rekorEntry);
-          switch (entry.getData().getHash().getAlgorithm()) {
-            case SHA_256:
-              return AlgorithmRegistry.HashAlgorithm.SHA2_256;
-            case SHA_384:
-              return AlgorithmRegistry.HashAlgorithm.SHA2_384;
-            case SHA_512:
-              return AlgorithmRegistry.HashAlgorithm.SHA2_512;
+      // rekor 0.0.1 hashedrekord entries encode the hash algorithm in the entry itself. Others
+      // (rekor 0.0.2, a bundle with no transparency-log entry) derive it from the signing
+      // certificate's public key.
+      if (!bundle.getEntries().isEmpty()) {
+        var rekorEntry = bundle.getEntries().get(0);
+        var body = rekorEntry.getBodyDecoded();
+        if ("0.0.1".equals(body.getApiVersion())) {
+          if ("hashedrekord".equals(body.getKind())) {
+            var entry = RekorTypes.getHashedRekordV001(rekorEntry);
+            switch (entry.getData().getHash().getAlgorithm()) {
+              case SHA_256:
+                return AlgorithmRegistry.HashAlgorithm.SHA2_256;
+              case SHA_384:
+                return AlgorithmRegistry.HashAlgorithm.SHA2_384;
+              case SHA_512:
+                return AlgorithmRegistry.HashAlgorithm.SHA2_512;
+            }
+          } else if ("dsse".equals(body.getKind())) {
+            // dsse:0.0.1 is always sha256
+            return AlgorithmRegistry.HashAlgorithm.SHA2_256;
           }
-        } else if ("dsse".equals(body.getKind())) {
-          // dsse:0.0.1 is always sha256
-          return AlgorithmRegistry.HashAlgorithm.SHA2_256;
         }
-      } else if ("0.0.2".equals(body.getApiVersion())) {
-        // rekor v2 entries must conform to the Algorithm Registry
-        var publicKey = Certificates.getLeaf(bundle.getCertPath()).getPublicKey();
-        var signingAlgorithm = AlgorithmRegistry.getSigningAlgorithm(publicKey);
-        return signingAlgorithm.getHashAlgorithm();
       }
-      throw new KeylessVerificationException(
-          "Unsupported entry type: '" + body.getKind() + ":" + body.getApiVersion() + "'");
+      var publicKey = Certificates.getLeaf(bundle.getCertPath()).getPublicKey();
+      return AlgorithmRegistry.getSigningAlgorithm(publicKey).getHashAlgorithm();
     } catch (JsonParseException | RekorTypeException | UnsupportedAlgorithmException ex) {
       throw new KeylessVerificationException(
           "Could not determine hash algorithm from sigstore bundle", ex);
@@ -211,8 +199,7 @@ public class KeylessVerifier {
 
     // a trusted CT log
     try {
-      fulcioVerifier.verifySigningCertificate(
-          signingCert, options.allowNonTransparencyLogVerification());
+      fulcioVerifier.verifySigningCertificate(signingCert, options.getCtLogOptions());
     } catch (FulcioVerificationException | IOException ex) {
       throw new KeylessVerificationException(
           "Fulcio certificate was not valid: " + ex.getMessage(), ex);
@@ -223,17 +210,17 @@ public class KeylessVerifier {
 
     var hashAlgorithm = findHashAlgorithm(bundle);
 
-    // A transparency-log entry is required by default. Bundles from instances that do not publish
-    // to a log (e.g. GitHub's Sigstore instance for private repositories) carry only a signed
-    // timestamp; verifying those requires opting in and relies on the RFC 3161 timestamp (verified
-    // below) for trusted time.
+    // A transparency-log entry is required unless disabled (e.g. a private deployment that verifies
+    // via a signed timestamp instead). We also refuse to ignore an entry that is present, so a
+    // disabled policy cannot silently skip verifying a log entry the bundle actually contains.
     var entries = bundle.getEntries();
-    if (entries.isEmpty() && !options.allowNonTransparencyLogVerification()) {
+    if (entries.isEmpty() && options.getTLogOptions().isEnabled()) {
       throw new KeylessVerificationException(
-          "Bundle does not contain a transparency log entry. If it is from an instance that does "
-              + "not publish to a transparency log, set "
-              + "VerificationOptions.allowNonTransparencyLogVerification(true) to verify using its "
-              + "signed timestamp instead.");
+          "No transparency log entry found and transparency-log verification is required");
+    }
+    if (!entries.isEmpty() && !options.getTLogOptions().isEnabled()) {
+      throw new KeylessVerificationException(
+          "Bundle contains a transparency log entry but transparency-log verification is disabled");
     }
     var rekorEntry = entries.isEmpty() ? null : entries.get(0);
 
