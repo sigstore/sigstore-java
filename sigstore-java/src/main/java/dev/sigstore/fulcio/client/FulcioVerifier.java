@@ -16,6 +16,7 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.annotations.VisibleForTesting;
+import dev.sigstore.VerificationOptions.CTLogOptions;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.certificates.transparency.CTLogInfo;
 import dev.sigstore.encryption.certificates.transparency.CTVerificationResult;
@@ -44,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Verifier for fulcio generated signing cerificates */
+/** Verifier for fulcio generated signing certificates */
 public class FulcioVerifier {
   private final List<CertificateAuthority> cas;
   private final List<TransparencyLog> ctLogs;
@@ -150,28 +151,17 @@ public class FulcioVerifier {
    */
   public void verifySigningCertificate(CertPath signingCertificate)
       throws FulcioVerificationException, IOException {
-    verifySigningCertificate(signingCertificate, false);
+    verifySigningCertificate(signingCertificate, CTLogOptions.builder().isEnabled(true).build());
   }
 
   /**
-   * Verify a signing certificate, optionally tolerating a trust root that provides no certificate
-   * transparency logs.
-   *
-   * @param signingCertificate the chain to verify
-   * @param allowEmptyCtLogs when {@code true} and the configured trust root declares <em>no</em> CT
-   *     logs, SCT verification is skipped. This is required for Sigstore instances that do not use
-   *     certificate transparency (for example, GitHub's Sigstore instance for private repositories,
-   *     whose trust root carries zero CT logs and whose certificates embed no SCT). When {@code
-   *     false} (the default) a missing CT log is an error, preserving the strict behavior for the
-   *     public-good instance. If the trust root <em>does</em> provide CT logs, SCTs are always
-   *     verified regardless of this flag.
+   * Verify a signing certificate, applying the given certificate-transparency policy. When SCT
+   * verification is disabled (ex: a private deployment without CT logs) the SCT check is skipped.
    */
-  public void verifySigningCertificate(CertPath signingCertificate, boolean allowEmptyCtLogs)
+  public void verifySigningCertificate(CertPath signingCertificate, CTLogOptions ctLogOptions)
       throws FulcioVerificationException, IOException {
     CertPath fullCertPath = validateCertPath(signingCertificate);
-    if (ctLogs.isEmpty() && allowEmptyCtLogs) {
-      // The trust root declares no certificate-transparency logs, so there is nothing to verify an
-      // SCT against. Trusted time is established elsewhere (a signed RFC 3161 timestamp).
+    if (!ctLogOptions.isEnabled()) {
       return;
     }
     verifySct(fullCertPath);
@@ -200,7 +190,8 @@ public class FulcioVerifier {
     } catch (NoSuchAlgorithmException e) {
       //
       throw new RuntimeException(
-          "No PKIX CertPathValidator, we probably shouldn't be here, but this seems to be a system library error not a program control flow issue",
+          "No PKIX CertPathValidator, we probably shouldn't be here, but this seems to be a system"
+              + " library error not a program control flow issue",
           e);
     }
 
@@ -220,7 +211,8 @@ public class FulcioVerifier {
         pkixParams = new PKIXParameters(Collections.singleton(ca.asTrustAnchor()));
       } catch (InvalidAlgorithmParameterException | CertificateException e) {
         throw new RuntimeException(
-            "Can't create PKIX parameters for fulcioRoot. This should have been checked when generating a verifier instance",
+            "Can't create PKIX parameters for fulcioRoot. This should have been checked when"
+                + " generating a verifier instance",
             e);
       }
       pkixParams.setRevocationEnabled(false);

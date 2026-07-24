@@ -113,16 +113,6 @@ public class Verify implements Callable<Integer> {
       required = false)
   Path workingDirectory;
 
-  @Option(
-      names = {"--allow-non-transparency-log"},
-      description =
-          "verify a bundle that has no transparency-log entry, relying on a signed RFC 3161 "
-              + "timestamp instead (reduced assurance; for instances that do not publish to a "
-              + "transparency log, e.g. GitHub's Sigstore instance for private repositories)",
-      required = false,
-      defaultValue = "false")
-  Boolean allowNonTransparencyLog;
-
   @Override
   public Integer call() throws Exception {
     byte[] digest;
@@ -151,9 +141,6 @@ public class Verify implements Callable<Integer> {
               .issuer(StringMatcher.string(policy.certificateIssuer))
               .subjectAlternativeName(StringMatcher.string(policy.certificateSan))
               .build());
-    }
-    if (allowNonTransparencyLog) {
-      verificationOptionsBuilder.allowNonTransparencyLogVerification(true);
     }
     var verificationOptions = verificationOptionsBuilder.build();
 

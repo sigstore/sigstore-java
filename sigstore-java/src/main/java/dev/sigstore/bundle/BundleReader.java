@@ -50,12 +50,7 @@ class BundleReader {
 
     bundleBuilder.mediaType(protoBundle.getMediaType());
 
-    // A bundle may legitimately carry no transparency-log entry (for example, GitHub's Sigstore
-    // instance for private repositories, which relies on a signed RFC 3161 timestamp instead).
-    // Such bundles are parsed here; whether their absence is acceptable is a verification-time
-    // policy decision (see VerificationOptions#allowNonTransparencyLogVerification), not a parse
-    // error. Any tlog entries that ARE present must still be well-formed (inclusion proof
-    // required).
+    // A bundle may skip tlog entries in private environments that don't require them.
     for (var bundleEntry : protoBundle.getVerificationMaterial().getTlogEntriesList()) {
       if (!bundleEntry.hasInclusionProof()) {
         // all consumed bundles must have an inclusion proof
