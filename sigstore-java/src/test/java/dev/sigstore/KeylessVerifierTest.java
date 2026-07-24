@@ -17,9 +17,12 @@ package dev.sigstore;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import com.google.common.io.Resources;
 import com.google.gson.JsonParser;
+import dev.sigstore.VerificationOptions.CTLogOptions;
 import dev.sigstore.VerificationOptions.CertificateMatcher;
+import dev.sigstore.VerificationOptions.TLogOptions;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.ImmutableBundle;
 import dev.sigstore.encryption.signers.Signers;
@@ -34,10 +37,13 @@ import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -415,7 +421,9 @@ public class KeylessVerifierTest {
                             .issuer(StringMatcher.string("not-match-again"))
                             .build())));
     Assertions.assertEquals(
-        "No provided certificate identities matched values in certificate: [{issuer:'String: not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String: not-match-again'}]",
+        "No provided certificate identities matched values in certificate: [{issuer:'String:"
+            + " not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String:"
+            + " not-match-again'}]",
         ex.getMessage());
   }
 
@@ -519,9 +527,14 @@ public class KeylessVerifierTest {
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
     var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
 
-    Assertions.assertThrows(
-        IndexOutOfBoundsException.class,
-        () -> verifier.verify(Path.of(artifact), testBundle, VerificationOptions.empty()));
+    // By default a transparency-log entry is required, so a bundle without one is rejected with a
+    // clear error (rather than the incidental IndexOutOfBoundsException it used to raise).
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () -> verifier.verify(Path.of(artifact), testBundle, VerificationOptions.empty()));
+    MatcherAssert.assertThat(
+        ex.getMessage(), CoreMatchers.startsWith("No transparency log entry found"));
   }
 
   @Test
@@ -549,7 +562,8 @@ public class KeylessVerifierTest {
                     Bundle.from(new StringReader(invalidBundleFile)),
                     VerificationOptions.empty()));
     Assertions.assertEquals(
-        "DSSE envelope must have payload type application/vnd.in-toto+json, but found 'application/json'",
+        "DSSE envelope must have payload type application/vnd.in-toto+json, but found"
+            + " 'application/json'",
         ex.getMessage());
   }
 
@@ -580,7 +594,7 @@ public class KeylessVerifierTest {
                     Path.of(artifact),
                     Bundle.from(new StringReader(invalidBundleFile)),
                     VerificationOptions.empty()));
-    Assertions.assertEquals("Unsupported entry type: 'hashedrekord:0.0.3'", ex.getMessage());
+    Assertions.assertEquals("Unsupported hashedrekord version: 0.0.3", ex.getMessage());
   }
 
   @Test
@@ -751,7 +765,8 @@ public class KeylessVerifierTest {
 
     var validRfc3161Timestamps =
         "\"rfc3161Timestamps\": [{\n"
-            + "        \"signedTimestamp\": \"MIIC1DADAgEAMIICywYJKoZIhvcNAQcCoIICvDCCArgCAQMxDTALBglghkgBZQMEAgEwgcIGCyqGSIb3DQEJEAEEoIGyBIGvMIGsAgEBBgkrBgEEAYO/MAIwMTANBglghkgBZQMEAgEFAAQgtF/jtMHzKroX8UjkT/BViNcIlC5Y7za/y4n5cjasXD0CFQCxAdEfFrtmTuy4mcW7QjLeeOAUXhgPMjAyNTA3MDIxODUxNTFaMAMCAQECCE0pZTAXtl1eoDKkMDAuMRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxFTATBgNVBAMTDHNpZ3N0b3JlLXRzYaAAMYIB2zCCAdcCAQEwUTA5MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxIDAeBgNVBAMTF3NpZ3N0b3JlLXRzYS1zZWxmc2lnbmVkAhQKNaEGYdXiQXPGiZan8n3yfgN8pzALBglghkgBZQMEAgGggfwwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMBwGCSqGSIb3DQEJBTEPFw0yNTA3MDIxODUxNTFaMC8GCSqGSIb3DQEJBDEiBCCiICYObTnM098xx9niiVyPo+gxp4FTvN94z4K6gH/LgjCBjgYLKoZIhvcNAQkQAi8xfzB9MHsweQQgBvT/4Ef+s1mZtzOw16MjUBz8GOTAM2aoRdd1NudLJ0QwVTA9pDswOTEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MSAwHgYDVQQDExdzaWdzdG9yZS10c2Etc2VsZnNpZ25lZAIUCjWhBmHV4kFzxomWp/J98n4DfKcwCgYIKoZIzj0EAwIEZzBlAjB0/hfB4Hm4GO5SZYuDzCtgnNdXQkETtx/QTtILM09awUdez2kQNmCAkLtPBf8ojB8CMQDfRBy5WNohfrWNDh0o+NBR7Yj67vsUyBS1WK5nT5QatouJQ3PbtSJN3Kk8xsiVxFc=\"\n"
+            + "        \"signedTimestamp\":"
+            + " \"MIIC1DADAgEAMIICywYJKoZIhvcNAQcCoIICvDCCArgCAQMxDTALBglghkgBZQMEAgEwgcIGCyqGSIb3DQEJEAEEoIGyBIGvMIGsAgEBBgkrBgEEAYO/MAIwMTANBglghkgBZQMEAgEFAAQgtF/jtMHzKroX8UjkT/BViNcIlC5Y7za/y4n5cjasXD0CFQCxAdEfFrtmTuy4mcW7QjLeeOAUXhgPMjAyNTA3MDIxODUxNTFaMAMCAQECCE0pZTAXtl1eoDKkMDAuMRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxFTATBgNVBAMTDHNpZ3N0b3JlLXRzYaAAMYIB2zCCAdcCAQEwUTA5MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxIDAeBgNVBAMTF3NpZ3N0b3JlLXRzYS1zZWxmc2lnbmVkAhQKNaEGYdXiQXPGiZan8n3yfgN8pzALBglghkgBZQMEAgGggfwwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMBwGCSqGSIb3DQEJBTEPFw0yNTA3MDIxODUxNTFaMC8GCSqGSIb3DQEJBDEiBCCiICYObTnM098xx9niiVyPo+gxp4FTvN94z4K6gH/LgjCBjgYLKoZIhvcNAQkQAi8xfzB9MHsweQQgBvT/4Ef+s1mZtzOw16MjUBz8GOTAM2aoRdd1NudLJ0QwVTA9pDswOTEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MSAwHgYDVQQDExdzaWdzdG9yZS10c2Etc2VsZnNpZ25lZAIUCjWhBmHV4kFzxomWp/J98n4DfKcwCgYIKoZIzj0EAwIEZzBlAjB0/hfB4Hm4GO5SZYuDzCtgnNdXQkETtx/QTtILM09awUdez2kQNmCAkLtPBf8ojB8CMQDfRBy5WNohfrWNDh0o+NBR7Yj67vsUyBS1WK5nT5QatouJQ3PbtSJN3Kk8xsiVxFc=\"\n"
             + "      }]";
     var noRfc3161Timestamps = "\"rfc3161Timestamps\": []";
     var invalidBundleFile = bundleFile.replace(validRfc3161Timestamps, noRfc3161Timestamps);
@@ -870,5 +885,134 @@ public class KeylessVerifierTest {
         ex.getMessage(),
         CoreMatchers.startsWith(
             "Provided artifact digest does not match digest used for verification"));
+  }
+
+  // The fixture below is a real SLSA build-provenance attestation produced by GitHub Actions for a
+  // *private* repository. Attestations for private repositories are signed by GitHub's own Sigstore
+  // instance, which (unlike the public-good instance) does not publish to a transparency log and
+  // does not use certificate transparency: the bundle carries zero tlog entries and relies on a
+  // signed RFC 3161 timestamp for trusted time, and the trust root that GitHub distributes for it
+  // (via `gh attestation trusted-root`) contains zero CT logs. Verifying such a bundle therefore
+  // requires a policy that disables both transparency-log and certificate-transparency checks.
+  //
+  // The zip file contains two files:
+  //   - attestation.sigstore.json : the sigstore bundle (DSSE, in-toto SLSA provenance predicate)
+  //   - trusted_root.jsonl        : the trust roots as JSON Lines. `gh attestation trusted-root`
+  //                                 emits more than one (public-good and GitHub); sigstore-java
+  //                                 consumes a single trust root, so the tests below select the
+  //                                 GitHub one (the line describing the fulcio.githubapp.com CA).
+  private static final String GH_PRIVATE_ATTESTATION_ZIP =
+      "dev/sigstore/samples/bundles/bundle-github-private-no-tlog.zip";
+  private static final String GH_PRIVATE_SIGNER_SAN =
+      "https://github.com/neverendingsupport/slsa-attestations/.github/workflows/attest.yml@9f6d9dc1bfc02986955721eb15f89ad618f1cedb";
+  private static final String GH_PRIVATE_OIDC_ISSUER =
+      "https://token.actions.githubusercontent.com";
+  // sha256 of one of the artifacts recorded as a subject in the attestation.
+  private static final String GH_PRIVATE_SUBJECT_SHA256 =
+      "caa015ef69e9bc31a41322d6c71563ed9600c75bb988e4d639b1edc578580551";
+
+  @Test
+  public void testVerify_noTransparencyLog_gitHubPrivateInstance(@TempDir Path tempDir)
+      throws Exception {
+    var bundle = gitHubPrivateBundle();
+    var verifier = gitHubPrivateVerifier(tempDir);
+    var options =
+        gitHubPrivateOptions()
+            .addCertificateMatchers(
+                CertificateMatcher.fulcio()
+                    .subjectAlternativeName(StringMatcher.string(GH_PRIVATE_SIGNER_SAN))
+                    .issuer(StringMatcher.string(GH_PRIVATE_OIDC_ISSUER))
+                    .build())
+            .build();
+
+    Assertions.assertDoesNotThrow(
+        () ->
+            verifier.verify(
+                BaseEncoding.base16().lowerCase().decode(GH_PRIVATE_SUBJECT_SHA256),
+                bundle,
+                options));
+  }
+
+  @Test
+  public void testVerify_noTransparencyLog_rejectedWithoutOptIn(@TempDir Path tempDir)
+      throws Exception {
+    var bundle = gitHubPrivateBundle();
+    var verifier = gitHubPrivateVerifier(tempDir);
+
+    // Default options do not permit skipping the transparency log, so the bundle is rejected.
+    Assertions.assertThrows(
+        KeylessVerificationException.class,
+        () ->
+            verifier.verify(
+                BaseEncoding.base16().lowerCase().decode(GH_PRIVATE_SUBJECT_SHA256),
+                bundle,
+                VerificationOptions.empty()));
+  }
+
+  @Test
+  public void testVerify_noTransparencyLog_optInStillChecksArtifactDigest(@TempDir Path tempDir)
+      throws Exception {
+    var bundle = gitHubPrivateBundle();
+    var verifier = gitHubPrivateVerifier(tempDir);
+    var options = gitHubPrivateOptions().build();
+
+    // Relaxing the tlog/CT requirements does not relax the rest: the artifact digest must still be
+    // one of the attested subjects.
+    var badArtifactDigest =
+        Hashing.sha256().hashString("nonsense", StandardCharsets.UTF_8).asBytes();
+    var ex =
+        Assertions.assertThrows(
+            KeylessVerificationException.class,
+            () -> verifier.verify(badArtifactDigest, bundle, options));
+    MatcherAssert.assertThat(
+        ex.getMessage(),
+        CoreMatchers.startsWith(
+            "Provided artifact digest does not match any subject sha256 digests in DSSE payload"));
+  }
+
+  // A private-deployment policy: neither a transparency-log entry nor an SCT is required.
+  private static ImmutableVerificationOptions.Builder gitHubPrivateOptions() {
+    return VerificationOptions.builder()
+        .tLogOptions(TLogOptions.builder().isEnabled(false).build())
+        .ctLogOptions(CTLogOptions.builder().isEnabled(false).build());
+  }
+
+  private static Bundle gitHubPrivateBundle() throws Exception {
+    return Bundle.from(
+        new StringReader(
+            new String(
+                readZipEntry(GH_PRIVATE_ATTESTATION_ZIP, "attestation.sigstore.json"),
+                StandardCharsets.UTF_8)));
+  }
+
+  private static KeylessVerifier gitHubPrivateVerifier(Path tempDir) throws Exception {
+    var jsonl =
+        new String(
+            readZipEntry(GH_PRIVATE_ATTESTATION_ZIP, "trusted_root.jsonl"), StandardCharsets.UTF_8);
+    var gitHubTrustedRoot =
+        jsonl
+            .lines()
+            .filter(line -> line.contains("fulcio.githubapp.com"))
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new IllegalStateException("no GitHub trust root found in trusted_root.jsonl"));
+    var trustedRootPath = tempDir.resolve("github-trusted-root.json");
+    Files.writeString(trustedRootPath, gitHubTrustedRoot);
+    return KeylessVerifier.builder()
+        .trustedRootProvider(TrustedRootProvider.from(trustedRootPath))
+        .build();
+  }
+
+  private static byte[] readZipEntry(String zipResource, String entryName) throws Exception {
+    try (var zis = new ZipInputStream(Resources.getResource(zipResource).openStream())) {
+      ZipEntry entry;
+      while ((entry = zis.getNextEntry()) != null) {
+        if (entry.getName().equals(entryName)) {
+          return zis.readAllBytes();
+        }
+      }
+    }
+    throw new IllegalStateException("entry '" + entryName + "' not found in " + zipResource);
   }
 }

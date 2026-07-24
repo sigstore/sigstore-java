@@ -132,31 +132,31 @@ public class KeylessVerifier {
   private AlgorithmRegistry.HashAlgorithm findHashAlgorithm(Bundle bundle)
       throws KeylessVerificationException {
     try {
-      var rekorEntry = bundle.getEntries().get(0);
-      var body = rekorEntry.getBodyDecoded();
-      if ("0.0.1".equals(body.getApiVersion())) {
-        if ("hashedrekord".equals(body.getKind())) {
-          var entry = RekorTypes.getHashedRekordV001(rekorEntry);
-          switch (entry.getData().getHash().getAlgorithm()) {
-            case SHA_256:
-              return AlgorithmRegistry.HashAlgorithm.SHA2_256;
-            case SHA_384:
-              return AlgorithmRegistry.HashAlgorithm.SHA2_384;
-            case SHA_512:
-              return AlgorithmRegistry.HashAlgorithm.SHA2_512;
+      // rekor 0.0.1 hashedrekord entries encode the hash algorithm in the entry itself. Others
+      // (rekor 0.0.2, a bundle with no transparency-log entry) derive it from the signing
+      // certificate's public key.
+      if (!bundle.getEntries().isEmpty()) {
+        var rekorEntry = bundle.getEntries().get(0);
+        var body = rekorEntry.getBodyDecoded();
+        if ("0.0.1".equals(body.getApiVersion())) {
+          if ("hashedrekord".equals(body.getKind())) {
+            var entry = RekorTypes.getHashedRekordV001(rekorEntry);
+            switch (entry.getData().getHash().getAlgorithm()) {
+              case SHA_256:
+                return AlgorithmRegistry.HashAlgorithm.SHA2_256;
+              case SHA_384:
+                return AlgorithmRegistry.HashAlgorithm.SHA2_384;
+              case SHA_512:
+                return AlgorithmRegistry.HashAlgorithm.SHA2_512;
+            }
+          } else if ("dsse".equals(body.getKind())) {
+            // dsse:0.0.1 is always sha256
+            return AlgorithmRegistry.HashAlgorithm.SHA2_256;
           }
-        } else if ("dsse".equals(body.getKind())) {
-          // dsse:0.0.1 is always sha256
-          return AlgorithmRegistry.HashAlgorithm.SHA2_256;
         }
-      } else if ("0.0.2".equals(body.getApiVersion())) {
-        // rekor v2 entries must conform to the Algorithm Registry
-        var publicKey = Certificates.getLeaf(bundle.getCertPath()).getPublicKey();
-        var signingAlgorithm = AlgorithmRegistry.getSigningAlgorithm(publicKey);
-        return signingAlgorithm.getHashAlgorithm();
       }
-      throw new KeylessVerificationException(
-          "Unsupported entry type: '" + body.getKind() + ":" + body.getApiVersion() + "'");
+      var publicKey = Certificates.getLeaf(bundle.getCertPath()).getPublicKey();
+      return AlgorithmRegistry.getSigningAlgorithm(publicKey).getHashAlgorithm();
     } catch (JsonParseException | RekorTypeException | UnsupportedAlgorithmException ex) {
       throw new KeylessVerificationException(
           "Could not determine hash algorithm from sigstore bundle", ex);
@@ -199,7 +199,7 @@ public class KeylessVerifier {
 
     // a trusted CT log
     try {
-      fulcioVerifier.verifySigningCertificate(signingCert);
+      fulcioVerifier.verifySigningCertificate(signingCert, options.getCtLogOptions());
     } catch (FulcioVerificationException | IOException ex) {
       throw new KeylessVerificationException(
           "Fulcio certificate was not valid: " + ex.getMessage(), ex);
@@ -209,7 +209,20 @@ public class KeylessVerifier {
     checkCertificateMatchers(leafCert, options.getCertificateMatchers());
 
     var hashAlgorithm = findHashAlgorithm(bundle);
-    var rekorEntry = bundle.getEntries().get(0);
+
+    // A transparency-log entry is required unless disabled (e.g. a private deployment that verifies
+    // via a signed timestamp instead). We also refuse to ignore an entry that is present, so a
+    // disabled policy cannot silently skip verifying a log entry the bundle actually contains.
+    var entries = bundle.getEntries();
+    if (entries.isEmpty() && options.getTLogOptions().isEnabled()) {
+      throw new KeylessVerificationException(
+          "No transparency log entry found and transparency-log verification is required");
+    }
+    if (!entries.isEmpty() && !options.getTLogOptions().isEnabled()) {
+      throw new KeylessVerificationException(
+          "Bundle contains a transparency log entry but transparency-log verification is disabled");
+    }
+    var rekorEntry = entries.isEmpty() ? null : entries.get(0);
 
     byte[] signature;
     if (bundle.getMessageSignature().isPresent()) { // hashedrekord
@@ -222,15 +235,19 @@ public class KeylessVerifier {
       signature = dsseEnvelope.getSignature();
     }
 
-    try {
-      rekorVerifier.verifyEntry(rekorEntry);
-    } catch (RekorVerificationException ex) {
-      throw new KeylessVerificationException("Transparency log entry could not be verified", ex);
+    // A transparency-log entry that is present is always verified; opting in only relaxes the
+    // requirement that one exists, never the verification of one that is provided.
+    Instant entryTime = null;
+    if (rekorEntry != null) {
+      try {
+        rekorVerifier.verifyEntry(rekorEntry);
+      } catch (RekorVerificationException ex) {
+        throw new KeylessVerificationException("Transparency log entry could not be verified", ex);
+      }
+      // if entry was verified and has a SET, get time from it
+      var set = rekorEntry.getVerification().getSignedEntryTimestamp();
+      entryTime = set != null ? rekorEntry.getIntegratedTimeInstant() : null;
     }
-
-    // if entry was verified and has a SET, get time from it
-    var set = rekorEntry.getVerification().getSignedEntryTimestamp();
-    var entryTime = set != null ? rekorEntry.getIntegratedTimeInstant() : null;
 
     verifyTimestamps(leafCert, bundle.getTimestamps(), entryTime, signature);
   }
@@ -323,6 +340,12 @@ public class KeylessVerifier {
     } catch (SignatureException | UnsupportedAlgorithmException ex) {
       throw new KeylessVerificationException(
           "Signature could not be processed: " + ex.getMessage(), ex);
+    }
+
+    // No transparency-log entry (allowed via VerificationOptions): the artifact digest and
+    // signature have been verified above, and there is nothing to cross-check against.
+    if (rekorEntry == null) {
+      return;
     }
 
     // recreate the log entry and check if it matches what was provided in the entry
@@ -467,6 +490,12 @@ public class KeylessVerifier {
       throw new RuntimeException(ex);
     } catch (SignatureException | UnsupportedAlgorithmException se) {
       throw new KeylessVerificationException("Signature could not be processed", se);
+    }
+
+    // No transparency-log entry (allowed via VerificationOptions): the payload subject digest and
+    // DSSE signature have been verified above, and there is nothing to cross-check against.
+    if (rekorEntry == null) {
+      return;
     }
 
     RekorEntryBody entryBody;

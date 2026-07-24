@@ -50,9 +50,7 @@ class BundleReader {
 
     bundleBuilder.mediaType(protoBundle.getMediaType());
 
-    if (protoBundle.getVerificationMaterial().getTlogEntriesCount() == 0) {
-      throw new BundleParseException("Could not find any tlog entries in bundle json");
-    }
+    // A bundle may skip tlog entries in private environments that don't require them.
     for (var bundleEntry : protoBundle.getVerificationMaterial().getTlogEntriesList()) {
       if (!bundleEntry.hasInclusionProof()) {
         // all consumed bundles must have an inclusion proof
