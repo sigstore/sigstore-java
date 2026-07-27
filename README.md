@@ -119,6 +119,35 @@ Sigstore Java and Sigstore Maven Plugin are signed with both PGP and sigstore.
 | ------------- | --------- | ------ |
 | 1.0.0 - 2.X.X | https://token.actions.githubusercontent.com | https://github.com/sigstore/sigstore-java/.github/workflows/release-sigstore-java-from-tag.yaml@refs/tags/X.X.X |
 
+## Building locally
+
+Gradle must be **launched** with Java 21, even though the library targets Java 11
+(see `settings.gradle.kts`). Using Java 25+ breaks the Spotless formatter.
+
+If you use [sdkman](https://sdkman.io), run `sdk env` to pick up the pinned JDK from
+`.sdkmanrc`. Otherwise point `JAVA_HOME` at any Java 21 install.
+
+Some tests start a local [fulcio](https://github.com/sigstore/fulcio) server, so
+install it and make sure it is on your `PATH`:
+```
+go install github.com/sigstore/fulcio@main   # installs to $(go env GOPATH)/bin
+```
+
+Then build:
+```
+./gradlew build
+```
+
+### Gotchas
+- `Could not find org.gradle.kotlin.kotlin-dsl...`: a Gradle init script (e.g.
+  `~/.gradle/init.d/*.gradle`) is overriding repositories and hiding the plugin
+  portal. Remove or scope it.
+- Spotless reports `NoSuchMethodError ... getDiagnostics()`: you launched Gradle
+  with Java 25+. Switch to Java 21, then `./gradlew --stop && ./gradlew clean build`
+  to clear the cached lint failures.
+- `Cannot run program "fulcio"`: the fulcio binary is missing from your `PATH`
+  (see above).
+
 ## Troubleshooting
 
 To ensure maximum compatibility with the public Sigstore infrastructure,
