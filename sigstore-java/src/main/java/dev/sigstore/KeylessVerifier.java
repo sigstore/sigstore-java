@@ -132,9 +132,8 @@ public class KeylessVerifier {
   private AlgorithmRegistry.HashAlgorithm findHashAlgorithm(Bundle bundle)
       throws KeylessVerificationException {
     try {
-      // rekor 0.0.1 hashedrekord entries encode the hash algorithm in the entry itself. Others
-      // (rekor 0.0.2, a bundle with no transparency-log entry) derive it from the signing
-      // certificate's public key.
+      // special case hashedrekord:0.0.1 and dsse:0.0.1 which may contain legacy public key to hash
+      // algorithm mappings
       if (!bundle.getEntries().isEmpty()) {
         var rekorEntry = bundle.getEntries().get(0);
         var body = rekorEntry.getBodyDecoded();

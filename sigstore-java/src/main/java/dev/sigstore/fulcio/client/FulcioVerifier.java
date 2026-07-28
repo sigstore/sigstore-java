@@ -96,7 +96,17 @@ public class FulcioVerifier {
 
   @VisibleForTesting
   void verifySct(CertPath fullCertPath) throws FulcioVerificationException {
-    if (ctLogs.size() == 0) {
+    verifySct(fullCertPath, CTLogOptions.builder().isEnabled(true).build());
+  }
+
+  @VisibleForTesting
+  void verifySct(CertPath fullCertPath, CTLogOptions ctLogOptions)
+      throws FulcioVerificationException {
+    if (ctLogs.isEmpty()) {
+      // Only when there are no CT Logs (private deployment) we can skip SCT verification
+      if (!ctLogOptions.isEnabled()) {
+        return;
+      }
       throw new FulcioVerificationException("No ct logs were provided to verifier");
     }
 
@@ -155,16 +165,13 @@ public class FulcioVerifier {
   }
 
   /**
-   * Verify a signing certificate, applying the given certificate-transparency policy. When SCT
-   * verification is disabled (ex: a private deployment without CT logs) the SCT check is skipped.
+   * Verify a signing certificate, applying the given certificate-transparency policy (see {@link
+   * #verifySct(CertPath, CTLogOptions)}).
    */
   public void verifySigningCertificate(CertPath signingCertificate, CTLogOptions ctLogOptions)
       throws FulcioVerificationException, IOException {
     CertPath fullCertPath = validateCertPath(signingCertificate);
-    if (!ctLogOptions.isEnabled()) {
-      return;
-    }
-    verifySct(fullCertPath);
+    verifySct(fullCertPath, ctLogOptions);
   }
 
   public CertPath trimTrustedParent(CertPath signingCertificate)

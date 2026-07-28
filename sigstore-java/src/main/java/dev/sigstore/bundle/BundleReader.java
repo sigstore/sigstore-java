@@ -50,7 +50,6 @@ class BundleReader {
 
     bundleBuilder.mediaType(protoBundle.getMediaType());
 
-    // A bundle may skip tlog entries in private environments that don't require them.
     for (var bundleEntry : protoBundle.getVerificationMaterial().getTlogEntriesList()) {
       if (!bundleEntry.hasInclusionProof()) {
         // all consumed bundles must have an inclusion proof
