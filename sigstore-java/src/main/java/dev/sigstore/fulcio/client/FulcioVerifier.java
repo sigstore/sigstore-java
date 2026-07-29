@@ -95,11 +95,6 @@ public class FulcioVerifier {
   }
 
   @VisibleForTesting
-  void verifySct(CertPath fullCertPath) throws FulcioVerificationException {
-    verifySct(fullCertPath, CTLogOptions.builder().isEnabled(true).build());
-  }
-
-  @VisibleForTesting
   void verifySct(CertPath fullCertPath, CTLogOptions ctLogOptions)
       throws FulcioVerificationException {
     if (ctLogs.isEmpty()) {

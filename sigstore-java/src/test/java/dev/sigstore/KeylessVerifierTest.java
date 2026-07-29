@@ -37,8 +37,6 @@ import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
@@ -421,9 +419,7 @@ public class KeylessVerifierTest {
                             .issuer(StringMatcher.string("not-match-again"))
                             .build())));
     Assertions.assertEquals(
-        "No provided certificate identities matched values in certificate: [{issuer:'String:"
-            + " not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String:"
-            + " not-match-again'}]",
+        "No provided certificate identities matched values in certificate: [{issuer:'String: not-match',san:'String: not-match'},{issuer:'String: not-match-again',san:'String: not-match-again'}]",
         ex.getMessage());
   }
 
@@ -887,22 +883,11 @@ public class KeylessVerifierTest {
             "Provided artifact digest does not match digest used for verification"));
   }
 
-  // The fixture below is a real SLSA build-provenance attestation produced by GitHub Actions for a
-  // *private* repository. Attestations for private repositories are signed by GitHub's own Sigstore
-  // instance, which (unlike the public-good instance) does not publish to a transparency log and
-  // does not use certificate transparency: the bundle carries zero tlog entries and relies on a
-  // signed RFC 3161 timestamp for trusted time, and the trust root that GitHub distributes for it
-  // (via `gh attestation trusted-root`) contains zero CT logs. Verifying such a bundle therefore
-  // requires a policy that disables both transparency-log and certificate-transparency checks.
-  //
-  // The zip file contains two files:
-  //   - attestation.sigstore.json : the sigstore bundle (DSSE, in-toto SLSA provenance predicate)
-  //   - trusted_root.jsonl        : the trust roots as JSON Lines. `gh attestation trusted-root`
-  //                                 emits more than one (public-good and GitHub); sigstore-java
-  //                                 consumes a single trust root, so the tests below select the
-  //                                 GitHub one (the line describing the fulcio.githubapp.com CA).
-  private static final String GH_PRIVATE_ATTESTATION_ZIP =
-      "dev/sigstore/samples/bundles/bundle-github-private-no-tlog.zip";
+  // A real SLSA build-provenance attestation from a GitHub *private* repository: no
+  // transparency-log entry, no CT log, signed RFC 3161 timestamp only. See the README in the
+  // fixture directory for provenance and how it was obtained.
+  private static final String GH_PRIVATE_DIR =
+      "dev/sigstore/samples/bundles/github-private-no-tlog/";
   private static final String GH_PRIVATE_SIGNER_SAN =
       "https://github.com/neverendingsupport/slsa-attestations/.github/workflows/attest.yml@9f6d9dc1bfc02986955721eb15f89ad618f1cedb";
   private static final String GH_PRIVATE_OIDC_ISSUER =
@@ -980,15 +965,15 @@ public class KeylessVerifierTest {
   private static Bundle gitHubPrivateBundle() throws Exception {
     return Bundle.from(
         new StringReader(
-            new String(
-                readZipEntry(GH_PRIVATE_ATTESTATION_ZIP, "attestation.sigstore.json"),
+            Resources.toString(
+                Resources.getResource(GH_PRIVATE_DIR + "attestation.sigstore.json"),
                 StandardCharsets.UTF_8)));
   }
 
   private static KeylessVerifier gitHubPrivateVerifier(Path tempDir) throws Exception {
     var jsonl =
-        new String(
-            readZipEntry(GH_PRIVATE_ATTESTATION_ZIP, "trusted_root.jsonl"), StandardCharsets.UTF_8);
+        Resources.toString(
+            Resources.getResource(GH_PRIVATE_DIR + "trusted_root.jsonl"), StandardCharsets.UTF_8);
     var gitHubTrustedRoot =
         jsonl
             .lines()
@@ -1002,17 +987,5 @@ public class KeylessVerifierTest {
     return KeylessVerifier.builder()
         .trustedRootProvider(TrustedRootProvider.from(trustedRootPath))
         .build();
-  }
-
-  private static byte[] readZipEntry(String zipResource, String entryName) throws Exception {
-    try (var zis = new ZipInputStream(Resources.getResource(zipResource).openStream())) {
-      ZipEntry entry;
-      while ((entry = zis.getNextEntry()) != null) {
-        if (entry.getName().equals(entryName)) {
-          return zis.readAllBytes();
-        }
-      }
-    }
-    throw new IllegalStateException("entry '" + entryName + "' not found in " + zipResource);
   }
 }

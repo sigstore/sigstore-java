@@ -16,6 +16,8 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.io.Resources;
+import dev.sigstore.ImmutableCTLogOptions;
+import dev.sigstore.VerificationOptions.CTLogOptions;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.trustroot.ImmutableLogId;
@@ -26,6 +28,7 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -81,7 +84,7 @@ public class FulcioVerifierTest {
     var fulcioVerifier = FulcioVerifier.newFulcioVerifier(trustRoot);
 
     try {
-      fulcioVerifier.verifySct(signingCertificate);
+      fulcioVerifier.verifySct(signingCertificate, enabledCTLog());
       Assertions.fail();
     } catch (FulcioVerificationException fve) {
       Assertions.assertEquals("No valid SCTs were found during verification", fve.getMessage());
@@ -122,7 +125,12 @@ public class FulcioVerifierTest {
 
     var fve =
         Assertions.assertThrows(
-            FulcioVerificationException.class, () -> fulcioVerifier.verifySct(signingCertificate));
+            FulcioVerificationException.class,
+            () -> fulcioVerifier.verifySct(signingCertificate, enabledCTLog()));
     Assertions.assertEquals("No valid SCTs were found, all(1) SCTs were invalid", fve.getMessage());
+  }
+
+  private static @NonNull ImmutableCTLogOptions enabledCTLog() {
+    return CTLogOptions.builder().isEnabled(true).build();
   }
 }
