@@ -16,6 +16,7 @@
 package dev.sigstore.fulcio.client;
 
 import com.google.common.annotations.VisibleForTesting;
+import dev.sigstore.VerificationOptions.CTLogOptions;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.certificates.transparency.CTLogInfo;
 import dev.sigstore.encryption.certificates.transparency.CTVerificationResult;
@@ -44,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Verifier for fulcio generated signing cerificates */
+/** Verifier for fulcio generated signing certificates */
 public class FulcioVerifier {
   private final List<CertificateAuthority> cas;
   private final List<TransparencyLog> ctLogs;
@@ -94,8 +95,13 @@ public class FulcioVerifier {
   }
 
   @VisibleForTesting
-  void verifySct(CertPath fullCertPath) throws FulcioVerificationException {
-    if (ctLogs.size() == 0) {
+  void verifySct(CertPath fullCertPath, CTLogOptions ctLogOptions)
+      throws FulcioVerificationException {
+    if (ctLogs.isEmpty()) {
+      // Only when there are no CT Logs (private deployment) we can skip SCT verification
+      if (!ctLogOptions.isEnabled()) {
+        return;
+      }
       throw new FulcioVerificationException("No ct logs were provided to verifier");
     }
 
@@ -150,8 +156,17 @@ public class FulcioVerifier {
    */
   public void verifySigningCertificate(CertPath signingCertificate)
       throws FulcioVerificationException, IOException {
+    verifySigningCertificate(signingCertificate, CTLogOptions.builder().isEnabled(true).build());
+  }
+
+  /**
+   * Verify a signing certificate, applying the given certificate-transparency policy (see {@link
+   * #verifySct(CertPath, CTLogOptions)}).
+   */
+  public void verifySigningCertificate(CertPath signingCertificate, CTLogOptions ctLogOptions)
+      throws FulcioVerificationException, IOException {
     CertPath fullCertPath = validateCertPath(signingCertificate);
-    verifySct(fullCertPath);
+    verifySct(fullCertPath, ctLogOptions);
   }
 
   public CertPath trimTrustedParent(CertPath signingCertificate)
@@ -177,7 +192,8 @@ public class FulcioVerifier {
     } catch (NoSuchAlgorithmException e) {
       //
       throw new RuntimeException(
-          "No PKIX CertPathValidator, we probably shouldn't be here, but this seems to be a system library error not a program control flow issue",
+          "No PKIX CertPathValidator, we probably shouldn't be here, but this seems to be a system"
+              + " library error not a program control flow issue",
           e);
     }
 
@@ -197,7 +213,8 @@ public class FulcioVerifier {
         pkixParams = new PKIXParameters(Collections.singleton(ca.asTrustAnchor()));
       } catch (InvalidAlgorithmParameterException | CertificateException e) {
         throw new RuntimeException(
-            "Can't create PKIX parameters for fulcioRoot. This should have been checked when generating a verifier instance",
+            "Can't create PKIX parameters for fulcioRoot. This should have been checked when"
+                + " generating a verifier instance",
             e);
       }
       pkixParams.setRevocationEnabled(false);

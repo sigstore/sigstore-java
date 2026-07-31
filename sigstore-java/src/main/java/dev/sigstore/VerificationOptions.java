@@ -20,6 +20,7 @@ import dev.sigstore.fulcio.client.ImmutableFulcioCertificateMatcher;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.function.Predicate;
+import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 
 @Immutable(singleton = true)
@@ -27,6 +28,40 @@ public interface VerificationOptions {
 
   /** An allow list of certificate identities to match with. */
   List<CertificateMatcher> getCertificateMatchers();
+
+  /** Transparency-log (rekor) verification policy; defaults to requiring an entry. */
+  @Default
+  default TLogOptions getTLogOptions() {
+    return TLogOptions.builder().isEnabled(true).build();
+  }
+
+  /** Certificate-transparency (SCT) verification policy; defaults to requiring an SCT. */
+  @Default
+  default CTLogOptions getCtLogOptions() {
+    return CTLogOptions.builder().isEnabled(true).build();
+  }
+
+  /** Transparency-log verification options. */
+  @Immutable
+  interface TLogOptions {
+    /** Whether a transparency-log entry is required and verified. */
+    boolean isEnabled();
+
+    static ImmutableTLogOptions.Builder builder() {
+      return ImmutableTLogOptions.builder();
+    }
+  }
+
+  /** Certificate-transparency verification options. */
+  @Immutable
+  interface CTLogOptions {
+    /** Whether a certificate-transparency log entry (SCT) is required and verified. */
+    boolean isEnabled();
+
+    static ImmutableCTLogOptions.Builder builder() {
+      return ImmutableCTLogOptions.builder();
+    }
+  }
 
   /**
    * An interface for allowing matching of certificates. Use {@link #fulcio()} to instantiate the
