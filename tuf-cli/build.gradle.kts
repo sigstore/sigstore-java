@@ -50,6 +50,9 @@ tasks.register<ShadowJar>("serverShadowJar") {
     archiveClassifier.set("all")
     archiveVersion.set("")
 
+    filesMatching("META-INF/services/*") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
     mergeServiceFiles()
 
     from(sourceSets.main.get().output)
