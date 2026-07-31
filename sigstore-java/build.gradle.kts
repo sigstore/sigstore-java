@@ -28,7 +28,7 @@ dependencies {
     implementation("com.google.protobuf:protobuf-java-util")
 
     // grpc deps
-    implementation(platform("io.grpc:grpc-bom:1.82.1"))
+    implementation(platform("io.grpc:grpc-bom:1.83.1"))
     implementation("io.grpc:grpc-protobuf")
     implementation("io.grpc:grpc-stub")
     runtimeOnly("io.grpc:grpc-netty-shaded")
@@ -64,7 +64,7 @@ protobuf {
     }
     plugins {
         id("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.82.1"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.83.1"
         }
     }
     generateProtoTasks {
