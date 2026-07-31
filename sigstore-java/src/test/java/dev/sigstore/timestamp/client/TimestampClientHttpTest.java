@@ -189,7 +189,7 @@ public class TimestampClientHttpTest {
                 client.timestamp(tsReq);
               });
       assertEquals(
-          "Timestamp response validation or parsing failed: unknown tag 0 encountered",
+          "Timestamp response validation or parsing failed: corrupted stream - out of bounds length found: 105 > 101",
           tse.getMessage());
     }
   }
