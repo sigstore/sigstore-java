@@ -1,0 +1,3 @@
+# Use `sdk env` (or enable sdkman_auto_env) to switch to this JDK.
+# Gradle must be launched with Java 21 (see settings.gradle.kts).
+java=21.0.8-tem
