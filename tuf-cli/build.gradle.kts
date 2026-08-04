@@ -3,7 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     id("build-logic.java")
     id("application")
-    id("com.gradleup.shadow") version "9.0.0-rc3"
+    id("com.gradleup.shadow") version "9.6.1"
 }
 
 repositories {
@@ -50,6 +50,9 @@ tasks.register<ShadowJar>("serverShadowJar") {
     archiveClassifier.set("all")
     archiveVersion.set("")
 
+    filesMatching("META-INF/services/*") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
     mergeServiceFiles()
 
     from(sourceSets.main.get().output)
