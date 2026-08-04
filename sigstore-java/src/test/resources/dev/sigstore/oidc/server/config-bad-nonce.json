@@ -11,8 +11,8 @@
       "tokenExpiry": 120,
       "requestMappings": [
         {
-          "requestParam": "scope",
-          "match": "openid email",
+          "requestParam": "client_id",
+          "match": "sigstore",
           "claims": {
             "audience": "sigstore",
             "email": "test.person@test.com",
