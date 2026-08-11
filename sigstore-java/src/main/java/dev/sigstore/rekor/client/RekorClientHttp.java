@@ -91,19 +91,31 @@ public class RekorClientHttp implements RekorClient {
     req.getHeaders().set("Accept", "application/json");
     req.getHeaders().set("Content-Type", "application/json");
 
-    HttpResponse resp = req.execute();
-    if (resp.getStatusCode() != 201) {
-      throw new IOException(
-          String.format(
-              Locale.ROOT,
-              "bad response from rekor @ '%s' : %s",
-              rekorPutEndpoint,
-              resp.parseAsString()));
+    try {
+      HttpResponse resp = req.execute();
+      if (resp.getStatusCode() != 201) {
+        throw new IOException(
+            String.format(
+                Locale.ROOT,
+                "bad response from rekor @ '%s' : %s",
+                rekorPutEndpoint,
+                resp.parseAsString()));
+      }
+      URI rekorEntryUri = URIFormat.appendPath(uri, resp.getHeaders().getLocation());
+      String entry = resp.parseAsString();
+      return RekorResponse.newRekorResponse(rekorEntryUri, entry);
+    } catch (HttpResponseException e) {
+      if (e.getStatusCode() == 409) {
+        String location = e.getHeaders().getLocation();
+        URI getEntryURI = URIFormat.appendPath(uri, location);
+        HttpRequest fetchReq =
+            HttpClients.newRequestFactory(httpParams).buildGetRequest(new GenericUrl(getEntryURI));
+        fetchReq.getHeaders().set("Accept", "application/json");
+        HttpResponse fetchResp = fetchReq.execute();
+        return RekorResponse.newRekorResponse(getEntryURI, fetchResp.parseAsString());
+      }
+      throw e;
     }
-
-    URI rekorEntryUri = URIFormat.appendPath(uri, resp.getHeaders().getLocation());
-    String entry = resp.parseAsString();
-    return RekorResponse.newRekorResponse(rekorEntryUri, entry);
   }
 
   @Override
