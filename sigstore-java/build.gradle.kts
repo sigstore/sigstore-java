@@ -10,6 +10,13 @@ plugins {
 
 description = "A Java client for signing and verifying using Sigstore"
 
+tasks.jar {
+    manifest {
+        // Name of the automatic module for JPMS consumers. It must never change once released.
+        attributes["Automatic-Module-Name"] = "dev.sigstore"
+    }
+}
+
 dependencies {
     compileOnly("org.immutables:gson:2.12.2")
     compileOnly("org.immutables:value-annotations:2.12.2")
