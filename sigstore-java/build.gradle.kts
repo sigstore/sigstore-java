@@ -50,7 +50,7 @@ dependencies {
     testImplementation("org.mockito:mockito-core")
     testImplementation("org.mockito:mockito-junit-jupiter")
 
-    testImplementation("no.nav.security:mock-oauth2-server:0.5.10")
+    testImplementation("no.nav.security:mock-oauth2-server:5.0.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.4.0")
     testImplementation("net.sourceforge.htmlunit:htmlunit:2.70.0")
 
@@ -91,12 +91,12 @@ spotless {
         )
     }
     format("conscrypt", com.diffplug.gradle.spotless.JavaExtension::class.java) {
-        googleJavaFormat("1.24.0")
+        googleJavaFormat("1.35.0")
         licenseHeaderFile("$rootDir/config/conscryptLicenseHeader")
         target("src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
     }
     format("webPki", com.diffplug.gradle.spotless.JavaExtension::class.java) {
-        googleJavaFormat("1.24.0")
+        googleJavaFormat("1.35.0")
         licenseHeaderFile("$rootDir/config/webPKILicenseHeader")
         target("src/*/java/dev/sigstore/json/canonicalizer/*.java")
     }

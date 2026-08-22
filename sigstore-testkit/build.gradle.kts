@@ -1,3 +1,6 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
 plugins {
     id("build-logic.kotlin")
     id("build-logic.repositories")
@@ -17,4 +20,15 @@ dependencies {
     implementation("org.junit.jupiter:junit-jupiter")
     api("org.assertj:assertj-core:3.27.7")
     api(gradleTestKit())
+}
+
+tasks.named<JavaCompile>("compileJava") {
+    options.release.set(17)
+}
+
+tasks.named<KotlinJvmCompile>("compileKotlin") {
+    compilerOptions {
+        freeCompilerArgs.set(listOf("-Xjdk-release=17"))
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
 }
