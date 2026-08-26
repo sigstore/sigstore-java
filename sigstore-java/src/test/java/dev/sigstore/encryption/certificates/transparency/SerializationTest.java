@@ -159,21 +159,17 @@ public class SerializationTest {
     SignedCertificateTimestamp.decode(sct, SignedCertificateTimestamp.Origin.EMBEDDED);
 
     // Perform various modification to it, and make sure it throws an exception on decoding
-    try {
-      byte[] in = sct.clone();
-      in[0] = 1; // Modify version field
-      SignedCertificateTimestamp.decode(in, SignedCertificateTimestamp.Origin.EMBEDDED);
-      fail("SerializationException not thrown on unsupported version");
-    } catch (SerializationException e) {
-    }
+    byte[] in1 = sct.clone();
+    in1[0] = 1; // Modify version field
+    assertThrows(
+        SerializationException.class,
+        () -> SignedCertificateTimestamp.decode(in1, SignedCertificateTimestamp.Origin.EMBEDDED));
 
-    try {
-      byte[] in = sct.clone();
-      in[41] = 1; // Modify extensions lemgth
-      SignedCertificateTimestamp.decode(in, SignedCertificateTimestamp.Origin.EMBEDDED);
-      fail("SerializationException not thrown on invalid extensions length");
-    } catch (SerializationException e) {
-    }
+    byte[] in2 = sct.clone();
+    in2[41] = 1; // Modify extensions lemgth
+    assertThrows(
+        SerializationException.class,
+        () -> SignedCertificateTimestamp.decode(in2, SignedCertificateTimestamp.Origin.EMBEDDED));
   }
 
   @Test
@@ -198,62 +194,58 @@ public class SerializationTest {
 
   @Test
   public void test_decode_invalid_DigitallySigned() throws Exception {
-    try {
-      DigitallySigned.decode(
-          new byte[] {
-            0x07,
-            0x03, // hash & signature algorithm
-            0x00,
-            0x04, // signature length
-            0x12,
-            0x34,
-            0x56,
-            0x78 // signature
-          });
-      fail("SerializationException not thrown on invalid hash type");
-    } catch (SerializationException e) {
-    }
+    assertThrows(
+        SerializationException.class,
+        () ->
+            DigitallySigned.decode(
+                new byte[] {
+                  0x07,
+                  0x03, // hash & signature algorithm
+                  0x00,
+                  0x04, // signature length
+                  0x12,
+                  0x34,
+                  0x56,
+                  0x78 // signature
+                }));
 
-    try {
-      DigitallySigned.decode(
-          new byte[] {
-            0x04,
-            0x04, // hash & signature algorithm
-            0x00,
-            0x04, // signature length
-            0x12,
-            0x34,
-            0x56,
-            0x78 // signature
-          });
-      fail("SerializationException not thrown on invalid signature type");
-    } catch (SerializationException e) {
-    }
+    assertThrows(
+        SerializationException.class,
+        () ->
+            DigitallySigned.decode(
+                new byte[] {
+                  0x04,
+                  0x04, // hash & signature algorithm
+                  0x00,
+                  0x04, // signature length
+                  0x12,
+                  0x34,
+                  0x56,
+                  0x78 // signature
+                }));
 
-    try {
-      DigitallySigned.decode(
-          new byte[] {
-            0x07,
-            0x03, // hash & signature algorithm
-            0x64,
-            0x35, // signature length
-            0x12,
-            0x34,
-            0x56,
-            0x78 // signature
-          });
-      fail("SerializationException not thrown on invalid signature length");
-    } catch (SerializationException e) {
-    }
+    assertThrows(
+        SerializationException.class,
+        () ->
+            DigitallySigned.decode(
+                new byte[] {
+                  0x07,
+                  0x03, // hash & signature algorithm
+                  0x64,
+                  0x35, // signature length
+                  0x12,
+                  0x34,
+                  0x56,
+                  0x78 // signature
+                }));
 
-    try {
-      DigitallySigned.decode(
-          new byte[] {
-            0x07, 0x03, // hash & signature algorithm
-          });
-      fail("SerializationException not thrown on missing signature");
-    } catch (SerializationException e) {
-    }
+    assertThrows(
+        SerializationException.class,
+        () ->
+            DigitallySigned.decode(
+                new byte[] {
+                  0x07, 0x03, // hash & signature algorithm
+                }));
   }
 
   @Test
@@ -364,35 +356,31 @@ public class SerializationTest {
     expected[0] = 0x45;
     assertEqualByteArrays(expected, Serialization.readDEROctetString(in));
 
-    try {
-      in =
-          new byte[] {
-            0x12, // wrong tag
-            0x06, // length
-            0x01,
-            0x02,
-            0x03,
-            0x04,
-            0x05,
-            0x05 // data
-          };
-      Serialization.readDEROctetString(in);
-      fail("SerializationException not thrown on invalid tag.");
-    } catch (SerializationException e) {
-    }
+    assertThrows(
+        SerializationException.class,
+        () ->
+            Serialization.readDEROctetString(
+                new byte[] {
+                  0x12, // wrong tag
+                  0x06, // length
+                  0x01,
+                  0x02,
+                  0x03,
+                  0x04,
+                  0x05,
+                  0x05 // data
+                }));
 
-    try {
-      in =
-          new byte[] {
-            0x04, // wrong tag
-            0x06, // length
-            0x01,
-            0x02 // data
-          };
-      Serialization.readDEROctetString(in);
-      fail("SerializationException not thrown on invalid length.");
-    } catch (SerializationException e) {
-    }
+    assertThrows(
+        SerializationException.class,
+        () ->
+            Serialization.readDEROctetString(
+                new byte[] {
+                  0x04, // wrong tag
+                  0x06, // length
+                  0x01,
+                  0x02 // data
+                }));
   }
 
   public static void assertEqualByteArrays(byte[] expected, byte[] actual) {

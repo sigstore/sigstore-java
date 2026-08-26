@@ -57,48 +57,49 @@ public class AllRequiredFieldsInBundleTest {
         messages.values().stream().map(Object::toString).collect(Collectors.joining("\n\n"));
 
     Assertions.assertEquals(
-        "dev.sigstore.common.v1.X509Certificate\n"
-            + "    raw_bytes\n"
-            + "\n"
-            + "dev.sigstore.common.v1.LogId\n"
-            + "    key_id\n"
-            + "\n"
-            + "dev.sigstore.rekor.v1.KindVersion\n"
-            + "    kind\n"
-            + "    version\n"
-            + "\n"
-            + "dev.sigstore.rekor.v1.InclusionPromise\n"
-            + "    signed_entry_timestamp\n"
-            + "\n"
-            + "dev.sigstore.rekor.v1.Checkpoint\n"
-            + "    envelope\n"
-            + "\n"
-            + "dev.sigstore.rekor.v1.InclusionProof\n"
-            + "    log_index\n"
-            + "    root_hash\n"
-            + "    tree_size\n"
-            + "    hashes\n"
-            + "    checkpoint\n"
-            + "\n"
-            + "dev.sigstore.rekor.v1.TransparencyLogEntry\n"
-            + "    log_index\n"
-            + "    log_id\n"
-            + "    kind_version\n"
-            + "    integrated_time\n"
-            + "    inclusion_proof\n"
-            + "\n"
-            + "dev.sigstore.common.v1.RFC3161SignedTimestamp\n"
-            + "    signed_timestamp\n"
-            + "\n"
-            + "dev.sigstore.bundle.v1.VerificationMaterial\n"
-            + "    content\n"
-            + "\n"
-            + "dev.sigstore.common.v1.MessageSignature\n"
-            + "    signature\n"
-            + "\n"
-            + "dev.sigstore.bundle.v1.Bundle\n"
-            + "    verification_material\n"
-            + "    content",
+        """
+        dev.sigstore.common.v1.X509Certificate
+            raw_bytes
+
+        dev.sigstore.common.v1.LogId
+            key_id
+
+        dev.sigstore.rekor.v1.KindVersion
+            kind
+            version
+
+        dev.sigstore.rekor.v1.InclusionPromise
+            signed_entry_timestamp
+
+        dev.sigstore.rekor.v1.Checkpoint
+            envelope
+
+        dev.sigstore.rekor.v1.InclusionProof
+            log_index
+            root_hash
+            tree_size
+            hashes
+            checkpoint
+
+        dev.sigstore.rekor.v1.TransparencyLogEntry
+            log_index
+            log_id
+            kind_version
+            integrated_time
+            inclusion_proof
+
+        dev.sigstore.common.v1.RFC3161SignedTimestamp
+            signed_timestamp
+
+        dev.sigstore.bundle.v1.VerificationMaterial
+            content
+
+        dev.sigstore.common.v1.MessageSignature
+            signature
+
+        dev.sigstore.bundle.v1.Bundle
+            verification_material
+            content""",
         str,
         "List of all the required fields reachable from Bundle. "
             + "If you see a test failure here (e.g. new required field is added), then "

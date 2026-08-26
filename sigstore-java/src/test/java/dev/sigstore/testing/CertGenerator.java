@@ -24,10 +24,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.util.Calendar;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -67,11 +66,9 @@ public class CertGenerator {
             .build();
 
     // create a short lived cert
-    Date startDate = new Date(System.currentTimeMillis());
-    var calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale.ROOT);
-    calendar.setTime(startDate);
-    calendar.add(Calendar.MINUTE, 20);
-    var endDate = calendar.getTime();
+    Instant now = Instant.now();
+    Date startDate = Date.from(now);
+    Date endDate = Date.from(now.plus(Duration.ofMinutes(20)));
 
     // arbitrary serial number
     BigInteger serial = new BigInteger(Long.toString(System.currentTimeMillis()));
@@ -109,11 +106,11 @@ public class CertGenerator {
         false,
         new DERUTF8String("https://fakeaccounts.test.com").getEncoded());
     certificate.addExtension(
-        new ASN1ObjectIdentifier(("1.3.6.1.4.1.99999.42.42")),
+        new ASN1ObjectIdentifier("1.3.6.1.4.1.99999.42.42"),
         false,
         "test value".getBytes(StandardCharsets.UTF_8));
     certificate.addExtension(
-        new ASN1ObjectIdentifier(("1.3.6.1.4.1.99999.42.43")),
+        new ASN1ObjectIdentifier("1.3.6.1.4.1.99999.42.43"),
         false,
         new DERUTF8String("test value der").getEncoded());
 

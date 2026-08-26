@@ -50,7 +50,6 @@ public class VerifiersTest {
   @Test
   public void verify_ed448_withBcProvider() throws Exception {
     var kp = genKeyPairWithBcProvider("ed448");
-    var signature = genSignature(kp, "ed448");
     var exception =
         Assertions.assertThrows(
             UnsupportedAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
@@ -63,7 +62,6 @@ public class VerifiersTest {
   @EnabledForJreRange(min = JRE.JAVA_15)
   public void verify_ed448_withoutBcProvider() throws Exception {
     var kp = genKeyPair("ed448");
-    var signature = genSignature(kp, "ed448");
     var exception =
         Assertions.assertThrows(
             UnsupportedAlgorithmException.class, () -> Verifiers.newVerifier(kp.getPublic()));
