@@ -14,17 +14,12 @@ if (!project.hasProperty("skipErrorprone") && buildParameters.enableErrorprone) 
     }
 
     tasks.withType<JavaCompile>().configureEach {
-        if ("Test" in name) {
-            // Ignore warnings in test code
-            options.errorprone.isEnabled.set(false)
-        } else {
-            options.compilerArgs.addAll(listOf("-Xmaxerrs", "10000", "-Xmaxwarns", "10000"))
-            options.errorprone {
-                disableWarningsInGeneratedCode.set(true)
-                enable(
-                    "PackageLocation"
-                )
-            }
+        options.compilerArgs.addAll(listOf("-Xmaxerrs", "10000", "-Xmaxwarns", "10000"))
+        options.errorprone {
+            disableWarningsInGeneratedCode.set(true)
+            enable(
+                "PackageLocation"
+            )
         }
     }
 }
