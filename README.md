@@ -119,6 +119,20 @@ Sigstore Java and Sigstore Maven Plugin are signed with both PGP and sigstore.
 | ------------- | --------- | ------ |
 | 1.0.0 - 2.X.X | https://token.actions.githubusercontent.com | https://github.com/sigstore/sigstore-java/.github/workflows/release-sigstore-java-from-tag.yaml@refs/tags/X.X.X |
 
+## Building locally
+
+Building requires **Java 21** to run Gradle, even though the main code stays Java 11
+compatible and tests target Java 17. Point `JAVA_HOME` at a Java 21 install and run:
+```
+./gradlew build
+```
+
+Some tests start a local [fulcio](https://github.com/sigstore/fulcio) server, so
+install it on your `PATH` first:
+```
+go install github.com/sigstore/fulcio@main
+```
+
 ## Troubleshooting
 
 To ensure maximum compatibility with the public Sigstore infrastructure,
