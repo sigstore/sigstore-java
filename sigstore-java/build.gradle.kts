@@ -21,10 +21,11 @@ dependencies {
 
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
 
-    // this requires inclusion of protos is src/main/proto
-    protobuf("dev.sigstore:protobuf-specs:0.5.0")
+    protobuf("dev.sigstore:protobuf-specs:0.5.2")
+    implementation("com.google.api.grpc:proto-google-common-protos:2.74.0")
 
     implementation(platform("com.google.protobuf:protobuf-bom:4.35.1"))
+    implementation("com.google.protobuf:protobuf-java")
     implementation("com.google.protobuf:protobuf-java-util")
 
     // grpc deps
