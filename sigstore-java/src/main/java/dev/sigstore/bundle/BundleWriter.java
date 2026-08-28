@@ -28,13 +28,14 @@ import dev.sigstore.proto.common.v1.LogId;
 import dev.sigstore.proto.common.v1.MessageSignature;
 import dev.sigstore.proto.common.v1.RFC3161SignedTimestamp;
 import dev.sigstore.proto.common.v1.X509Certificate;
+import dev.sigstore.proto.dsse.EnvelopeOuterClass.Envelope;
+import dev.sigstore.proto.dsse.EnvelopeOuterClass.Signature;
 import dev.sigstore.proto.rekor.v1.Checkpoint;
 import dev.sigstore.proto.rekor.v1.InclusionPromise;
 import dev.sigstore.proto.rekor.v1.InclusionProof;
 import dev.sigstore.proto.rekor.v1.KindVersion;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
 import dev.sigstore.rekor.client.RekorEntry;
-import io.intoto.EnvelopeOuterClass.Envelope;
 import java.security.cert.CertificateEncodingException;
 import java.util.Base64;
 import java.util.List;
@@ -118,9 +119,7 @@ class BundleWriter {
               .setPayloadType(dsseEnvelope.getPayloadType());
       for (var sig : dsseEnvelope.getSignatures()) {
         envelopeBuilder.addSignatures(
-            io.intoto.EnvelopeOuterClass.Signature.newBuilder()
-                .setSig(ByteString.copyFrom(sig.getSig()))
-                .build());
+            Signature.newBuilder().setSig(ByteString.copyFrom(sig.getSig())).build());
       }
       builder.setDsseEnvelope(envelopeBuilder.build());
     }
