@@ -232,12 +232,21 @@ open class BaseGradleTest {
         require(gradle.configurationCache == ConfigurationCache.ON) {
             "Project isolation requires Configuration Cache."
         }
-        projectDir.resolve("gradle.properties").appendText(
-            """
+        if (gradle.version >= GradleVersion.version("9.7")) {
+            projectDir.resolve("gradle.properties").appendText(
+                """
 
-            org.gradle.unsafe.isolated-projects=true
-            """.trimIndent()
-        )
+                org.gradle.isolated-projects=true
+                """.trimIndent()
+            )
+        } else {
+            projectDir.resolve("gradle.properties").appendText(
+                """
+
+                org.gradle.unsafe.isolated-projects=true
+                """.trimIndent()
+            )
+        }
     }
 
     protected fun assertSoftly(body: SoftAssertions.() -> Unit) =
