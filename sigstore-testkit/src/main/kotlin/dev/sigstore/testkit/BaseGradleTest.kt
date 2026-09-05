@@ -71,6 +71,7 @@ open class BaseGradleTest {
             "8.14.3",
             "9.1.0",
             "9.2.0",
+            "9.7.1",
         ).map { GradleVersion.version(it) }
             .filter {
                 // See https://docs.gradle.org/current/userguide/compatibility.html
@@ -231,12 +232,21 @@ open class BaseGradleTest {
         require(gradle.configurationCache == ConfigurationCache.ON) {
             "Project isolation requires Configuration Cache."
         }
-        projectDir.resolve("gradle.properties").appendText(
-            """
+        if (gradle.version >= GradleVersion.version("9.7")) {
+            projectDir.resolve("gradle.properties").appendText(
+                """
 
-            org.gradle.unsafe.isolated-projects=true
-            """.trimIndent()
-        )
+                org.gradle.isolated-projects=true
+                """.trimIndent()
+            )
+        } else {
+            projectDir.resolve("gradle.properties").appendText(
+                """
+
+                org.gradle.unsafe.isolated-projects=true
+                """.trimIndent()
+            )
+        }
     }
 
     protected fun assertSoftly(body: SoftAssertions.() -> Unit) =
