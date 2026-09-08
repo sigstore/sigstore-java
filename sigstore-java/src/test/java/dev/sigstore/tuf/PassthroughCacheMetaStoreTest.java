@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
+import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,7 +45,8 @@ class PassthroughCacheMetaStoreTest {
         Path.of(
             Resources.getResource("dev/sigstore/tuf/synthetic/test/repository/timestamp.json")
                 .getPath());
-    timestamp = GSON.get().fromJson(Files.newBufferedReader(timestampResource), Timestamp.class);
+    timestamp =
+        TUF_GSON.get().fromJson(Files.newBufferedReader(timestampResource), Timestamp.class);
   }
 
   @BeforeEach
@@ -80,7 +81,7 @@ class PassthroughCacheMetaStoreTest {
 
     try (BufferedWriter fileWriter =
         Files.newBufferedWriter(localStore.resolve("timestamp.json"))) {
-      GSON.get().toJson(timestamp, fileWriter);
+      TUF_GSON.get().toJson(timestamp, fileWriter);
     }
 
     assertEquals(timestamp, fileSystemTufStore.readMeta(RootRole.TIMESTAMP, Timestamp.class).get());
