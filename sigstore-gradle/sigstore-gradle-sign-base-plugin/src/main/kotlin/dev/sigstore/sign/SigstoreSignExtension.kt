@@ -17,29 +17,25 @@
 package dev.sigstore.sign
 
 import dev.sigstore.sign.tasks.SigstoreSignFilesTask
-import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.DomainObjectCollection
 import org.gradle.api.Project
-import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.publish.Publication
 import org.gradle.api.publish.PublicationArtifact
 import org.gradle.api.publish.internal.PublicationInternal
-import org.gradle.api.publish.maven.MavenArtifact
 import org.gradle.api.publish.maven.internal.artifact.AbstractMavenArtifact
 import org.gradle.api.publish.maven.internal.artifact.DerivedMavenArtifact
-import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
-import org.gradle.kotlin.dsl.the
 import org.gradle.kotlin.dsl.withType
 import org.gradle.plugins.signing.Sign
 import org.gradle.util.GradleVersion
+import javax.inject.Inject
 import kotlin.collections.set
 
-abstract class SigstoreSignExtension(private val project: Project) {
+abstract class SigstoreSignExtension @Inject constructor (private val project: Project) {
     private val Publication.signingTaskName: String
         get() = "sigstoreSign${name.titlecase()}Publication"
 

@@ -16,16 +16,13 @@
  */
 package dev.sigstore.sign.tasks
 
-import dev.sigstore.sign.SigstoreSignExtension
 import dev.sigstore.sign.SigstoreSignature
-import dev.sigstore.sign.services.SigstoreSigningService
 import dev.sigstore.sign.work.SignWorkAction
 import org.gradle.api.Buildable
 import org.gradle.api.DefaultTask
 import org.gradle.api.JavaVersion
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.file.*
-import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -34,7 +31,6 @@ import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.findByType
-import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
 import org.gradle.work.DisableCachingByDefault
 import org.gradle.workers.WorkerExecutor
@@ -43,22 +39,6 @@ import javax.inject.Inject
 
 @DisableCachingByDefault(because = "Sigstore signatures are true-timestamp dependent, so we should not cache signatures")
 abstract class SigstoreSignFilesTask : DefaultTask() {
-    companion object {
-        private val PROPERTY_SET_PROVIDER = Property::class.java.getMethod("set", Provider::class.java)
-    }
-
-    init {
-        @Suppress("UNCHECKED_CAST")
-        val service: Provider<SigstoreSigningService> =
-            project.gradle.sharedServices.registrations[SigstoreSigningService.SERVICE_NAME].service as Provider<SigstoreSigningService>
-
-        // Use reflection to resolve set(Provider) vs set(Object) ambiguity
-        @Suppress("LeakingThis")
-        PROPERTY_SET_PROVIDER.invoke(signingService, service)
-        // See https://docs.gradle.org/current/userguide/build_services.html
-        @Suppress("LeakingThis")
-        usesService(service)
-    }
 
     /**
      * Signing service is there so none of the signing tasks execute concurrently.
@@ -67,20 +47,13 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
      * Type is `Any` to workaround https://github.com/gradle/gradle/issues/17559
      */
     @get:Internal
-    protected abstract val signingService: Property<Any>
+    internal abstract val signingService: Property<Any>
 
-    @Nested
-    val signatures: NamedDomainObjectContainer<SigstoreSignature> =
-        objects.domainObjectContainer(SigstoreSignature::class.java) {
-            objects.newInstance(
-                SigstoreSignature::class.java,
-                it,
-            )
-        }
+    @get:Nested
+    abstract val signatures: NamedDomainObjectContainer<SigstoreSignature>
 
     @get:Classpath
-    @get:InputFiles
-    protected abstract val sigstoreClientClasspath: ConfigurableFileCollection
+    abstract val sigstoreClientClasspath: ConfigurableFileCollection
 
     @get:Internal
     abstract val signatureDirectory: DirectoryProperty
@@ -96,9 +69,6 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
     protected abstract val providers: ProviderFactory
 
     @get:Inject
-    protected abstract val objects: ObjectFactory
-
-    @get:Inject
     protected abstract val layout: ProjectLayout
 
     init {
@@ -109,7 +79,6 @@ abstract class SigstoreSignFilesTask : DefaultTask() {
         outputs.cacheIf("Sigstore signatures are true-timestamp dependent, so we should not cache signatures") {
             false
         }
-        sigstoreClientClasspath.from(project.configurations["sigstoreClientClasspath"])
         signatureDirectory.convention(
             layout.buildDirectory.dir("sigstore/$name")
         )

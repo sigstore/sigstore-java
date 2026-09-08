@@ -28,6 +28,5 @@ abstract class SigstoreSigningService: BuildService<SigstoreSigningService.Param
         const val SERVICE_NAME = "sigstoreJavaSigningService"
     }
 
-    interface Params: BuildServiceParameters {
-    }
+    interface Params: BuildServiceParameters
 }
