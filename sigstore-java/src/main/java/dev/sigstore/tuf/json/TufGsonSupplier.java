@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Sigstore Authors.
+ * Copyright 2026 The Sigstore Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.json;
+package dev.sigstore.tuf.json;
 
-import com.google.gson.*;
-import dev.sigstore.dsse.GsonAdaptersInTotoPayload;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
 import dev.sigstore.forbidden.SuppressForbidden;
-import dev.sigstore.rekor.client.GsonAdaptersRekorEntry;
-import dev.sigstore.rekor.client.GsonAdaptersRekorEntryBody;
+import dev.sigstore.json.GsonByteArrayAdapter;
+import dev.sigstore.json.GsonChecked;
+import dev.sigstore.tuf.model.*;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.function.Supplier;
 
-/**
- * Supplies a Gson with custom byte to base64 serialization, and no html escaping. This instance of
- * GSON is NOT html/url safe, but makes more sense if you want to do things for the serialization of
- * requests between sigstore and this client -- and should probably be used for any api call to
- * sigstore that expects JSON.
- */
+/** Supplies a Gson with custom byte to base64 serialization, configured for TUF models. */
 @SuppressForbidden(reason = "GsonBuilder")
-public enum GsonSupplier implements Supplier<GsonChecked> {
-  GSON;
+public enum TufGsonSupplier implements Supplier<GsonChecked> {
+  TUF_GSON;
 
   @SuppressWarnings("ImmutableEnumChecker")
   private final GsonChecked gson =
@@ -46,9 +42,20 @@ public enum GsonSupplier implements Supplier<GsonChecked> {
                           ZonedDateTime.parse(json.getAsJsonPrimitive().getAsString())
                               .toLocalDateTime())
               // Immutables generated GSON Adapters in alphabetical order
-              .registerTypeAdapterFactory(new GsonAdaptersRekorEntry())
-              .registerTypeAdapterFactory(new GsonAdaptersRekorEntryBody())
-              .registerTypeAdapterFactory(new GsonAdaptersInTotoPayload())
+              .registerTypeAdapterFactory(new GsonAdaptersDelegations())
+              .registerTypeAdapterFactory(new GsonAdaptersDelegationRole())
+              .registerTypeAdapterFactory(new GsonAdaptersHashes())
+              .registerTypeAdapterFactory(new GsonAdaptersKey())
+              .registerTypeAdapterFactory(new GsonAdaptersRoot())
+              .registerTypeAdapterFactory(new GsonAdaptersRootMeta())
+              .registerTypeAdapterFactory(new GsonAdaptersRootRole())
+              .registerTypeAdapterFactory(new GsonAdaptersSignature())
+              .registerTypeAdapterFactory(new GsonAdaptersSnapshot())
+              .registerTypeAdapterFactory(new GsonAdaptersSnapshotMeta())
+              .registerTypeAdapterFactory(new GsonAdaptersTargets())
+              .registerTypeAdapterFactory(new GsonAdaptersTargetMeta())
+              .registerTypeAdapterFactory(new GsonAdaptersTimestamp())
+              .registerTypeAdapterFactory(new GsonAdaptersTimestampMeta())
               .disableHtmlEscaping()
               .create());
 

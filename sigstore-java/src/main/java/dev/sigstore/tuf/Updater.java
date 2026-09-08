@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
+import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
@@ -164,7 +164,7 @@ public class Updater {
     if (localRoot.isPresent()) {
       trustedRoot = localRoot.get();
     } else {
-      trustedRoot = GSON.get().fromJson(trustedRootPath.get(), Root.class);
+      trustedRoot = TUF_GSON.get().fromJson(trustedRootPath.get(), Root.class);
       trustedMetaStore.setRoot(trustedRoot);
     }
     // verify root that we're bootstrapping this update with is good to go
