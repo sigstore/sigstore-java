@@ -10,6 +10,16 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [2.3.0] - 2026-09-08
+
+## Added
+- Allow verifying bundles without transparency-log entries (for private deployments), relying on signed RFC 3161 timestamps: https://github.com/sigstore/sigstore-java/pull/1252
+- Add Automatic-Module-Name to sigstore-java: https://github.com/sigstore/sigstore-java/pull/1269
+- Support Gradle Project Isolation in the Gradle plugin: https://github.com/sigstore/sigstore-java/pull/1246
+
+## Fixed
+- Handle 409 responses from Rekor: https://github.com/sigstore/sigstore-java/pull/1266
+
 # [2.2.0] - 2026-06-10
 
 ## Added

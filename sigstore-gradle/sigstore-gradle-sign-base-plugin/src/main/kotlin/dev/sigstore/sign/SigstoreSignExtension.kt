@@ -42,7 +42,7 @@ abstract class SigstoreSignExtension @Inject constructor (private val project: P
     abstract val sigstoreJavaVersion : Property<String>
 
     init {
-        sigstoreJavaVersion.convention("2.3.0")
+        sigstoreJavaVersion.convention("2.4.0")
     }
 
     fun sign(publications: DomainObjectCollection<Publication>) {
