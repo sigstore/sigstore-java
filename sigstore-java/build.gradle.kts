@@ -18,6 +18,7 @@ tasks.jar {
 
 dependencies {
     api(project(":sigstore-common"))
+    api(project(":sigstore-tuf"))
 
     compileOnly("org.immutables:gson:2.12.3")
     compileOnly("org.immutables:value-annotations:2.12.3")
@@ -96,18 +97,12 @@ spotless {
         targetExclude(
             "build/**/*.java",
             "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java",
-            "src/*/java/dev/sigstore/tuf/json/canonicalizer/*.java",
         )
     }
     format("conscrypt", com.diffplug.gradle.spotless.JavaExtension::class.java) {
         googleJavaFormat("1.35.0")
         licenseHeaderFile("$rootDir/config/conscryptLicenseHeader")
         target("src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
-    }
-    format("webPki", com.diffplug.gradle.spotless.JavaExtension::class.java) {
-        googleJavaFormat("1.35.0")
-        licenseHeaderFile("$rootDir/config/webPKILicenseHeader")
-        target("src/*/java/dev/sigstore/tuf/json/canonicalizer/*.java")
     }
 }
 

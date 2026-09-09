@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.tuf;
+package dev.sigstore.trustroot.tuf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -22,6 +22,14 @@ import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.tuf.FileSystemTufStore;
+import dev.sigstore.tuf.HttpFetcher;
+import dev.sigstore.tuf.MetaFetcher;
+import dev.sigstore.tuf.PassthroughCacheMetaStore;
+import dev.sigstore.tuf.RootProvider;
+import dev.sigstore.tuf.TargetReader;
+import dev.sigstore.tuf.TrustedMetaStore;
+import dev.sigstore.tuf.Updater;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -42,18 +50,21 @@ public class SigstoreTufClient {
   @VisibleForTesting static final String SIGNING_CONFIG_FILENAME = "signing_config.v0.2.json";
 
   public static final String PUBLIC_GOOD_ROOT_RESOURCE =
-      "dev/sigstore/tuf/sigstore-tuf-root/root.json";
-  public static final String STAGING_ROOT_RESOURCE = "dev/sigstore/tuf/tuf-root-staging/root.json";
+      "dev/sigstore/trustroot/tuf/sigstore-tuf-root/root.json";
+  public static final String STAGING_ROOT_RESOURCE =
+      "dev/sigstore/trustroot/tuf/tuf-root-staging/root.json";
 
   private final Updater updater;
+  private final TargetReader targetReader;
   private Instant lastUpdate;
   private SigstoreTrustedRoot sigstoreTrustedRoot;
   private SigstoreSigningConfig sigstoreSigningConfig;
   private final Duration cacheValidity;
 
   @VisibleForTesting
-  SigstoreTufClient(Updater updater, Duration cacheValidity) {
+  SigstoreTufClient(Updater updater, TargetReader targetReader, Duration cacheValidity) {
     this.updater = updater;
+    this.targetReader = targetReader;
     this.cacheValidity = cacheValidity;
   }
 
@@ -131,7 +142,7 @@ public class SigstoreTufClient {
               .setMetaFetcher(MetaFetcher.newFetcher(HttpFetcher.newFetcher(remoteMirror)))
               .setTargetFetcher(HttpFetcher.newFetcher(remoteTargetsLocation))
               .build();
-      return new SigstoreTufClient(tufUpdater, cacheValidity);
+      return new SigstoreTufClient(tufUpdater, filesystemTufStore, cacheValidity);
     }
   }
 
@@ -160,15 +171,13 @@ public class SigstoreTufClient {
     lastUpdate = Instant.now();
     try {
       sigstoreTrustedRoot =
-          SigstoreTrustedRoot.from(
-              updater.getTargetStore().getTargetInputSteam(TRUST_ROOT_FILENAME));
+          SigstoreTrustedRoot.from(targetReader.getTargetInputSteam(TRUST_ROOT_FILENAME));
     } catch (IOException ex) {
       throw new SigstoreConfigurationException("Failed to read trusted root from target store", ex);
     }
     try {
       sigstoreSigningConfig =
-          SigstoreSigningConfig.from(
-              updater.getTargetStore().getTargetInputSteam(SIGNING_CONFIG_FILENAME));
+          SigstoreSigningConfig.from(targetReader.getTargetInputSteam(SIGNING_CONFIG_FILENAME));
     } catch (IOException ex) {
       throw new SigstoreConfigurationException(
           "Failed to read signing config from target store", ex);

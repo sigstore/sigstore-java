@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.tuf;
+package dev.sigstore.trustroot.tuf;
 
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.ServiceConfiguration;
@@ -22,6 +22,8 @@ import dev.sigstore.proto.trustroot.v1.SigningConfig;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
 import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.tuf.TargetReader;
+import dev.sigstore.tuf.Updater;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -104,8 +106,8 @@ class SigstoreTufClientTest {
 
   @Test
   public void testUpdate_updateWhenCacheInvalid() throws Exception {
-    var mockUpdater = mockUpdater();
-    var client = new SigstoreTufClient(mockUpdater, Duration.ofSeconds(2));
+    var mockUpdater = Mockito.mock(Updater.class);
+    var client = new SigstoreTufClient(mockUpdater, mockTargetReader(), Duration.ofSeconds(2));
 
     client.update();
     Thread.sleep(3000);
@@ -115,15 +117,15 @@ class SigstoreTufClientTest {
 
   @Test
   public void testUpdate_noUpdateWhenCacheValid() throws Exception {
-    var mockUpdater = mockUpdater();
-    var client = new SigstoreTufClient(mockUpdater, Duration.ofSeconds(2));
+    var mockUpdater = Mockito.mock(Updater.class);
+    var client = new SigstoreTufClient(mockUpdater, mockTargetReader(), Duration.ofSeconds(2));
 
     client.update();
     client.update();
     Mockito.verify(mockUpdater, Mockito.times(1)).update();
   }
 
-  private static Updater mockUpdater() throws IOException {
+  private static TargetReader mockTargetReader() throws IOException {
     var serviceConfig = ServiceConfiguration.newBuilder().setSelector(ServiceSelector.ANY).build();
     var trustRootBytes =
         JsonFormat.printer().print(TrustedRoot.newBuilder()).getBytes(StandardCharsets.UTF_8);
@@ -135,16 +137,14 @@ class SigstoreTufClientTest {
                     .setTsaConfig(serviceConfig)
                     .setRekorTlogConfig(serviceConfig))
             .getBytes(StandardCharsets.UTF_8);
-    var mockUpdater = Mockito.mock(Updater.class);
-    var mockTargetStore = Mockito.mock(TargetStore.class);
-    Mockito.when(mockTargetStore.getTargetInputSteam(SigstoreTufClient.TRUST_ROOT_FILENAME))
+    var mockTargetReader = Mockito.mock(TargetReader.class);
+    Mockito.when(mockTargetReader.getTargetInputSteam(SigstoreTufClient.TRUST_ROOT_FILENAME))
         .thenAnswer((Answer<InputStream>) invocation -> new ByteArrayInputStream(trustRootBytes));
-    Mockito.when(mockTargetStore.getTargetInputSteam(SigstoreTufClient.SIGNING_CONFIG_FILENAME))
+    Mockito.when(mockTargetReader.getTargetInputSteam(SigstoreTufClient.SIGNING_CONFIG_FILENAME))
         .thenAnswer(
             (Answer<InputStream>) invocation -> new ByteArrayInputStream(signingConfigBytes));
-    Mockito.when(mockUpdater.getTargetStore()).thenReturn(mockTargetStore);
 
-    return mockUpdater;
+    return mockTargetReader;
   }
 
   private <T> void assertNonEmpty(List<T> list) {

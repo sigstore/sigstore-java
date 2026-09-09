@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf;
 
-import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
+import static dev.sigstore.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
 import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import dev.sigstore.common.http.URIFormat;
 import dev.sigstore.common.json.JsonParseException;
-import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.encryption.Verifier;
 import dev.sigstore.tuf.encryption.Verifiers;
 import dev.sigstore.tuf.model.Hashes;
