@@ -3,7 +3,6 @@ import com.google.protobuf.gradle.id
 plugins {
     id("build-logic.java-published-library")
     id("build-logic.test-junit5")
-    id("build-logic.build-info")
     id("org.jsonschema2dataclass") version "5.0.0"
     id("com.google.protobuf") version "0.10.0"
 }
@@ -18,6 +17,8 @@ tasks.jar {
 }
 
 dependencies {
+    api(project(":sigstore-common"))
+
     compileOnly("org.immutables:gson:2.12.2")
     compileOnly("org.immutables:value-annotations:2.12.2")
     annotationProcessor("org.immutables:value:2.12.2")
@@ -95,18 +96,12 @@ spotless {
         targetExclude(
             "build/**/*.java",
             "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java",
-            "src/*/java/dev/sigstore/json/canonicalizer/*.java",
         )
     }
     format("conscrypt", com.diffplug.gradle.spotless.JavaExtension::class.java) {
         googleJavaFormat("1.35.0")
         licenseHeaderFile("$rootDir/config/conscryptLicenseHeader")
         target("src/*/java/dev/sigstore/encryption/certificates/transparency/*.java")
-    }
-    format("webPki", com.diffplug.gradle.spotless.JavaExtension::class.java) {
-        googleJavaFormat("1.35.0")
-        licenseHeaderFile("$rootDir/config/webPKILicenseHeader")
-        target("src/*/java/dev/sigstore/json/canonicalizer/*.java")
     }
 }
 
@@ -126,14 +121,10 @@ forbiddenApis {
     // Don't allow sigstore-java developers to directly call JsonFormat.parser(), use our wrapper instead
     // which allows for ignored fields.
     signaturesFiles = files("$rootDir/config/forbiddenApis.txt")
-    suppressAnnotations = setOf("dev.sigstore.forbidden.SuppressForbidden")
+    suppressAnnotations = setOf("dev.sigstore.common.forbidden.SuppressForbidden")
 }
 
 // TODO: keep until these code gen plugins explicitly declare dependencies
 tasks.named("sourcesJar") {
     dependsOn("generateJsonSchema2DataClassConfigRekor")
-}
-
-tasks.generateBuildInfo {
-    packageName.set("dev.sigstore.buildinfo")
 }

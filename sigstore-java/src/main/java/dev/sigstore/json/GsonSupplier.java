@@ -16,8 +16,10 @@
 package dev.sigstore.json;
 
 import com.google.gson.*;
+import dev.sigstore.common.forbidden.SuppressForbidden;
+import dev.sigstore.common.json.GsonByteArrayAdapter;
+import dev.sigstore.common.json.GsonChecked;
 import dev.sigstore.dsse.GsonAdaptersInTotoPayload;
-import dev.sigstore.forbidden.SuppressForbidden;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntry;
 import dev.sigstore.rekor.client.GsonAdaptersRekorEntryBody;
 import java.time.LocalDateTime;

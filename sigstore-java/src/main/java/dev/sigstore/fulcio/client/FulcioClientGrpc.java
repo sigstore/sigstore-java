@@ -19,13 +19,12 @@ import static dev.sigstore.fulcio.v2.SigningCertificate.CertificateCase.SIGNED_C
 
 import com.google.api.client.util.Preconditions;
 import com.google.protobuf.ByteString;
+import dev.sigstore.common.http.HttpParams;
 import dev.sigstore.fulcio.v2.CAGrpc;
 import dev.sigstore.fulcio.v2.CreateSigningCertificateRequest;
 import dev.sigstore.fulcio.v2.Credentials;
 import dev.sigstore.fulcio.v2.PublicKey;
 import dev.sigstore.fulcio.v2.PublicKeyRequest;
-import dev.sigstore.http.GrpcChannels;
-import dev.sigstore.http.HttpParams;
 import dev.sigstore.trustroot.Service;
 import java.net.URI;
 import java.security.cert.CertPath;

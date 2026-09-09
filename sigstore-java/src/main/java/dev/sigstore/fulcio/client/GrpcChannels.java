@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.http;
+package dev.sigstore.fulcio.client;
 
+import dev.sigstore.common.http.HttpParams;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URI;

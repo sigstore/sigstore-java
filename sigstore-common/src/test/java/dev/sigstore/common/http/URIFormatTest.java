@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.http;
+package dev.sigstore.common.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
