@@ -18,6 +18,7 @@ tasks.jar {
 
 dependencies {
     api(project(":sigstore-common"))
+    api(project(":sigstore-tuf"))
 
     compileOnly("org.immutables:gson:2.12.2")
     compileOnly("org.immutables:value-annotations:2.12.2")
