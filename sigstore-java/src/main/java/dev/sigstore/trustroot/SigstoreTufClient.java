@@ -13,15 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.tuf;
+package dev.sigstore.trustroot;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import dev.sigstore.common.http.URIFormat;
 import dev.sigstore.common.json.JsonParseException;
-import dev.sigstore.trustroot.SigstoreConfigurationException;
-import dev.sigstore.trustroot.SigstoreSigningConfig;
-import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.tuf.FileSystemTufStore;
+import dev.sigstore.tuf.HttpFetcher;
+import dev.sigstore.tuf.MetaFetcher;
+import dev.sigstore.tuf.PassthroughCacheMetaStore;
+import dev.sigstore.tuf.RootProvider;
+import dev.sigstore.tuf.TrustedMetaStore;
+import dev.sigstore.tuf.Updater;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
