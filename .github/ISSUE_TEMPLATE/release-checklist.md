@@ -23,5 +23,5 @@ Full release instructions are at: [RELEASING.md](/sigstore/sigstore-java/blob/ma
 
 ## Post Release
 - [ ] Update README if required
-- [ ] Update versions (`./scripts/update_version.sh`)
+- [ ] Update versions (`./scripts/update_versions.sh`)
 - [ ] Update CHANGELOG.md
