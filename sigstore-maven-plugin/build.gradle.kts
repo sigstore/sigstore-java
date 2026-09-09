@@ -22,6 +22,7 @@ dependencies {
     testImplementation(project(":sigstore-testkit"))
 
     sigstoreJavaRuntime(project(":sigstore-common"))
+    sigstoreJavaRuntime(project(":sigstore-tuf"))
     sigstoreJavaRuntime(project(":sigstore-java")) {
         because("Test code needs access locally-built sigstore-java as a Maven repository")
     }

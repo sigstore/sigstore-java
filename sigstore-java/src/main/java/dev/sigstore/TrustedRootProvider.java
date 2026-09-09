@@ -18,7 +18,7 @@ package dev.sigstore;
 import com.google.common.base.Preconditions;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
-import dev.sigstore.tuf.SigstoreTufClient;
+import dev.sigstore.trustroot.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
