@@ -18,7 +18,7 @@ package dev.sigstore.tuf;
 import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 
 import com.google.common.base.Preconditions;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;

@@ -13,6 +13,7 @@ if (!System.getenv("CIFUZZ").equals("true", ignoreCase = true) && JavaVersion.cu
 includeBuild("build-logic-commons")
 includeBuild("build-logic")
 
+include("sigstore-common")
 include("sigstore-java")
 include("sigstore-gradle:sigstore-gradle-sign-base-plugin")
 include("sigstore-gradle:sigstore-gradle-sign-plugin")

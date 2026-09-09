@@ -19,7 +19,7 @@ import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.bundle.v1.TimestampVerificationData;
 import dev.sigstore.proto.bundle.v1.VerificationMaterial;

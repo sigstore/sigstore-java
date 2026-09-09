@@ -22,17 +22,11 @@
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
+      <repositories>
+@localRepositories@
+      </repositories>
       <pluginRepositories>
-        <pluginRepository>
-          <id>local.central</id>
-          <url>@localRepositoryUrl@</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>true</enabled>
-          </snapshots>
-        </pluginRepository>
+@localPluginRepositories@
         <pluginRepository>
           <id>local.plugin.central</id>
           <url>@localPluginRepositoryUrl@</url>

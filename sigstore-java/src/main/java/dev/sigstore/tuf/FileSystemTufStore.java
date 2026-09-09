@@ -18,7 +18,7 @@ package dev.sigstore.tuf;
 import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 
 import com.google.common.annotations.VisibleForTesting;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.tuf.model.*;
 import java.io.BufferedWriter;
 import java.io.IOException;

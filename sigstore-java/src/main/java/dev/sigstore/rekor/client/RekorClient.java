@@ -15,7 +15,7 @@
  */
 package dev.sigstore.rekor.client;
 
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;

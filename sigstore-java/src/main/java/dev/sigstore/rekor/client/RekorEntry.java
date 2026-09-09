@@ -19,7 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
