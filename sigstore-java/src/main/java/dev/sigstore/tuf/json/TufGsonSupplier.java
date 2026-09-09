@@ -17,9 +17,9 @@ package dev.sigstore.tuf.json;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
-import dev.sigstore.forbidden.SuppressForbidden;
-import dev.sigstore.json.GsonByteArrayAdapter;
-import dev.sigstore.json.GsonChecked;
+import dev.sigstore.common.forbidden.SuppressForbidden;
+import dev.sigstore.common.json.GsonByteArrayAdapter;
+import dev.sigstore.common.json.GsonChecked;
 import dev.sigstore.tuf.model.*;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;

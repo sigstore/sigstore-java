@@ -16,7 +16,7 @@
 package dev.sigstore.tuf.model;
 
 import com.google.gson.JsonElement;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.tuf.json.TufGsonSupplier;
 import dev.sigstore.tuf.json.canonicalizer.JsonCanonicalizer;
 import java.io.IOException;
