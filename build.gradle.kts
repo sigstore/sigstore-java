@@ -37,6 +37,7 @@ repositories {
 
 dependencies {
     nmcpAggregation(project(":sigstore-common"))
+    nmcpAggregation(project(":sigstore-tuf"))
     nmcpAggregation(project(":sigstore-java"))
     nmcpAggregation(project(":sigstore-maven-plugin"))
 }

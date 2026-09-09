@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.tuf;
+package dev.sigstore.trustroot.tuf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -22,6 +22,13 @@ import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.SigstoreSigningConfig;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.tuf.FileSystemTufStore;
+import dev.sigstore.tuf.HttpFetcher;
+import dev.sigstore.tuf.MetaFetcher;
+import dev.sigstore.tuf.PassthroughCacheMetaStore;
+import dev.sigstore.tuf.RootProvider;
+import dev.sigstore.tuf.TrustedMetaStore;
+import dev.sigstore.tuf.Updater;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -42,8 +49,9 @@ public class SigstoreTufClient {
   @VisibleForTesting static final String SIGNING_CONFIG_FILENAME = "signing_config.v0.2.json";
 
   public static final String PUBLIC_GOOD_ROOT_RESOURCE =
-      "dev/sigstore/tuf/sigstore-tuf-root/root.json";
-  public static final String STAGING_ROOT_RESOURCE = "dev/sigstore/tuf/tuf-root-staging/root.json";
+      "dev/sigstore/trustroot/tuf/sigstore-tuf-root/root.json";
+  public static final String STAGING_ROOT_RESOURCE =
+      "dev/sigstore/trustroot/tuf/tuf-root-staging/root.json";
 
   private final Updater updater;
   private Instant lastUpdate;
