@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.trustroot.Service;
-import dev.sigstore.tuf.SigstoreTufClient;
+import dev.sigstore.trustroot.SigstoreTufClient;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
