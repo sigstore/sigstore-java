@@ -16,8 +16,8 @@
 package fuzzing;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
-import dev.sigstore.json.canonicalizer.NumberToJSON;
+import dev.sigstore.common.json.canonicalizer.JsonCanonicalizer;
+import dev.sigstore.common.json.canonicalizer.NumberToJSON;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 

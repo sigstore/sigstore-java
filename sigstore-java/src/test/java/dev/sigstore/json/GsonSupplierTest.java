@@ -17,6 +17,8 @@ package dev.sigstore.json;
 
 import static dev.sigstore.json.GsonSupplier.GSON;
 
+import dev.sigstore.common.json.GsonChecked;
+import dev.sigstore.common.json.JsonParseException;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

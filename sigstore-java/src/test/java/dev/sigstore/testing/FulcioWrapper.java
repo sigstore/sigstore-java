@@ -16,8 +16,8 @@
 package dev.sigstore.testing;
 
 import com.google.gson.Gson;
+import dev.sigstore.common.http.URIFormat;
 import dev.sigstore.encryption.certificates.Certificates;
-import dev.sigstore.http.URIFormat;
 import dev.sigstore.trustroot.Service;
 import java.io.IOException;
 import java.net.URI;

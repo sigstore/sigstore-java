@@ -18,7 +18,7 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.rekor.v2.HashedRekordLogEntryV002;
 import dev.sigstore.rekor.dsse.v0_0_1.Dsse;

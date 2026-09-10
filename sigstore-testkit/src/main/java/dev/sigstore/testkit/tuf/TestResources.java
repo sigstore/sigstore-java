@@ -16,7 +16,7 @@
 package dev.sigstore.testkit.tuf;
 
 import com.google.common.io.Resources;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.tuf.json.TufGsonSupplier;
 import dev.sigstore.tuf.model.Root;
 import java.io.IOException;
