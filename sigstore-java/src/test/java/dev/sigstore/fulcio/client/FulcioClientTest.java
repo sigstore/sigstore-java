@@ -19,9 +19,9 @@ import static org.junit.jupiter.api.Named.named;
 
 import com.google.common.io.Resources;
 import dev.sigstore.AlgorithmRegistry;
+import dev.sigstore.common.http.HttpParams;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
-import dev.sigstore.http.HttpParams;
 import dev.sigstore.testing.FakeCTLogServer;
 import dev.sigstore.testing.FulcioWrapper;
 import dev.sigstore.testing.MockOAuth2ServerExtension;

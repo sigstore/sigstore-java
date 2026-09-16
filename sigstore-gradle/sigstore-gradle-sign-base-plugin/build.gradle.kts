@@ -8,6 +8,7 @@ description = "Gradle plugin with the base set of tasks and configurations for S
 dependencies {
     compileOnly(project(":sigstore-java"))
 
+    sigstoreJavaRuntime(project(":sigstore-common"))
     sigstoreJavaRuntime(project(":sigstore-java")) {
         because("Test code needs access locally-built sigstore-java as a Maven repository")
     }

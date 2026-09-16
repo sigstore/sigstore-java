@@ -7,7 +7,7 @@
  * thread</a> and <a href="https://github.com/theupdateframework/python-tuf/issues/457">related
  * issue</a>.
  *
- * <p>There is just a minor edit to {@link dev.sigstore.json.canonicalizer.JsonCanonicalizer} line
- * 43.
+ * <p>There is just a minor edit to {@link dev.sigstore.common.json.canonicalizer.JsonCanonicalizer}
+ * line 43.
  */
-package dev.sigstore.json.canonicalizer;
+package dev.sigstore.common.json.canonicalizer;

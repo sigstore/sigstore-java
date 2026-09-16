@@ -16,7 +16,7 @@
 package dev.sigstore.tuf.model;
 
 import com.google.common.base.Preconditions;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import org.immutables.gson.Gson;
 import org.immutables.value.Value;
 
