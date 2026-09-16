@@ -27,7 +27,7 @@ import dev.sigstore.testkit.annotations.OidcProviderType;
 import dev.sigstore.testkit.oidc.ConformanceTestingToken;
 import dev.sigstore.trustroot.ImmutableSigstoreSigningConfig;
 import dev.sigstore.trustroot.Service;
-import dev.sigstore.tuf.SigstoreTufClient;
+import dev.sigstore.trustroot.SigstoreTufClient;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
