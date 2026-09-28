@@ -11,7 +11,7 @@ dependencies {
     implementation(project(":build-parameters"))
     implementation("com.diffplug.spotless:com.diffplug.spotless.gradle.plugin:8.10.2")
     implementation("com.github.vlsi.gradle-extensions:com.github.vlsi.gradle-extensions.gradle.plugin:4.0.0")
-    implementation("de.thetaphi.forbiddenapis:de.thetaphi.forbiddenapis.gradle.plugin:3.10")
+    implementation("de.thetaphi.forbiddenapis:de.thetaphi.forbiddenapis.gradle.plugin:3.11")
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin")
     implementation("org.jetbrains.dokka-javadoc:org.jetbrains.dokka-javadoc.gradle.plugin:2.2.0")
     implementation("com.github.autostyle:com.github.autostyle.gradle.plugin:4.0.1")
