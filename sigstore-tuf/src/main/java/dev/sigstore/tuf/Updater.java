@@ -563,12 +563,12 @@ public class Updater {
   }
 
   @VisibleForTesting
-  TargetStore getTargetStore() {
+  public TargetStore getTargetStore() {
     return targetStore;
   }
 
   @VisibleForTesting
-  TrustedMetaStore getMetaStore() {
+  public TrustedMetaStore getMetaStore() {
     return trustedMetaStore;
   }
 

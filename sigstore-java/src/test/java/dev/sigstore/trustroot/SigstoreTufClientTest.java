@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.tuf;
+package dev.sigstore.trustroot;
 
 import com.google.protobuf.util.JsonFormat;
 import dev.sigstore.proto.trustroot.v1.ServiceConfiguration;
 import dev.sigstore.proto.trustroot.v1.ServiceSelector;
 import dev.sigstore.proto.trustroot.v1.SigningConfig;
 import dev.sigstore.proto.trustroot.v1.TrustedRoot;
-import dev.sigstore.trustroot.SigstoreSigningConfig;
-import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.tuf.TargetStore;
+import dev.sigstore.tuf.Updater;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;

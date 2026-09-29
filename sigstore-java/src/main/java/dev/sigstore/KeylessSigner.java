@@ -67,7 +67,7 @@ import dev.sigstore.timestamp.client.TimestampVerificationException;
 import dev.sigstore.timestamp.client.TimestampVerifier;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
-import dev.sigstore.tuf.SigstoreTufClient;
+import dev.sigstore.trustroot.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
