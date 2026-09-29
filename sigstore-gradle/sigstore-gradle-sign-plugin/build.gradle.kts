@@ -8,6 +8,7 @@ description = "Gradle plugin to that automatically signs all Publications in Sig
 dependencies {
     api(project(":sigstore-gradle:sigstore-gradle-sign-base-plugin"))
 
+    sigstoreJavaRuntime(project(":sigstore-common"))
     sigstoreJavaRuntime(project(":sigstore-java")) {
         because("Test code needs access locally-built sigstore-java as a Maven repository")
     }

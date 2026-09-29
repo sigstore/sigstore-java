@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.http;
+package dev.sigstore.common.http;
 
 import com.google.api.client.http.HttpBackOffIOExceptionHandler;
 import com.google.api.client.http.HttpRequestFactory;
@@ -21,7 +21,7 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.apache.v5.Apache5HttpTransport;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.ObjectParser;
-import dev.sigstore.forbidden.SuppressForbidden;
+import dev.sigstore.common.forbidden.SuppressForbidden;
 import javax.annotation.Nullable;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;

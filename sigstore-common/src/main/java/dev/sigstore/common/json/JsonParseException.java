@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.json;
+package dev.sigstore.common.json;
 
 public class JsonParseException extends Exception {
   public JsonParseException(Throwable cause) {

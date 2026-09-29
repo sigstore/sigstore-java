@@ -63,7 +63,7 @@ jobs:
 
     - name: Ensure sigstore-java self signing still works
       if: ${{ !github.event.pull_request.head.repo.fork }}
-      run: ./gradlew -Porg.gradle.java.installations.auto-download=false sigstore-java:publishToMavenLocal -Prelease -PskipPgpSigning
+      run: ./gradlew -Porg.gradle.java.installations.auto-download=false nmcpPublishAggregationToMavenLocal -Prelease -PskipPgpSigning
 
     - name: Test sigstore-java/sandbox
       run: |

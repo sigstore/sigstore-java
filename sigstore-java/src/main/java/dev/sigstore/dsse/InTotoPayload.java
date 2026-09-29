@@ -19,7 +19,7 @@ import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.gson.JsonElement;
 import dev.sigstore.bundle.Bundle.DsseEnvelope;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import java.util.List;
 import java.util.Map;
 import org.immutables.gson.Gson;

@@ -19,7 +19,7 @@ import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.tuf.encryption.Verifiers;
 import dev.sigstore.tuf.model.*;
 import dev.sigstore.tuf.model.TargetMeta.TargetData;

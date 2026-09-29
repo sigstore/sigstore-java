@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf;
 
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.tuf.model.SignedTufMeta;
 import dev.sigstore.tuf.model.TufMeta;
 import java.io.IOException;

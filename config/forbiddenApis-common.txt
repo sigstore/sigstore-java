@@ -1,0 +1,3 @@
+dev.sigstore.common.http.HttpClients#newHttpTransport(dev.sigstore.common.http.HttpParams) @ Use dev.sigstore.common.http.HttpClients#newRequestFactory(...) instead
+java.net.URI#resolve(java.lang.String) @ Use dev.sigstore.common.http.URIFormat#appendPath(java.net.URI, java.lang.String) instead
+java.net.URI#resolve(java.net.URI) @ Use dev.sigstore.common.http.URIFormat#appendPath(java.net.URI, java.lang.String) instead

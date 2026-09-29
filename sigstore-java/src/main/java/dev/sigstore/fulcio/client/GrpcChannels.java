@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.http;
+package dev.sigstore.fulcio.client;
 
+import dev.sigstore.common.http.HttpParams;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
-public class GrpcChannels {
+class GrpcChannels {
   /**
    * Create a new managed channel, this may be reused across multiple requests to a host, and must
    * be closed when finished.
@@ -29,7 +30,7 @@ public class GrpcChannels {
    * @param httpParams the http configuration
    * @return a reusable grpc channel
    */
-  public static ManagedChannel newManagedChannel(URI serverUrl, HttpParams httpParams) {
+  static ManagedChannel newManagedChannel(URI serverUrl, HttpParams httpParams) {
     var channelBuilder =
         ManagedChannelBuilder.forTarget(serverUrl.toString())
             .userAgent(httpParams.getUserAgent())
@@ -48,7 +49,7 @@ public class GrpcChannels {
    * @param httpParams the http configuration
    * @return a reusable grpc channel
    */
-  public static ManagedChannel newManagedChannel(String serverUrl, HttpParams httpParams) {
+  static ManagedChannel newManagedChannel(String serverUrl, HttpParams httpParams) {
     var channelBuilder =
         ManagedChannelBuilder.forTarget(serverUrl)
             .userAgent(httpParams.getUserAgent())

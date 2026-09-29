@@ -18,7 +18,7 @@ package dev.sigstore.rekor.client;
 import static dev.sigstore.json.GsonSupplier.GSON;
 
 import com.google.common.reflect.TypeToken;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import java.net.URI;
 import java.util.Map;
 import org.immutables.value.Value;
