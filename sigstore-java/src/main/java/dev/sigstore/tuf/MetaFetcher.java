@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
+import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 
 import com.google.common.base.Preconditions;
 import dev.sigstore.json.JsonParseException;
@@ -79,7 +79,7 @@ public class MetaFetcher {
     }
     var result =
         new MetaFetchResult<T>(
-            roleBytes, GSON.get().fromJson(new String(roleBytes, StandardCharsets.UTF_8), t));
+            roleBytes, TUF_GSON.get().fromJson(new String(roleBytes, StandardCharsets.UTF_8), t));
     return Optional.of(result);
   }
 }

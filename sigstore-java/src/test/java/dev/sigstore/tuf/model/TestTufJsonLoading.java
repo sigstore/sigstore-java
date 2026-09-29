@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf.model;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
+import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -39,7 +39,7 @@ public class TestTufJsonLoading {
         Resources.asCharSource(
                 Resources.getResource("dev/sigstore/tuf/model/root.json"), Charset.defaultCharset())
             .openStream(); ) {
-      trustRoot = GSON.get().fromJson(reader, Root.class);
+      trustRoot = TUF_GSON.get().fromJson(reader, Root.class);
     }
     assertNotNull(trustRoot);
     assertEquals(5, trustRoot.getSignatures().size());
@@ -76,7 +76,7 @@ public class TestTufJsonLoading {
                 Resources.getResource("dev/sigstore/tuf/model/snapshot.json"),
                 Charset.defaultCharset())
             .openStream(); ) {
-      snapshot = GSON.get().fromJson(reader, Snapshot.class);
+      snapshot = TUF_GSON.get().fromJson(reader, Snapshot.class);
     }
     assertNotNull(snapshot);
     assertEquals(1, snapshot.getSignatures().size());
@@ -114,7 +114,7 @@ public class TestTufJsonLoading {
                 Resources.getResource("dev/sigstore/tuf/model/targets.json"),
                 Charset.defaultCharset())
             .openStream(); ) {
-      targets = GSON.get().fromJson(reader, Targets.class);
+      targets = TUF_GSON.get().fromJson(reader, Targets.class);
     }
     assertNotNull(targets);
     assertEquals(5, targets.getSignatures().size());
@@ -172,13 +172,15 @@ public class TestTufJsonLoading {
   public void loadTargetData_oneHash() {
     Assertions.assertDoesNotThrow(
         () ->
-            GSON.get()
+            TUF_GSON
+                .get()
                 .fromJson(
                     "{\"custom\":{\"sigstore\":{\"status\":\"Active\",\"usage\":\"CTFE\"}},\"hashes\":{\"sha256\": \"7fcb94a5d0ed541260473b990b99a6c39864c1fb16f3f3e594a5a3cebbfe138a\"},\"length\":177}",
                     TargetData.class));
     Assertions.assertDoesNotThrow(
         () ->
-            GSON.get()
+            TUF_GSON
+                .get()
                 .fromJson(
                     "{\"custom\":{\"sigstore\":{\"status\":\"Active\",\"usage\":\"CTFE\"}},\"hashes\":{\"sha512\": \"4b20747d1afe2544238ad38cc0cc3010921b177d60ac743767e0ef675b915489bd01a36606c0ff83c06448622d7160f0d866c83d20f0c0f44653dcc3f9aa0bd4\"},\"length\":177}",
                     TargetData.class));
@@ -190,7 +192,8 @@ public class TestTufJsonLoading {
         Assertions.assertThrows(
             JsonParseException.class,
             () ->
-                GSON.get()
+                TUF_GSON
+                    .get()
                     .fromJson(
                         "{\"custom\":{\"sigstore\":{\"status\":\"Active\",\"usage\":\"CTFE\"}},\"hashes\":{},\"length\":177}",
                         TargetData.class));

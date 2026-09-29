@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.Base64;
 
 /** Converts byte arrays to base64, not url safe */
-class GsonByteArrayAdapter extends TypeAdapter<byte[]> {
+public class GsonByteArrayAdapter extends TypeAdapter<byte[]> {
   @Override
   public void write(JsonWriter out, byte[] value) throws IOException {
     out.value(new String(Base64.getEncoder().encodeToString(value)));

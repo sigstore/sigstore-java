@@ -16,9 +16,9 @@
 package dev.sigstore.tuf.model;
 
 import com.google.gson.JsonElement;
-import dev.sigstore.json.GsonSupplier;
 import dev.sigstore.json.JsonParseException;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
+import dev.sigstore.tuf.json.TufGsonSupplier;
 import java.io.IOException;
 import java.util.List;
 import org.immutables.gson.Gson;
@@ -40,7 +40,7 @@ public interface SignedTufMeta<T extends TufMeta> {
   @Lazy
   @Gson.Ignore
   default T getSignedMeta(Class<T> type) throws JsonParseException {
-    return GsonSupplier.GSON.get().fromJson(getRawSignedMeta(), type);
+    return TufGsonSupplier.TUF_GSON.get().fromJson(getRawSignedMeta(), type);
   }
 
   /** The raw signed json, just verify signature over this to prevent loss of unknown fields */
@@ -49,7 +49,7 @@ public interface SignedTufMeta<T extends TufMeta> {
 
   @Lazy
   default byte[] getCanonicalSignedBytes() throws IOException {
-    return new JsonCanonicalizer(GsonSupplier.GSON.get().toJson(getRawSignedMeta()))
+    return new JsonCanonicalizer(TufGsonSupplier.TUF_GSON.get().toJson(getRawSignedMeta()))
         .getEncodedUTF8();
   }
 }

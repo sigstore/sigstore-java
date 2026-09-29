@@ -15,8 +15,8 @@
  */
 package dev.sigstore.tuf;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
 import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
+import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -459,7 +459,8 @@ class UpdaterTest {
     var localTargets = updater.getMetaStore().getTargets();
     assertNotNull(localTargets);
     var remoteTargets =
-        GSON.get()
+        TUF_GSON
+            .get()
             .fromJson(
                 Files.newBufferedReader(localMirrorPath.resolve("3.targets.json")), Targets.class);
     assertEquals(localTargets.getSignedMeta(), remoteTargets.getSignedMeta());
