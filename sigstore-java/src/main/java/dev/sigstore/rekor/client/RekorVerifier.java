@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
@@ -65,8 +66,15 @@ public class RekorVerifier {
       throw new RekorVerificationException("No inclusion proof in entry.");
     }
 
+    byte[] logId;
+    try {
+      logId = Hex.decode(entry.getLogID());
+    } catch (DecoderException de) {
+      throw new RekorVerificationException("Log entry (logid) is not a valid hex string.", de);
+    }
+
     var tlog =
-        TransparencyLog.find(tlogs, Hex.decode(entry.getLogID()))
+        TransparencyLog.find(tlogs, logId)
             .orElseThrow(
                 () ->
                     new RekorVerificationException(
@@ -85,7 +93,8 @@ public class RekorVerifier {
           | InvalidKeyException
           | SignatureException
           | UnsupportedAlgorithmException
-          | NoSuchAlgorithmException e) {
+          | NoSuchAlgorithmException
+          | IllegalArgumentException e) {
         throw new RekorVerificationException("Entry SET verification failed: " + e.getMessage(), e);
       }
     }
@@ -99,29 +108,29 @@ public class RekorVerifier {
   private void verifyInclusionProof(RekorEntry entry) throws RekorVerificationException {
     var inclusionProof = entry.getVerification().getInclusionProof();
 
-    var leafHash =
-        Hashing.sha256()
-            .newHasher()
-            .putByte((byte) 0x00)
-            .putBytes(Base64.getDecoder().decode(entry.getBody()))
-            .hash()
-            .asBytes();
-
-    List<byte[]> hashes = new ArrayList<>();
-    for (String hash : inclusionProof.getHashes()) {
-      hashes.add(Hex.decode(hash));
-    }
-
-    byte[] expectedRootHash = Hex.decode(inclusionProof.getRootHash());
-
     try {
+      var leafHash =
+          Hashing.sha256()
+              .newHasher()
+              .putByte((byte) 0x00)
+              .putBytes(Base64.getDecoder().decode(entry.getBody()))
+              .hash()
+              .asBytes();
+
+      List<byte[]> hashes = new ArrayList<>();
+      for (String hash : inclusionProof.getHashes()) {
+        hashes.add(Hex.decode(hash));
+      }
+
+      byte[] expectedRootHash = Hex.decode(inclusionProof.getRootHash());
+
       InclusionProofVerifier.verify(
           leafHash,
           inclusionProof.getLogIndex(),
           inclusionProof.getTreeSize(),
           hashes,
           expectedRootHash);
-    } catch (InclusionProofVerificationException e) {
+    } catch (InclusionProofVerificationException | DecoderException | IllegalArgumentException e) {
       throw new RekorVerificationException("Inclusion proof verification failed", e);
     }
   }
@@ -144,9 +153,14 @@ public class RekorVerifier {
               + MAX_CHECKPOINT_SIGNATURES);
     }
 
-    byte[] inclusionRootHash =
-        Hex.decode(entry.getVerification().getInclusionProof().getRootHash());
-    byte[] checkpointRootHash = Base64.getDecoder().decode(parsedCheckpoint.getBase64Hash());
+    byte[] inclusionRootHash;
+    byte[] checkpointRootHash;
+    try {
+      inclusionRootHash = Hex.decode(entry.getVerification().getInclusionProof().getRootHash());
+      checkpointRootHash = Base64.getDecoder().decode(parsedCheckpoint.getBase64Hash());
+    } catch (DecoderException | IllegalArgumentException e) {
+      throw new RekorVerificationException("Checkpoint root hash could not be decoded", e);
+    }
 
     if (!Arrays.equals(inclusionRootHash, checkpointRootHash)) {
       throw new RekorVerificationException(
