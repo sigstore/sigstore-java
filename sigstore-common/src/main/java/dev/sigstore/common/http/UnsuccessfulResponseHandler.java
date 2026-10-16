@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.http;
+package dev.sigstore.common.http;
 
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpResponse;
@@ -22,7 +22,6 @@ import com.google.api.client.util.BackOff;
 import com.google.api.client.util.BackOffUtils;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.Sleeper;
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.logging.Logger;
@@ -50,7 +49,7 @@ public class UnsuccessfulResponseHandler implements HttpUnsuccessfulResponseHand
     return new UnsuccessfulResponseHandler(Sleeper.DEFAULT, new ExponentialBackOff());
   }
 
-  @VisibleForTesting
+  // package-private for testing
   UnsuccessfulResponseHandler(Sleeper sleeper, ExponentialBackOff exponentialBackOff) {
     this.sleeper = sleeper;
     this.exponentialBackOff = exponentialBackOff;
@@ -110,7 +109,6 @@ public class UnsuccessfulResponseHandler implements HttpUnsuccessfulResponseHand
   }
 
   // backoff in milliseconds
-  @VisibleForTesting
   long calculateBackoff(String retryAfter, Instant now) throws NumberFormatException {
     // parse as httpdate
     var date = DateUtils.parseDate(retryAfter);

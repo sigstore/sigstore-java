@@ -16,7 +16,7 @@
 package dev.sigstore.json;
 
 import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.forbidden.SuppressForbidden;
+import dev.sigstore.common.forbidden.SuppressForbidden;
 
 /** Use this instead of JsonFormat to pick up default formatter options for sigstore-java. */
 public class ProtoJson {

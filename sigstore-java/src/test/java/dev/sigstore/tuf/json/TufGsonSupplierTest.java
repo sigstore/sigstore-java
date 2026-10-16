@@ -17,8 +17,8 @@ package dev.sigstore.tuf.json;
 
 import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 
-import dev.sigstore.json.GsonChecked;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.GsonChecked;
+import dev.sigstore.common.json.JsonParseException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Assertions;
