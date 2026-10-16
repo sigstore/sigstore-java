@@ -155,4 +155,28 @@ public class CheckpointsTest {
     var ex = Assertions.assertThrows(RekorParseException.class, () -> Checkpoints.from(checkpoint));
     Assertions.assertEquals("Checkpoint signature is not valid base64", ex.getMessage());
   }
+
+  @Test
+  public void from_signatureExtraTokensRejected() {
+    String trailing =
+        "origin\n"
+            + "100\n"
+            + "base64hash\n\n"
+            + "— identity wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0= trailing\n";
+    var ex = Assertions.assertThrows(RekorParseException.class, () -> Checkpoints.from(trailing));
+    Assertions.assertTrue(
+        ex.getMessage().contains("was not in the format '— <id> <base64 keyhint+signature>'"));
+
+    String leading =
+        "origin\n"
+            + "100\n"
+            + "base64hash\n\n"
+            + "leading — identity wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0=\n";
+    var exLeading =
+        Assertions.assertThrows(RekorParseException.class, () -> Checkpoints.from(leading));
+    Assertions.assertTrue(
+        exLeading
+            .getMessage()
+            .contains("was not in the format '— <id> <base64 keyhint+signature>'"));
+  }
 }

@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
@@ -160,6 +161,12 @@ public class RekorVerifier {
               + parsedCheckpoint.getSignatures().size()
               + "), exceeding the maximum allowed of "
               + MAX_CHECKPOINT_SIGNATURES);
+    }
+
+    if (!Objects.equals(
+        parsedCheckpoint.getSize(), entry.getVerification().getInclusionProof().getTreeSize())) {
+      throw new RekorVerificationException(
+          "Checkpoint tree size does not match tree size provided in inclusion proof");
     }
 
     byte[] inclusionRootHash;
