@@ -39,13 +39,23 @@ public class InclusionProofVerifier {
       List<byte[]> proofHashes,
       byte[] expectedRootHash)
       throws InclusionProofVerificationException {
+    if (logIndex < 0 || logIndex >= treeSize) {
+      throw new InclusionProofVerificationException(
+          "Inclusion proof failed, logIndex ("
+              + logIndex
+              + ") is out of bounds for treeSize ("
+              + treeSize
+              + ")");
+    }
+
     byte[] currentHash = leafHash;
     long nodeIndex = logIndex;
     long totalNodes = treeSize - 1;
 
     for (byte[] hash : proofHashes) {
       if (totalNodes == 0) {
-        throw new InclusionProofVerificationException("Inclusion proof failed, ended prematurely");
+        throw new InclusionProofVerificationException(
+            "Inclusion proof failed, proof has too many hashes");
       }
       if (nodeIndex == totalNodes || nodeIndex % 2 == 1) {
         currentHash = hashChildren(hash, currentHash);
@@ -58,6 +68,11 @@ public class InclusionProofVerifier {
       }
       nodeIndex = nodeIndex >> 1;
       totalNodes = totalNodes >> 1;
+    }
+
+    if (totalNodes != 0) {
+      throw new InclusionProofVerificationException(
+          "Inclusion proof failed, proof has too few hashes");
     }
 
     if (!Arrays.equals(currentHash, expectedRootHash)) {

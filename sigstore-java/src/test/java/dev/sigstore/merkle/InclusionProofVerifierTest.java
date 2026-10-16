@@ -65,8 +65,13 @@ public class InclusionProofVerifierTest {
   }
 
   @Test
-  public void verify_endPrematurely() throws Exception {
-    var invalidTreeSize = 1;
+  public void verify_singleLeaf() throws Exception {
+    InclusionProofVerifier.verify(leafHash, 0L, 1L, List.of(), leafHash);
+  }
+
+  @Test
+  public void verify_tooManyHashes() throws Exception {
+    var invalidTreeSize = 1228L;
 
     var thrown =
         assertThrows(
@@ -75,7 +80,45 @@ public class InclusionProofVerifierTest {
               InclusionProofVerifier.verify(
                   leafHash, logIndex, invalidTreeSize, proofHashes, expectedRootHash);
             });
-    assertEquals("Inclusion proof failed, ended prematurely", thrown.getMessage());
+    assertEquals("Inclusion proof failed, proof has too many hashes", thrown.getMessage());
+  }
+
+  @Test
+  public void verify_logIndexNegative() {
+    var thrown =
+        assertThrows(
+            InclusionProofVerificationException.class,
+            () ->
+                InclusionProofVerifier.verify(
+                    leafHash, -1L, treeSize, proofHashes, expectedRootHash));
+    assertEquals(
+        "Inclusion proof failed, logIndex (-1) is out of bounds for treeSize (14358)",
+        thrown.getMessage());
+  }
+
+  @Test
+  public void verify_logIndexOutOfBoundsForTreeSize() {
+    var thrown =
+        assertThrows(
+            InclusionProofVerificationException.class,
+            () ->
+                InclusionProofVerifier.verify(
+                    leafHash, logIndex, logIndex, proofHashes, expectedRootHash));
+    assertEquals(
+        "Inclusion proof failed, logIndex (1227) is out of bounds for treeSize (1227)",
+        thrown.getMessage());
+  }
+
+  @Test
+  public void verify_tooFewHashes() {
+    var truncatedHashes = proofHashes.subList(0, proofHashes.size() - 1);
+    var thrown =
+        assertThrows(
+            InclusionProofVerificationException.class,
+            () ->
+                InclusionProofVerifier.verify(
+                    leafHash, logIndex, treeSize, truncatedHashes, expectedRootHash));
+    assertEquals("Inclusion proof failed, proof has too few hashes", thrown.getMessage());
   }
 
   @Test

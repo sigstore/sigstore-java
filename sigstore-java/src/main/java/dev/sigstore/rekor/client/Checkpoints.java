@@ -81,7 +81,7 @@ public class Checkpoints {
 
   static CheckpointSignature sigFrom(String signatureLine) throws RekorParseException {
     var m = SIGNATURE_BLOCK.matcher(signatureLine);
-    if (!m.find()) {
+    if (!m.matches()) {
       throw new RekorParseException(
           "Checkpoint signature '"
               + signatureLine
