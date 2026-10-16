@@ -130,8 +130,13 @@ public interface RekorEntry {
    */
   @Lazy
   default RekorEntryBody getBodyDecoded() throws JsonParseException {
-    return GSON.get()
-        .fromJson(new String(Base64.getDecoder().decode(getBody()), UTF_8), RekorEntryBody.class);
+    byte[] rawBody;
+    try {
+      rawBody = Base64.getDecoder().decode(getBody());
+    } catch (IllegalArgumentException e) {
+      throw new JsonParseException(e);
+    }
+    return GSON.get().fromJson(new String(rawBody, UTF_8), RekorEntryBody.class);
   }
 
   /** Returns canonicalized json representing the signable contents of a rekor entry. */

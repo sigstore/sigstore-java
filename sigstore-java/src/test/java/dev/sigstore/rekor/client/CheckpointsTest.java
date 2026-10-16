@@ -153,6 +153,6 @@ public class CheckpointsTest {
   public void from_signatureNotBase64() {
     String checkpoint = "origin\n" + "100\n" + "base64hash\n\n" + "— identity not_valid_base64!\n";
     var ex = Assertions.assertThrows(RekorParseException.class, () -> Checkpoints.from(checkpoint));
-    Assertions.assertTrue(ex.getMessage().contains("is not valid base64"));
+    Assertions.assertEquals("Checkpoint signature is not valid base64", ex.getMessage());
   }
 }

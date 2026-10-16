@@ -92,8 +92,7 @@ public class Checkpoints {
     try {
       keySig = Base64.getDecoder().decode(m.group(2));
     } catch (IllegalArgumentException iae) {
-      throw new RekorParseException(
-          "Checkpoint signature '" + m.group(2) + "' is not valid base64", iae);
+      throw new RekorParseException("Checkpoint signature is not valid base64", iae);
     }
     if (keySig.length < 5) {
       throw new RekorParseException(

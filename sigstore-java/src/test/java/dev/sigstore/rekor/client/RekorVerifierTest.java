@@ -308,7 +308,7 @@ public class RekorVerifierTest {
     var thrown =
         Assertions.assertThrows(
             RekorVerificationException.class, () -> verifier.verifyEntry(entryWithInvalidSet));
-    Assertions.assertTrue(thrown.getMessage().startsWith("Entry SET verification failed:"));
+    Assertions.assertEquals("Entry SET is not valid base64", thrown.getMessage());
     Assertions.assertInstanceOf(IllegalArgumentException.class, thrown.getCause());
   }
 
@@ -324,7 +324,7 @@ public class RekorVerifierTest {
     var thrown =
         Assertions.assertThrows(
             RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
-    Assertions.assertEquals("Inclusion proof verification failed", thrown.getMessage());
+    Assertions.assertEquals("Inclusion proof contains invalid hex strings", thrown.getMessage());
   }
 
   @Test
@@ -340,7 +340,7 @@ public class RekorVerifierTest {
     var thrown =
         Assertions.assertThrows(
             RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
-    Assertions.assertEquals("Checkpoint root hash could not be decoded", thrown.getMessage());
+    Assertions.assertEquals("Checkpoint root hash is not valid base64", thrown.getMessage());
   }
 
   private RekorEntry getV2RekorEntry(String json)
