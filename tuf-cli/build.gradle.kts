@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":sigstore-java"))
+    implementation(project(":sigstore-tuf"))
     implementation("info.picocli:picocli:4.7.6")
     implementation("com.google.guava:guava:33.7.1-jre")
 
