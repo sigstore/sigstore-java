@@ -15,7 +15,7 @@
  */
 package dev.sigstore.tuf;
 
-import static dev.sigstore.json.GsonSupplier.GSON;
+import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import dev.sigstore.json.JsonParseException;
@@ -103,14 +103,14 @@ public class FileSystemTufStore implements MetaStore, TargetStore {
     if (!roleFile.toFile().exists()) {
       return Optional.empty();
     }
-    return Optional.of(GSON.get().fromJson(Files.readString(roleFile), tClass));
+    return Optional.of(TUF_GSON.get().fromJson(Files.readString(roleFile), tClass));
   }
 
   <T extends SignedTufMeta<? extends TufMeta>> void storeRole(String roleName, T role)
       throws IOException {
     try (BufferedWriter fileWriter =
         Files.newBufferedWriter(repoBaseDir.resolve(roleName + ".json"))) {
-      GSON.get().toJson(role, fileWriter);
+      TUF_GSON.get().toJson(role, fileWriter);
     }
   }
 

@@ -25,7 +25,7 @@ public final class GsonChecked {
 
   Gson gson;
 
-  GsonChecked(Gson gson) {
+  public GsonChecked(Gson gson) {
     this.gson = gson;
   }
 
