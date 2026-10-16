@@ -145,6 +145,23 @@ public class RekorVerifierTest {
   }
 
   @Test
+  public void verifyEntry_v1_invalidCheckpoint_treeSizeMismatch() throws Exception {
+    var entryWithMismatchedCheckpointTreeSize =
+        entryV1.replace(
+            "rekor.sigstage.dev - 108574341321668964\\n14358\\n",
+            "rekor.sigstage.dev - 108574341321668964\\n14359\\n");
+    var rekorEntry = getV1RekorEntry(entryWithMismatchedCheckpointTreeSize);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    Assertions.assertEquals(
+        "Checkpoint tree size does not match tree size provided in inclusion proof",
+        thrown.getMessage());
+  }
+
+  @Test
   public void verifyEntry_v2() throws Exception {
     var rekorEntry = getV2RekorEntry(entryV2);
     var verifier = RekorVerifier.newRekorVerifier(trustRoot);
@@ -275,6 +292,23 @@ public class RekorVerifierTest {
               verifier.verifyEntry(rekorEntry);
             });
     Assertions.assertEquals("Checkpoint signature was invalid", thrown.getMessage());
+  }
+
+  @Test
+  public void verifyEntry_v2_invalidCheckpoint_treeSizeMismatch() throws Exception {
+    var entryWithMismatchedCheckpointTreeSize =
+        entryV2.replace(
+            "log2025-alpha1.rekor.sigstage.dev\\n744\\n",
+            "log2025-alpha1.rekor.sigstage.dev\\n745\\n");
+    var rekorEntry = getV2RekorEntry(entryWithMismatchedCheckpointTreeSize);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    Assertions.assertEquals(
+        "Checkpoint tree size does not match tree size provided in inclusion proof",
+        thrown.getMessage());
   }
 
   @Test
