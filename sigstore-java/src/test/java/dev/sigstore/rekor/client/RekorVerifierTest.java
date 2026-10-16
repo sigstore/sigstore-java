@@ -277,6 +277,72 @@ public class RekorVerifierTest {
     Assertions.assertEquals("Checkpoint signature was invalid", thrown.getMessage());
   }
 
+  @Test
+  public void verifyEntry_v1_nonHexLogId() throws Exception {
+    var entryWithNonHexLogId =
+        entryV1.replace(
+            "\"logID\": \"d32f30a3c32d639c2b762205a21c7bb07788e68283a4ae6f42118723a1bea496\"",
+            "\"logID\": \"not_hex_string!\"");
+    var rekorEntry = getV1RekorEntry(entryWithNonHexLogId);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    Assertions.assertEquals("Log entry (logid) is not a valid hex string.", thrown.getMessage());
+  }
+
+  @Test
+  public void verifyEntry_v1_invalidBase64Set() throws Exception {
+    var rekorEntry = getV1RekorEntry(entryV1);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var verification =
+        ImmutableVerification.builder()
+            .from(rekorEntry.getVerification())
+            .signedEntryTimestamp("not_base64!")
+            .build();
+    var entryWithInvalidSet =
+        ImmutableRekorEntry.builder().from(rekorEntry).verification(verification).build();
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(entryWithInvalidSet));
+    Assertions.assertEquals("Entry SET is not valid base64", thrown.getMessage());
+    Assertions.assertInstanceOf(IllegalArgumentException.class, thrown.getCause());
+  }
+
+  @Test
+  public void verifyEntry_v1_invalidInclusionProof_hashesNotHex() throws Exception {
+    var invalidHashesEntry =
+        entryV1.replace(
+            "\"810320ec3029914695826d60133c67021f66ee0cfb09a6f79eb267ed9f55de2c\"",
+            "\"not_hex_hash!\"");
+    var rekorEntry = getV1RekorEntry(invalidHashesEntry);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    Assertions.assertEquals("Inclusion proof contains invalid hex strings", thrown.getMessage());
+  }
+
+  @Test
+  public void verifyEntry_v1_invalidCheckpoint_rootHashNotBase64() throws Exception {
+    String signedData =
+        "rekor.sigstage.dev - 108574341321668964\\n14358\\n7/pPpFdfcoKQFqZOWERBID3lMyEvlHDWOlbRmS5zRl0=\\n\\n";
+    String invalidSignedData =
+        "rekor.sigstage.dev - 108574341321668964\\n14358\\nnot_base64!\\n\\n";
+    var entryWithInvalidCheckpointRoot = entryV1.replace(signedData, invalidSignedData);
+    var rekorEntry = getV1RekorEntry(entryWithInvalidCheckpointRoot);
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    Assertions.assertEquals("Checkpoint root hash is not valid base64", thrown.getMessage());
+  }
+
   private RekorEntry getV2RekorEntry(String json)
       throws InvalidProtocolBufferException, RekorParseException {
     var transparencyLogEntryBuilder = TransparencyLogEntry.newBuilder();

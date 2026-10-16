@@ -17,6 +17,7 @@ package dev.sigstore.rekor.client;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
+import dev.sigstore.json.JsonParseException;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.LogId;
 import dev.sigstore.proto.rekor.v1.Checkpoint;
@@ -173,5 +174,20 @@ public class RekorEntryTest {
     Assertions.assertEquals("0.0.1", bodyDecoded.getApiVersion());
     Assertions.assertEquals("hashedrekord", bodyDecoded.getKind());
     Assertions.assertNotNull(bodyDecoded.getSpec());
+  }
+
+  @Test
+  public void getBodyDecoded_invalidBase64() {
+    var entry =
+        ImmutableRekorEntry.builder()
+            .body("not_valid_base64!")
+            .integratedTime(456)
+            .logID("abcdef")
+            .logIndex(123)
+            .verification(ImmutableVerification.builder().build())
+            .build();
+
+    var thrown = Assertions.assertThrows(JsonParseException.class, entry::getBodyDecoded);
+    Assertions.assertInstanceOf(IllegalArgumentException.class, thrown.getCause());
   }
 }

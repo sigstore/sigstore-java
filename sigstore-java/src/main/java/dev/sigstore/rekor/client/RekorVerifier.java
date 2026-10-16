@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.bouncycastle.util.encoders.Hex;
 
 /** Verifier for rekor entries. */
@@ -65,8 +66,15 @@ public class RekorVerifier {
       throw new RekorVerificationException("No inclusion proof in entry.");
     }
 
+    byte[] logId;
+    try {
+      logId = Hex.decode(entry.getLogID());
+    } catch (DecoderException de) {
+      throw new RekorVerificationException("Log entry (logid) is not a valid hex string.", de);
+    }
+
     var tlog =
-        TransparencyLog.find(tlogs, Hex.decode(entry.getLogID()))
+        TransparencyLog.find(tlogs, logId)
             .orElseThrow(
                 () ->
                     new RekorVerificationException(
@@ -74,11 +82,15 @@ public class RekorVerifier {
 
     var set = entry.getVerification().getSignedEntryTimestamp();
     if (set != null && !set.isEmpty()) {
+      byte[] decodedSet;
+      try {
+        decodedSet = Base64.getDecoder().decode(set);
+      } catch (IllegalArgumentException e) {
+        throw new RekorVerificationException("Entry SET is not valid base64", e);
+      }
       try {
         var verifier = Verifiers.newVerifier(tlog.getPublicKey().toJavaPublicKey());
-        if (!verifier.verify(
-            entry.getSignableContent(),
-            Base64.getDecoder().decode(entry.getVerification().getSignedEntryTimestamp()))) {
+        if (!verifier.verify(entry.getSignableContent(), decodedSet)) {
           throw new RekorVerificationException("Entry SET was not valid");
         }
       } catch (InvalidKeySpecException
@@ -99,20 +111,26 @@ public class RekorVerifier {
   private void verifyInclusionProof(RekorEntry entry) throws RekorVerificationException {
     var inclusionProof = entry.getVerification().getInclusionProof();
 
-    var leafHash =
-        Hashing.sha256()
-            .newHasher()
-            .putByte((byte) 0x00)
-            .putBytes(Base64.getDecoder().decode(entry.getBody()))
-            .hash()
-            .asBytes();
-
-    List<byte[]> hashes = new ArrayList<>();
-    for (String hash : inclusionProof.getHashes()) {
-      hashes.add(Hex.decode(hash));
+    byte[] bodyBytes;
+    try {
+      bodyBytes = Base64.getDecoder().decode(entry.getBody());
+    } catch (IllegalArgumentException e) {
+      throw new RekorVerificationException("Entry body is not valid base64", e);
     }
 
-    byte[] expectedRootHash = Hex.decode(inclusionProof.getRootHash());
+    var leafHash =
+        Hashing.sha256().newHasher().putByte((byte) 0x00).putBytes(bodyBytes).hash().asBytes();
+
+    List<byte[]> hashes = new ArrayList<>();
+    byte[] expectedRootHash;
+    try {
+      for (String hash : inclusionProof.getHashes()) {
+        hashes.add(Hex.decode(hash));
+      }
+      expectedRootHash = Hex.decode(inclusionProof.getRootHash());
+    } catch (DecoderException e) {
+      throw new RekorVerificationException("Inclusion proof contains invalid hex strings", e);
+    }
 
     try {
       InclusionProofVerifier.verify(
@@ -144,9 +162,20 @@ public class RekorVerifier {
               + MAX_CHECKPOINT_SIGNATURES);
     }
 
-    byte[] inclusionRootHash =
-        Hex.decode(entry.getVerification().getInclusionProof().getRootHash());
-    byte[] checkpointRootHash = Base64.getDecoder().decode(parsedCheckpoint.getBase64Hash());
+    byte[] inclusionRootHash;
+    try {
+      inclusionRootHash = Hex.decode(entry.getVerification().getInclusionProof().getRootHash());
+    } catch (DecoderException e) {
+      throw new RekorVerificationException(
+          "Inclusion proof root hash is not a valid hex string", e);
+    }
+
+    byte[] checkpointRootHash;
+    try {
+      checkpointRootHash = Base64.getDecoder().decode(parsedCheckpoint.getBase64Hash());
+    } catch (IllegalArgumentException e) {
+      throw new RekorVerificationException("Checkpoint root hash is not valid base64", e);
+    }
 
     if (!Arrays.equals(inclusionRootHash, checkpointRootHash)) {
       throw new RekorVerificationException(

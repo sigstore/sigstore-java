@@ -88,7 +88,12 @@ public class Checkpoints {
               + "' was not in the format '— <id> <base64 keyhint+signature>'");
     }
     var identity = m.group(1);
-    var keySig = Base64.getDecoder().decode(m.group(2));
+    byte[] keySig;
+    try {
+      keySig = Base64.getDecoder().decode(m.group(2));
+    } catch (IllegalArgumentException iae) {
+      throw new RekorParseException("Checkpoint signature is not valid base64", iae);
+    }
     if (keySig.length < 5) {
       throw new RekorParseException(
           "Checkpoint signature <keyhint + signature> was "
