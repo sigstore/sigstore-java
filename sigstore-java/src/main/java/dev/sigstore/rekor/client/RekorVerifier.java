@@ -74,15 +74,16 @@ public class RekorVerifier {
       throw new RekorVerificationException("Log entry (logid) is not a valid hex string.", de);
     }
 
-    var tlog =
-        TransparencyLog.find(tlogs, logId)
-            .orElseThrow(
-                () ->
-                    new RekorVerificationException(
-                        "Log entry (logid) does not match any provided transparency logs."));
-
     var set = entry.getVerification().getSignedEntryTimestamp();
+
+    TransparencyLog tlog;
     if (set != null && !set.isEmpty()) {
+      tlog =
+          TransparencyLog.find(tlogs, logId, entry.getIntegratedTimeInstant())
+              .orElseThrow(
+                  () ->
+                      new RekorVerificationException(
+                          "Log entry (logid, timestamp) does not match any provided transparency logs."));
       byte[] decodedSet;
       try {
         decodedSet = Base64.getDecoder().decode(set);
@@ -101,6 +102,13 @@ public class RekorVerifier {
           | NoSuchAlgorithmException e) {
         throw new RekorVerificationException("Entry SET verification failed: " + e.getMessage(), e);
       }
+    } else {
+      tlog =
+          TransparencyLog.find(tlogs, logId)
+              .orElseThrow(
+                  () ->
+                      new RekorVerificationException(
+                          "Log entry (logid) does not match any provided transparency logs."));
     }
 
     // verify inclusion proof

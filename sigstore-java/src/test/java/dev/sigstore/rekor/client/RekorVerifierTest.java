@@ -23,11 +23,17 @@ import dev.sigstore.json.GsonSupplier;
 import dev.sigstore.json.ProtoJson;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.rekor.v1.TransparencyLogEntry;
+import dev.sigstore.trustroot.ImmutablePublicKey;
+import dev.sigstore.trustroot.ImmutableTransparencyLog;
+import dev.sigstore.trustroot.ImmutableValidFor;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
+import dev.sigstore.trustroot.TransparencyLog;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
+import java.util.List;
 import java.util.Map;
+import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,6 +103,49 @@ public class RekorVerifierTest {
             RekorVerificationException.class, () -> verifier.verifyEntry(entryWithInvalidSet));
     Assertions.assertTrue(thrown.getMessage().startsWith("Entry SET verification failed:"));
     Assertions.assertInstanceOf(SignatureException.class, thrown.getCause());
+  }
+
+  @Test
+  public void verifyEntry_v1_invalidLogId() throws Exception {
+    var rekorEntry = getV1RekorEntry(entryV1);
+    var entryWithInvalidLogId =
+        ImmutableRekorEntry.builder().from(rekorEntry).logID("00".repeat(32)).build();
+    var verifier = RekorVerifier.newRekorVerifier(trustRoot);
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(entryWithInvalidLogId));
+    Assertions.assertEquals(
+        "Log entry (logid, timestamp) does not match any provided transparency logs.",
+        thrown.getMessage());
+  }
+
+  @Test
+  public void verifyEntry_v1_logIdTimeMismatch() throws Exception {
+    var rekorEntry = getV1RekorEntry(entryV1);
+    var logId = Hex.decode(rekorEntry.getLogID());
+    var tlog = TransparencyLog.find(trustRoot.getTLogs(), logId).orElseThrow();
+    var retiredTlog =
+        ImmutableTransparencyLog.builder()
+            .from(tlog)
+            .publicKey(
+                ImmutablePublicKey.builder()
+                    .from(tlog.getPublicKey())
+                    .validFor(
+                        ImmutableValidFor.builder()
+                            .from(tlog.getPublicKey().getValidFor())
+                            .end(rekorEntry.getIntegratedTimeInstant().minusSeconds(1))
+                            .build())
+                    .build())
+            .build();
+    var verifier = RekorVerifier.newRekorVerifier(List.of(retiredTlog));
+
+    var thrown =
+        Assertions.assertThrows(
+            RekorVerificationException.class, () -> verifier.verifyEntry(rekorEntry));
+    Assertions.assertEquals(
+        "Log entry (logid, timestamp) does not match any provided transparency logs.",
+        thrown.getMessage());
   }
 
   @Test
