@@ -17,7 +17,7 @@ dependencies {
     implementation("org.bouncycastle:bcutil-jdk18on:1.86")
     implementation("org.apache.maven.plugins:maven-gpg-plugin:3.2.8")
 
-    testImplementation("org.apache.maven.shared:maven-verifier:1.8.0")
+    testImplementation("org.apache.maven.shared:maven-verifier:2.0.0")
 
     testImplementation(project(":sigstore-testkit"))
 
