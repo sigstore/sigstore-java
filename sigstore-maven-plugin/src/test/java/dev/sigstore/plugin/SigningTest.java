@@ -15,12 +15,15 @@
  */
 package dev.sigstore.plugin;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import dev.sigstore.plugin.test.MavenTestProject;
 import dev.sigstore.testkit.annotations.EnabledIfOidcExists;
 import dev.sigstore.testkit.annotations.OidcProviderType;
 import java.io.IOException;
 import java.nio.file.Path;
-import org.apache.maven.it.VerificationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,13 +33,21 @@ public class SigningTest {
 
   @Test
   @EnabledIfOidcExists(provider = OidcProviderType.ANY)
-  public void test_simpleProject() throws IOException, VerificationException {
+  public void test_simpleProject() throws IOException {
     var testProject = new MavenTestProject(testRoot, "simple");
-    var verifier = testProject.newVerifier();
+    var result = testProject.execute("package");
 
-    verifier.executeGoal("package");
-    verifier.verifyErrorFreeLog();
-    verifier.verifyFilePresent("target/simple-it-1.0-SNAPSHOT.jar.sigstore.json");
-    verifier.verifyFilePresent("target/simple-it-1.0-SNAPSHOT.pom.sigstore.json");
+    String stdOut = result.stdOutString().orElse("");
+    String stdErr = result.stdErrString().orElse("");
+    String logs = "stdout:\n" + stdOut + "\nstderr:\n" + stdErr;
+    assertTrue(result.success(), "Maven execution failed:\n" + logs);
+    assertFalse(stdOut.contains("[ERROR]"), "Maven stdout contained [ERROR]:\n" + logs);
+    assertFalse(stdErr.contains("[ERROR]"), "Maven stderr contained [ERROR]:\n" + logs);
+    assertThat(
+            testProject.getProjectRoot().resolve("target/simple-it-1.0-SNAPSHOT.jar.sigstore.json"))
+        .exists();
+    assertThat(
+            testProject.getProjectRoot().resolve("target/simple-it-1.0-SNAPSHOT.pom.sigstore.json"))
+        .exists();
   }
 }

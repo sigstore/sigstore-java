@@ -25,6 +25,12 @@
         "com.google.protobuf{/,}**",
         "com.google.api.grpc{/,}**"
       ]
+    },
+    {
+      "groupName": "org.apache.maven",
+      "matchPackageNames": [
+        "org.apache.maven{.,:}**"
+      ]
     }
   ]
 }
