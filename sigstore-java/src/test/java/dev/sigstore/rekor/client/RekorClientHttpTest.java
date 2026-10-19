@@ -52,8 +52,8 @@ public class RekorClientHttpTest {
 
   @BeforeAll
   public static void setupClient() throws Exception {
-    // this tests directly against rekor in prod, it's a bit hard to bring up a rekor instance
-    var tufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+    // this tests directly against rekor in staging, it's a bit hard to bring up a rekor instance
+    var tufClient = SigstoreTufClient.builder().useStagingInstance().build();
     tufClient.update();
     var signingConfig = tufClient.getSigstoreSigningConfig();
     var rekorService = Service.select(signingConfig.getTLogs(), List.of(1)).get();
@@ -68,13 +68,13 @@ public class RekorClientHttpTest {
     HashedRekordRequest req = createdRekorRequest();
     var resp = client.putEntry(req);
     // pretty basic testing
-    var tufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+    var tufClient = SigstoreTufClient.builder().useStagingInstance().build();
     tufClient.update();
     var signingConfig = tufClient.getSigstoreSigningConfig();
+    var rekorService = Service.select(signingConfig.getTLogs(), List.of(1)).get();
     MatcherAssert.assertThat(
         resp.getEntryLocation().toString(),
-        CoreMatchers.startsWith(
-            signingConfig.getTLogs().get(0).getUrl().toString() + "/api/v1/log/entries/"));
+        CoreMatchers.startsWith(rekorService.getUrl().toString() + "/api/v1/log/entries/"));
 
     assertNotNull(resp.getUuid());
     assertNotNull(resp.getRaw());
