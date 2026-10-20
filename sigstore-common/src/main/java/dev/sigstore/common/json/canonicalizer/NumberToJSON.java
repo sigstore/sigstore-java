@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.json.canonicalizer;
+package dev.sigstore.common.json.canonicalizer;
 
 import java.io.IOException;
 import java.math.BigInteger;
