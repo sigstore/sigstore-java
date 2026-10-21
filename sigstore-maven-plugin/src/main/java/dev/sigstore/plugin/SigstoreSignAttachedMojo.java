@@ -19,6 +19,8 @@ import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.cert.X509Certificate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -32,7 +34,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.gpg.FilesCollector;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
-import org.codehaus.plexus.util.FileUtils;
 
 /** Sign project artifact, the POM, and attached artifacts with sigstore for deployment. */
 @Mojo(name = "sign", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true)
@@ -115,7 +116,7 @@ public class SigstoreSignAttachedMojo extends AbstractMojo {
         }
 
         File bundleFile = new File(fileToSign + BUNDLE_EXTENSION);
-        FileUtils.fileWrite(bundleFile, "UTF-8", bundle.toJson());
+        Files.writeString(bundleFile.toPath(), bundle.toJson(), StandardCharsets.UTF_8);
 
         long duration = System.currentTimeMillis() - start;
         getLog()

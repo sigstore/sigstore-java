@@ -15,19 +15,20 @@
  */
 package dev.sigstore.plugin.test;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.stream.Collectors;
-import org.apache.maven.it.VerificationException;
-import org.apache.maven.it.Verifier;
-import org.apache.maven.it.util.ResourceExtractor;
+import org.apache.maven.executor.ExecutorRequest;
+import org.apache.maven.executor.ExecutorResult;
+import org.apache.maven.executor.forked.ForkedMavenExecutor;
 
 /**
- * Initialize a test project verifier. You should use this to inject the right local repository into
+ * Initialize a test project executor. You should use this to inject the right local repository into
  * settings.xml and the project version into pom.xml. Works with the test Maven projects in the
  * {@code resources/maven/projects} directory.
  */
@@ -44,16 +45,37 @@ public class MavenTestProject {
     this.testProjectName = testProjectName;
   }
 
-  public Verifier newVerifier() throws IOException, VerificationException {
-    ResourceExtractor.extractResourcePath(
-        MavenTestProject.class,
-        PROJECTS_PATH_IN_RESOURCES + testProjectName,
-        testDir.toFile(),
-        true);
+  public Path getProjectRoot() {
+    return Paths.get(testDir.toString(), PROJECTS_PATH_IN_RESOURCES, testProjectName);
+  }
 
-    File settingsXml =
-        ResourceExtractor.extractResourceToDestination(
-            MavenTestProject.class, SETTINGS_XML, testDir.resolve("settings.xml").toFile(), true);
+  public ExecutorResult execute(String... arguments) throws IOException {
+    Path sourceDir;
+    try {
+      sourceDir =
+          Paths.get(
+              MavenTestProject.class
+                  .getResource(PROJECTS_PATH_IN_RESOURCES + testProjectName)
+                  .toURI());
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+    Path projectRoot = getProjectRoot();
+    try (var stream = Files.walk(sourceDir)) {
+      for (Path source : (Iterable<Path>) stream::iterator) {
+        Path dest = projectRoot.resolve(sourceDir.relativize(source));
+        if (Files.isDirectory(source)) {
+          Files.createDirectories(dest);
+        } else {
+          Files.copy(source, dest);
+        }
+      }
+    }
+
+    Path settingsXml = testDir.resolve("settings.xml");
+    try (var in = MavenTestProject.class.getResourceAsStream(SETTINGS_XML)) {
+      Files.copy(in, settingsXml);
+    }
 
     // properties are injected into the test task by the build (see
     // build-logic.depends-on-local-sigstore-java-repo.gradle.kts,
@@ -68,7 +90,7 @@ public class MavenTestProject {
       for (var pomXml : pomXmls) {
         Files.write(
             pomXml,
-            Files.readString(pomXml)
+            Files.readString(pomXml, StandardCharsets.UTF_8)
                 .replace("@PluginVersion@", pluginVersion)
                 .getBytes(StandardCharsets.UTF_8));
       }
@@ -85,15 +107,26 @@ public class MavenTestProject {
     }
     var localMavenPluginRepo = "file:///" + Paths.get(localMavenRepoPluginProp).toRealPath();
     Files.write(
-        settingsXml.toPath(),
-        Files.readString(settingsXml.toPath())
+        settingsXml,
+        Files.readString(settingsXml, StandardCharsets.UTF_8)
             .replace("@localRepositoryUrl@", localMavenRepo)
             .replace("@localPluginRepositoryUrl@", localMavenPluginRepo)
             .getBytes(StandardCharsets.UTF_8));
 
-    Path projectRoot = Paths.get(testDir.toString(), PROJECTS_PATH_IN_RESOURCES, testProjectName);
-    var verifier = new Verifier(projectRoot.toAbsolutePath().toString());
-    verifier.addCliOption("--settings=" + settingsXml.getCanonicalPath());
-    return verifier;
+    try (var executor = new ForkedMavenExecutor(ExecutorRequest.discoverInstallationDirectory())) {
+      var requestBuilder =
+          ExecutorRequest.mavenBuilder()
+              .cwd(getProjectRoot())
+              .environmentVariable(
+                  "JAVA_HOME",
+                  System.getProperty(
+                      "sigstore-java.test.JAVA_HOME", System.getProperty("java.home")))
+              .argument("-e")
+              .argument("--batch-mode")
+              .argument("--settings=" + settingsXml.toRealPath())
+              .grabOutputAsString(true);
+      Arrays.stream(arguments).forEach(requestBuilder::argument);
+      return executor.execute(requestBuilder.build());
+    }
   }
 }

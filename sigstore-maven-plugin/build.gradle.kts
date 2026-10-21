@@ -8,6 +8,13 @@ plugins {
 
 description = "A Maven plugin for signing with Sigstore"
 
+val mavenDistribution =
+    configurations.create("mavenDistribution") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        isTransitive = false
+    }
+
 dependencies {
     compileOnly("org.apache.maven:maven-plugin-api:3.10.0")
     compileOnly("org.apache.maven:maven-core:3.10.0")
@@ -17,9 +24,11 @@ dependencies {
     implementation("org.bouncycastle:bcutil-jdk18on:1.86")
     implementation("org.apache.maven.plugins:maven-gpg-plugin:3.2.8")
 
-    testImplementation("org.apache.maven.shared:maven-verifier:1.8.0")
+    testImplementation("org.apache.maven.executor:maven-executor:1.0.0")
 
     testImplementation(project(":sigstore-testkit"))
+
+    mavenDistribution("org.apache.maven:apache-maven:3.10.0:bin@zip")
 
     sigstoreJavaRuntime(project(":sigstore-java")) {
         because("Test code needs access locally-built sigstore-java as a Maven repository")
@@ -27,4 +36,25 @@ dependencies {
     sigstoreMavenPluginRuntime(project(":sigstore-maven-plugin")) {
         because("Test code needs access locally-built sigstore-java as a Maven repository")
     }
+}
+
+val unpackMavenDistribution =
+    tasks.register<Sync>("unpackMavenDistribution") {
+        from(mavenDistribution.elements.map { zipTree(it.single()) })
+        into(layout.buildDirectory.dir("maven-distro"))
+    }
+
+tasks.test {
+    dependsOn(unpackMavenDistribution)
+    jvmArgumentProviders.add(
+        CommandLineArgumentProvider {
+            val mavenHome =
+                unpackMavenDistribution
+                    .get()
+                    .destinationDir
+                    .listFiles()!!
+                    .single()
+            listOf("-Dmaven.home=${mavenHome.absolutePath}")
+        },
+    )
 }
