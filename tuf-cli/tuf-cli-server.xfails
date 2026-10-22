@@ -20,3 +20,4 @@ test_targetfile_search[targetpath matches wildcard]
 test_targetfile_search[targetpath with separators x]
 test_targetfile_search[targetpath with separators y]
 test_targetfile_search[targetpath is not delegated by all roles in the chain]
+test_mldsa_keytype_and_scheme
