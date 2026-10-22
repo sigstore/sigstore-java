@@ -21,4 +21,6 @@ test_targetfile_search[targetpath matches question mark wildcard]
 test_targetfile_search[targetpath with separators x]
 test_targetfile_search[targetpath with separators y]
 test_targetfile_search[targetpath is not delegated by all roles in the chain]
+test_rsa_keytype_and_scheme
+test_ecdsa_keytype_and_scheme
 test_mldsa_keytype_and_scheme
