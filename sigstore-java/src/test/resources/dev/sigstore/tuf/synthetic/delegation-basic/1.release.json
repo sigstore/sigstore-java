@@ -1,0 +1,22 @@
+{
+ "signatures": [
+  {
+   "keyid": "f04bb0fd5e31cdfb17897c396ae0e1bf401ede45c40db0ac9fa7f0c92b4ce51b",
+   "sig": "304402202c7dcaa2e5609de8b3ab2c227eeb321d5fa790677caf67cecbb5ec6f2981c3e4022049c18f1767633bae833a1c67d4ac728f598e8e06d467bbef284cb665850b67d8"
+  }
+ ],
+ "signed": {
+  "_type": "targets",
+  "expires": "2030-01-01T00:00:00Z",
+  "spec_version": "1.0",
+  "targets": {
+   "release/artifact.txt": {
+    "hashes": {
+     "sha256": "42bd420cc2f99e68e60005fa7c28fc2f60e4e04ee160d9dd3b98e72fc2954f98"
+    },
+    "length": 16
+   }
+  },
+  "version": 1
+ }
+}
