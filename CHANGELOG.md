@@ -10,6 +10,13 @@ All versions prior to 1.0.0 are untracked
 
 ## [Unreleased]
 
+# [2.4.0] - 2026-10-21
+
+## Fixed
+- Check Rekor log validity at SET integrated time: https://github.com/sigstore/sigstore-java/pull/1299
+- Match inclusion proof and checkpoint verification exact to spec: https://github.com/sigstore/sigstore-java/pull/1300
+- Handle invalid base64 and hex encodings in Rekor verification and parsing: https://github.com/sigstore/sigstore-java/pull/1298
+
 # [2.3.0] - 2026-09-08
 
 ## Added
