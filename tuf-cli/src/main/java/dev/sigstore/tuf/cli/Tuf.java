@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -54,7 +55,7 @@ public class Tuf {
       names = {"--target-name"},
       required = false,
       paramLabel = "<TARGET_PATH>")
-  private String targetName;
+  private List<String> targetNames;
 
   @Option(
       names = {"--target-base-url"},
@@ -91,11 +92,11 @@ public class Tuf {
     return metadataUrl;
   }
 
-  String getTargetName() {
-    if (targetName == null) {
+  List<String> getTargetNames() {
+    if (targetNames == null || targetNames.isEmpty()) {
       throw new ParameterException(spec.commandLine(), "--target-name not set");
     }
-    return targetName;
+    return targetNames;
   }
 
   URI getTargetBaseUrl() {
