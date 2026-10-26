@@ -17,6 +17,7 @@ package dev.sigstore.sandbox.modular;
 
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.common.json.GsonChecked;
+import dev.sigstore.http.HttpParams;
 import dev.sigstore.tuf.RootProvider;
 
 public class Main {
@@ -24,5 +25,6 @@ public class Main {
     System.out.println(KeylessSigner.class.getName());
     System.out.println(GsonChecked.class.getName());
     System.out.println(RootProvider.class.getName());
+    System.out.println(HttpParams.class.getName());
   }
 }
