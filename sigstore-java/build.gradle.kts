@@ -95,7 +95,7 @@ spotless {
         targetExclude(
             "build/**/*.java",
             "src/*/java/dev/sigstore/encryption/certificates/transparency/*.java",
-            "src/*/java/dev/sigstore/json/canonicalizer/*.java",
+            "src/*/java/dev/sigstore/tuf/json/canonicalizer/*.java",
         )
     }
     format("conscrypt", com.diffplug.gradle.spotless.JavaExtension::class.java) {
@@ -106,7 +106,7 @@ spotless {
     format("webPki", com.diffplug.gradle.spotless.JavaExtension::class.java) {
         googleJavaFormat("1.35.0")
         licenseHeaderFile("$rootDir/config/webPKILicenseHeader")
-        target("src/*/java/dev/sigstore/json/canonicalizer/*.java")
+        target("src/*/java/dev/sigstore/tuf/json/canonicalizer/*.java")
     }
 }
 
