@@ -19,6 +19,8 @@ import java.security.spec.InvalidKeySpecException;
 import org.bouncycastle.util.encoders.Base64;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class KeysTest {
 
@@ -44,10 +46,14 @@ class KeysTest {
     Assertions.assertEquals("RSA", Keys.parseRsaPkcs1(Base64.decode(base64Key)).getAlgorithm());
   }
 
-  @Test
-  void parseRsaPkcs1_bad() throws InvalidKeySpecException {
-    var base64Key =
-        "MIIBIjANBgkqikiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAghWkDAnX9F5QZZ9NxIWg9vcjULtD/kkbQwlcSm22e06FrgOdiFy1fKN/Ng32qEk1ZIKyi0HFzZxzPIcvg7eaFTRb7+AQiG6eMDmUzPGr67Jp0Di2ncH9+uOZmv4PVKovvQLq7qnEwbDk0HttxUscLQ2e36Lfv/2lpGW7apVmHVMoC5kwZ3KTiAk/DUtDhD4VQjU2rBy6OneO6pm6vdNzG4Jktjc0uUKFCRRUzydGEh05PgC9vSQu/EOiU+7aQPV1ZDUGpjg9tOM0SgaTOU3YSUfGiXZNHoiS2HwLyQPaxiHR2NPVH75bwnUFBHhdMxT1rhU+yLhXaweDQW6GQ0ti8wIDAQAB";
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "MIIBIjANBgkqikiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAghWkDAnX9F5QZZ9NxIWg9vcjULtD/kkbQwlcSm22e06FrgOdiFy1fKN/Ng32qEk1ZIKyi0HFzZxzPIcvg7eaFTRb7+AQiG6eMDmUzPGr67Jp0Di2ncH9+uOZmv4PVKovvQLq7qnEwbDk0HttxUscLQ2e36Lfv/2lpGW7apVmHVMoC5kwZ3KTiAk/DUtDhD4VQjU2rBy6OneO6pm6vdNzG4Jktjc0uUKFCRRUzydGEh05PgC9vSQu/EOiU+7aQPV1ZDUGpjg9tOM0SgaTOU3YSUfGiXZNHoiS2HwLyQPaxiHR2NPVH75bwnUFBHhdMxT1rhU+yLhXaweDQW6GQ0ti8wIDAQAB",
+        "oIAjBgOE44AjIwEB",
+        "MAA="
+      })
+  void parseRsaPkcs1_bad(String base64Key) {
     Assertions.assertThrows(
         InvalidKeySpecException.class, () -> Keys.parseRsaPkcs1(Base64.decode(base64Key)));
   }
@@ -58,9 +64,13 @@ class KeysTest {
     Assertions.assertEquals("Ed25519", Keys.parseEd25519(Base64.decode(base64Key)).getAlgorithm());
   }
 
-  @Test
-  void parseEd25519_bad() {
-    var base64Key = "MCowBQYDK2VxAyEAixzZOnx34hveTZ69J5iBCkmerK5Oh7EzJqTh3YY55jI=";
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "MCowBQYDK2VxAyEAixzZOnx34hveTZ69J5iBCkmerK5Oh7EzJqTh3YY55jI=",
+        "AAAAAAAAAABwBQA="
+      })
+  void parseEd25519_bad(String base64Key) {
     Assertions.assertThrows(
         InvalidKeySpecException.class, () -> Keys.parseEd25519(Base64.decode(base64Key)));
   }

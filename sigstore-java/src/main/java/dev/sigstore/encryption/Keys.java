@@ -85,7 +85,10 @@ public class Keys {
           new RSAPublicKeySpec(modulus.getPositiveValue(), exponent.getPositiveValue());
       KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
       return factory.generatePublic(keySpec);
-    } catch (IllegalArgumentException | NullPointerException e) {
+    } catch (IllegalArgumentException
+        | IllegalStateException
+        | NullPointerException
+        | ArrayIndexOutOfBoundsException e) {
       throw new InvalidKeySpecException("Failed to parse pkcs1 rsa key", e);
     } catch (NoSuchProviderException | NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
@@ -97,8 +100,11 @@ public class Keys {
       var keySpec = new X509EncodedKeySpec(contents);
       var factory = KeyFactory.getInstance(type, BouncyCastleProvider.PROVIDER_NAME);
       return factory.generatePublic(keySpec);
-    } catch (ArrayIndexOutOfBoundsException aoe) {
-      throw new InvalidKeySpecException(aoe);
+    } catch (IllegalArgumentException
+        | IllegalStateException
+        | NullPointerException
+        | ArrayIndexOutOfBoundsException e) {
+      throw new InvalidKeySpecException(e);
     } catch (NoSuchProviderException | NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     }
