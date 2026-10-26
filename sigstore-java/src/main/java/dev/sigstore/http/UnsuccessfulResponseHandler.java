@@ -26,7 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.logging.Logger;
-import org.apache.http.client.utils.DateUtils;
+import org.apache.hc.client5.http.utils.DateUtils;
 
 /**
  * Handler for 429 and standard server errors 5XX. Objects of this class are single use. A new
@@ -113,9 +113,9 @@ public class UnsuccessfulResponseHandler implements HttpUnsuccessfulResponseHand
   @VisibleForTesting
   long calculateBackoff(String retryAfter, Instant now) throws NumberFormatException {
     // parse as httpdate
-    var date = DateUtils.parseDate(retryAfter);
+    var date = DateUtils.parseStandardDate(retryAfter);
     if (date != null) {
-      return date.toInstant().toEpochMilli() - now.toEpochMilli();
+      return date.toEpochMilli() - now.toEpochMilli();
     }
 
     // parse as seconds (or throw NumberFormatException)
