@@ -50,13 +50,24 @@ class KeysTest {
         "MIIBIjANBgkqikiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAghWkDAnX9F5QZZ9NxIWg9vcjULtD/kkbQwlcSm22e06FrgOdiFy1fKN/Ng32qEk1ZIKyi0HFzZxzPIcvg7eaFTRb7+AQiG6eMDmUzPGr67Jp0Di2ncH9+uOZmv4PVKovvQLq7qnEwbDk0HttxUscLQ2e36Lfv/2lpGW7apVmHVMoC5kwZ3KTiAk/DUtDhD4VQjU2rBy6OneO6pm6vdNzG4Jktjc0uUKFCRRUzydGEh05PgC9vSQu/EOiU+7aQPV1ZDUGpjg9tOM0SgaTOU3YSUfGiXZNHoiS2HwLyQPaxiHR2NPVH75bwnUFBHhdMxT1rhU+yLhXaweDQW6GQ0ti8wIDAQAB";
     Assertions.assertThrows(
         InvalidKeySpecException.class, () -> Keys.parseRsaPkcs1(Base64.decode(base64Key)));
-    // Fuzzer input causing IllegalStateException in DefiniteLengthInputStream: definite-length too large for int
+    // Fuzzer input causing IllegalStateException in DefiniteLengthInputStream: definite-length too
+    // large for int
     var fuzzerInput =
         new byte[] {
-          (byte) 0xA0, (byte) 0x80, 0x23, 0x06, 0x03, (byte) 0x84, (byte) 0xE3, (byte) 0x80, 0x23, 0x23, 0x01, 0x01
+          (byte) 0xA0,
+          (byte) 0x80,
+          0x23,
+          0x06,
+          0x03,
+          (byte) 0x84,
+          (byte) 0xE3,
+          (byte) 0x80,
+          0x23,
+          0x23,
+          0x01,
+          0x01
         };
-    Assertions.assertThrows(
-        InvalidKeySpecException.class, () -> Keys.parseRsaPkcs1(fuzzerInput));
+    Assertions.assertThrows(InvalidKeySpecException.class, () -> Keys.parseRsaPkcs1(fuzzerInput));
     // Empty sequence (causes ArrayIndexOutOfBoundsException)
     Assertions.assertThrows(
         InvalidKeySpecException.class, () -> Keys.parseRsaPkcs1(new byte[] {0x30, 0x00}));
