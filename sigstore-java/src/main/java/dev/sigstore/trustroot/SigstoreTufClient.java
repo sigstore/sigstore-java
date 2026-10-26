@@ -17,8 +17,8 @@ package dev.sigstore.trustroot;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import dev.sigstore.common.http.URIFormat;
 import dev.sigstore.common.json.JsonParseException;
+import dev.sigstore.http.URIFormat;
 import dev.sigstore.tuf.FileSystemTufStore;
 import dev.sigstore.tuf.HttpFetcher;
 import dev.sigstore.tuf.MetaFetcher;

@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.common.http;
+package dev.sigstore.http;
 
 import com.google.api.client.util.Preconditions;
-import dev.sigstore.common.buildinfo.BuildInfo;
+import dev.sigstore.http.buildinfo.BuildInfo;
 import org.immutables.value.Value;
 
 /**
