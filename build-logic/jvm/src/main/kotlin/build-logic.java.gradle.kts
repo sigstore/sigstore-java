@@ -46,7 +46,7 @@ tasks.withType<JavaCompile>().configureEach {
 
 plugins.withId("java") {
     tasks.named<JavaCompile>("compileTestJava") {
-        options.release.set(17)
+        options.release.set(buildParameters.testTargetJavaVersion)
     }
 }
 
