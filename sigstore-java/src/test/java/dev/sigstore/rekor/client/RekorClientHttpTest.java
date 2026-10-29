@@ -25,7 +25,7 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
 import dev.sigstore.trustroot.Service;
-import dev.sigstore.tuf.SigstoreTufClient;
+import dev.sigstore.trustroot.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
