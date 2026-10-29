@@ -30,6 +30,7 @@ dependencies {
 
     mavenDistribution("org.apache.maven:apache-maven:3.10.0:bin@zip")
 
+    sigstoreJavaRuntime(project(":sigstore-common"))
     sigstoreJavaRuntime(project(":sigstore-java")) {
         because("Test code needs access locally-built sigstore-java as a Maven repository")
     }

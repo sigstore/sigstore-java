@@ -17,8 +17,8 @@ package dev.sigstore;
 
 import com.google.common.hash.Hashing;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.dsse.InTotoPayload;
-import dev.sigstore.json.JsonParseException;
 import dev.sigstore.oidc.client.OidcClients;
 import dev.sigstore.oidc.client.TokenStringOidcClient;
 import dev.sigstore.testkit.annotations.DisabledIfSkipStaging;

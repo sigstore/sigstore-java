@@ -88,11 +88,11 @@ public class MavenTestProject {
               .filter(p -> p.getFileName().toString().equals("pom.xml"))
               .collect(Collectors.toList());
       for (var pomXml : pomXmls) {
-        Files.write(
+        Files.writeString(
             pomXml,
             Files.readString(pomXml, StandardCharsets.UTF_8)
-                .replace("@PluginVersion@", pluginVersion)
-                .getBytes(StandardCharsets.UTF_8));
+                .replace("@PluginVersion@", pluginVersion),
+            StandardCharsets.UTF_8);
       }
     }
 
@@ -100,18 +100,60 @@ public class MavenTestProject {
     if (localMavenRepoProp == null) {
       throw new RuntimeException("no local repo configured for maven test");
     }
-    var localMavenRepo = "file:///" + Paths.get(localMavenRepoProp).toRealPath();
+    var reposBuilder = new StringBuilder();
+    var pluginReposBuilder = new StringBuilder();
+    int idx = 0;
+    for (String pathStr :
+        localMavenRepoProp.split(java.util.regex.Pattern.quote(java.io.File.pathSeparator))) {
+      var repoUrl = "file:///" + Paths.get(pathStr).toRealPath();
+      reposBuilder.append(
+          String.format(
+              java.util.Locale.ROOT,
+              """
+                  <repository>
+                    <id>local.central.%d</id>
+                    <url>%s</url>
+                    <releases>
+                      <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                      <enabled>true</enabled>
+                    </snapshots>
+                  </repository>
+          """,
+              idx,
+              repoUrl));
+      pluginReposBuilder.append(
+          String.format(
+              java.util.Locale.ROOT,
+              """
+                  <pluginRepository>
+                    <id>local.central.%d</id>
+                    <url>%s</url>
+                    <releases>
+                      <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                      <enabled>true</enabled>
+                    </snapshots>
+                  </pluginRepository>
+          """,
+              idx,
+              repoUrl));
+      idx++;
+    }
     var localMavenRepoPluginProp = System.getProperty("sigstore.test.local.maven.plugin.repo");
     if (localMavenRepoPluginProp == null) {
       throw new RuntimeException("no local plugin repo configured for maven test");
     }
     var localMavenPluginRepo = "file:///" + Paths.get(localMavenRepoPluginProp).toRealPath();
-    Files.write(
+    Files.writeString(
         settingsXml,
         Files.readString(settingsXml, StandardCharsets.UTF_8)
-            .replace("@localRepositoryUrl@", localMavenRepo)
-            .replace("@localPluginRepositoryUrl@", localMavenPluginRepo)
-            .getBytes(StandardCharsets.UTF_8));
+            .replace("@localRepositories@", reposBuilder.toString())
+            .replace("@localPluginRepositories@", pluginReposBuilder.toString())
+            .replace("@localPluginRepositoryUrl@", localMavenPluginRepo),
+        StandardCharsets.UTF_8);
 
     try (var executor = new ForkedMavenExecutor(ExecutorRequest.discoverInstallationDirectory())) {
       var requestBuilder =

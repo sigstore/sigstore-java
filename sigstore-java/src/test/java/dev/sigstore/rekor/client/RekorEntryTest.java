@@ -17,7 +17,7 @@ package dev.sigstore.rekor.client;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.util.JsonFormat;
-import dev.sigstore.json.JsonParseException;
+import dev.sigstore.common.json.JsonParseException;
 import dev.sigstore.proto.ProtoMutators;
 import dev.sigstore.proto.common.v1.LogId;
 import dev.sigstore.proto.rekor.v1.Checkpoint;
