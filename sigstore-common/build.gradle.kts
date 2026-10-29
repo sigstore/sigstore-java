@@ -20,7 +20,7 @@ dependencies {
     api("com.google.http-client:google-http-client-gson")
     api("com.google.code.gson:gson:2.14.0")
 
-    testImplementation(platform("org.junit:junit-bom:5.14.4"))
+    testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation(platform("org.mockito:mockito-bom:5.24.0"))
