@@ -17,6 +17,7 @@ dependencies {
     annotationProcessor("org.immutables:value:2.12.2")
 
     api(project(":sigstore-common"))
+    implementation(project(":sigstore-http"))
 
     implementation(platform("com.google.http-client:google-http-client-bom:2.2.0"))
     implementation("com.google.http-client:google-http-client-gson")
@@ -41,7 +42,7 @@ dependencies {
 }
 
 forbiddenApis {
-    signaturesFiles = files("$rootDir/config/forbiddenApis-common.txt")
+    signaturesFiles = files("$rootDir/config/forbiddenApis-http.txt")
     suppressAnnotations = setOf("dev.sigstore.common.forbidden.SuppressForbidden")
 }
 

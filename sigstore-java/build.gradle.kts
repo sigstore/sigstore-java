@@ -18,6 +18,7 @@ tasks.jar {
 
 dependencies {
     api(project(":sigstore-common"))
+    api(project(":sigstore-http"))
     api(project(":sigstore-tuf"))
 
     compileOnly("org.immutables:gson:2.12.3")
@@ -121,7 +122,7 @@ jsonSchema2Pojo {
 forbiddenApis {
     // Don't allow sigstore-java developers to directly call JsonFormat.parser(), use our wrapper instead
     // which allows for ignored fields.
-    signaturesFiles = files("$rootDir/config/forbiddenApis.txt", "$rootDir/config/forbiddenApis-common.txt")
+    signaturesFiles = files("$rootDir/config/forbiddenApis.txt", "$rootDir/config/forbiddenApis-http.txt")
     suppressAnnotations = setOf("dev.sigstore.common.forbidden.SuppressForbidden")
 }
 
