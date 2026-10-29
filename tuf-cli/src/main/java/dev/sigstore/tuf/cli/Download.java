@@ -37,7 +37,7 @@ public class Download implements Callable<Integer> {
     var metadataUrl = tufCommand.getMetadataUrl();
     var targetDir = tufCommand.getTargetDir();
     var targetBaseUrl = tufCommand.getTargetBaseUrl();
-    var targetName = tufCommand.getTargetName();
+    var targetNames = tufCommand.getTargetNames();
     var clock = tufCommand.getClock();
 
     var fsStore = FileSystemTufStore.newFileSystemStore(metadataDir, targetDir);
@@ -55,7 +55,9 @@ public class Download implements Callable<Integer> {
     // the java client isn't one shot like other clients, so downloadTarget doesn't call update
     // for the sake of conformance updateMeta here
     tuf.updateMeta();
-    tuf.downloadTarget(targetName);
+    for (var targetName : targetNames) {
+      tuf.downloadTarget(targetName);
+    }
     return 0;
   }
 }
