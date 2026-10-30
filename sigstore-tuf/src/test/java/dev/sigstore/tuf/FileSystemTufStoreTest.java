@@ -17,7 +17,6 @@ package dev.sigstore.tuf;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.RootRole;
 import java.io.IOException;

@@ -17,10 +17,12 @@ package dev.sigstore.sandbox.modular;
 
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.common.json.GsonChecked;
+import dev.sigstore.tuf.RootProvider;
 
 public class Main {
   public static void main(String[] args) {
     System.out.println(KeylessSigner.class.getName());
     System.out.println(GsonChecked.class.getName());
+    System.out.println(RootProvider.class.getName());
   }
 }
