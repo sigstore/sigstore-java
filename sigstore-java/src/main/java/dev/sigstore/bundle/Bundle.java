@@ -16,6 +16,7 @@
 package dev.sigstore.bundle;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Bytes;
 import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.rekor.client.RekorEntry;
 import java.io.IOException;
@@ -153,15 +154,11 @@ public abstract class Bundle {
     @Value.Auxiliary
     @Derived
     default byte[] getPAE() {
-      return ("DSSEv1 "
-              + getPayloadType().length()
-              + " "
-              + getPayloadType()
-              + " "
-              + getPayloadAsString().length()
-              + " "
-              + getPayloadAsString())
-          .getBytes(StandardCharsets.UTF_8);
+      String type = getPayloadType();
+      byte[] payload = getPayload();
+      int typeLength = type.getBytes(StandardCharsets.UTF_8).length;
+      String header = "DSSEv1 " + typeLength + " " + type + " " + payload.length + " ";
+      return Bytes.concat(header.getBytes(StandardCharsets.UTF_8), payload);
     }
 
     @Lazy
