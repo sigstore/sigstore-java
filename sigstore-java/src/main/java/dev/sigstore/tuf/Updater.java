@@ -118,6 +118,11 @@ public class Updater {
       // targets from remote
       updateSnapshot();
       updateTargets();
+    } else {
+      // nothing new on the remote, so the cached snapshot and targets are reused. They still have
+      // to pass the freeze attack checks (5.5.6 and 5.6.5) against this update's start time.
+      throwIfExpired(trustedMetaStore.getSnapshot().getSignedMeta().getExpiresAsDate());
+      throwIfExpired(trustedMetaStore.getTargets().getSignedMeta().getExpiresAsDate());
     }
   }
 
@@ -362,6 +367,9 @@ public class Updater {
       }
 
       if (localTimestamp.getSignedMeta().getVersion() == timestamp.getSignedMeta().getVersion()) {
+        // same version, keep the trusted timestamp. It is the timestamp this update continues
+        // with, so it still has to pass the freeze attack check in (4).
+        throwIfExpired(localTimestamp.getSignedMeta().getExpiresAsDate());
         return;
       }
     }
