@@ -63,4 +63,11 @@ public interface DelegationRole extends Role {
   /** A boolean indicating whether subsequent delegations should be considered. */
   @Gson.Named("terminating")
   boolean isTerminating();
+
+  /**
+   * A list of strings, where each string is a hex-encoded hash prefix. Clients MUST check that the
+   * SHA-256 hash of the target's name starts with one of these prefixes.
+   */
+  @Gson.Named("path_hash_prefixes")
+  List<String> getPathHashPrefixes();
 }
