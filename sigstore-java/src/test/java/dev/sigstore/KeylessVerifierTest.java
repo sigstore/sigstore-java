@@ -446,6 +446,12 @@ public class KeylessVerifierTest {
             "bundle.dsse.mismatched-signature.sigstore",
             "Provided DSSE signature materials are inconsistent with DSSE log entry"),
         Arguments.arguments(
+            "bundle.dsse.mismatched-certificate.sigstore",
+            "Certificate in DSSE log entry does not match certificate in bundle"),
+        Arguments.arguments(
+            "bundle.dsse.public-key-verifier.sigstore",
+            "Could not parse certificate from DSSE log entry verifier"),
+        Arguments.arguments(
             "bundle.dsse.rekor-v2.bad-signature.sigstore", "DSSE signature was not valid"),
         Arguments.arguments(
             "bundle.dsse.rekor-v2.mismatched-envelope.sigstore",

@@ -547,6 +547,22 @@ public class KeylessVerifier {
         throw new KeylessVerificationException(
             "Provided DSSE signature materials are inconsistent with DSSE log entry");
       }
+
+      // check if the verifier in the rekorEntry is the certificate in the bundle
+      var verifier = rekorDsse.getSignatures().get(0).getVerifier();
+      if (verifier == null) {
+        throw new KeylessVerificationException("DSSE log entry is missing a verifier");
+      }
+      try {
+        var certFromRekor = Certificates.fromPem(Base64.getDecoder().decode(verifier));
+        if (!Arrays.equals(certFromRekor.getEncoded(), leafCert.getEncoded())) {
+          throw new KeylessVerificationException(
+              "Certificate in DSSE log entry does not match certificate in bundle");
+        }
+      } catch (CertificateException | IllegalArgumentException e) {
+        throw new KeylessVerificationException(
+            "Could not parse certificate from DSSE log entry verifier", e);
+      }
     } else if ("0.0.2".equals(version) && "hashedrekord".equals(kind)) {
       HashedRekordLogEntryV002 logEntrySpec;
       try {
