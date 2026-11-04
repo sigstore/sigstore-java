@@ -911,6 +911,65 @@ class UpdaterTest {
   }
 
   @Test
+  public void testUpdateMeta_unchangedTimestampExpired() throws Exception {
+    setupMirror(
+        "synthetic/test-template",
+        "2.root.json",
+        "timestamp.json",
+        "3.snapshot.json",
+        "3.targets.json");
+    // populate the local store while all metadata is still valid
+    createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-18T18:07:27Z")
+        .updateMeta();
+    // timestamp expires 2023-02-13T15:37:48Z, the mirror still serves the same version
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2023-02-14T15:37:48Z");
+    assertThrows(
+        RoleExpiredException.class,
+        updater::updateMeta,
+        "Expects a RoleExpiredException as the trusted timestamp.json is expired and the mirror has no newer version.");
+  }
+
+  @Test
+  public void testUpdateMeta_unchangedSnapshotExpired() throws Exception {
+    setupMirror("synthetic/snapshot-expired", "2.root.json", "timestamp.json", "3.snapshot.json");
+    TestResources.setupRepoFiles("synthetic/test-template", localMirrorPath, "3.targets.json");
+    // populate the local store while all metadata is still valid
+    createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-18T18:07:27Z")
+        .updateMeta();
+    // snapshot expires 2022-11-19T18:07:27Z, the mirror still serves the same timestamp version
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-20T18:07:27Z");
+    assertThrows(
+        RoleExpiredException.class,
+        updater::updateMeta,
+        "Expects a RoleExpiredException as the trusted snapshot.json is expired and the mirror has no newer version.");
+  }
+
+  @Test
+  public void testUpdateMeta_unchangedTargetsExpired() throws Exception {
+    setupMirror(
+        "synthetic/targets-expired",
+        "2.root.json",
+        "timestamp.json",
+        "3.snapshot.json",
+        "3.targets.json");
+    // populate the local store while all metadata is still valid
+    createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-18T18:07:27Z")
+        .updateMeta();
+    // targets expires 2022-11-19T18:07:27Z, the mirror still serves the same timestamp version
+    var updater =
+        createTimeStaticUpdater(
+            localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT, "2022-11-20T18:07:27Z");
+    assertThrows(
+        RoleExpiredException.class,
+        updater::updateMeta,
+        "Expects a RoleExpiredException as the trusted targets.json is expired and the mirror has no newer version.");
+  }
+
+  @Test
   public void canCreateMultipleUpdaters() throws IOException {
     createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
