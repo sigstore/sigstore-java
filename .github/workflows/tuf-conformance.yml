@@ -54,7 +54,7 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
 
-      - uses: theupdateframework/tuf-conformance@500c525c9ce287a472fd334fe8d885cace667d32 # v2.4.0
+      - uses: theupdateframework/tuf-conformance@1bc18916ee35f753b6eb8ee19dabb98449ca7326 # v2.5.0
         with:
           entrypoint: ${{ github.workspace }}/tuf-cli/tuf-cli-server
           artifact-name: test repositories for tuf-cli java ${{ matrix.java-version }}
