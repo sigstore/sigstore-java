@@ -1,2 +1,1 @@
 com.google.protobuf.util.JsonFormat#parser() @ Use dev.sigstore.json.ProtoJson#parser() instead
-com.google.gson.GsonBuilder @ Use dev.sigstore.json.GsonSupplier.GSON instead

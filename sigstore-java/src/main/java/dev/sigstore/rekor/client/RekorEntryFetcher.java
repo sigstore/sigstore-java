@@ -21,7 +21,7 @@ import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.trustroot.SigstoreConfigurationException;
 import dev.sigstore.trustroot.TransparencyLog;
-import dev.sigstore.tuf.SigstoreTufClient;
+import dev.sigstore.trustroot.tuf.SigstoreTufClient;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.cert.CertificateExpiredException;

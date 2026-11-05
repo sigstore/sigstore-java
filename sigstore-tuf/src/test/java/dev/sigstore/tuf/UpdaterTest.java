@@ -15,8 +15,9 @@
  */
 package dev.sigstore.tuf;
 
-import static dev.sigstore.testkit.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
+import static dev.sigstore.tuf.TestResources.UPDATER_SYNTHETIC_TRUSTED_ROOT;
 import static dev.sigstore.tuf.json.TufGsonSupplier.TUF_GSON;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -29,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import dev.sigstore.common.http.URIFormat;
 import dev.sigstore.common.json.JsonParseException;
-import dev.sigstore.testkit.tuf.TestResources;
 import dev.sigstore.tuf.encryption.Verifier;
 import dev.sigstore.tuf.encryption.Verifiers;
 import dev.sigstore.tuf.model.Hashes;
@@ -42,7 +42,6 @@ import dev.sigstore.tuf.model.Root;
 import dev.sigstore.tuf.model.Signature;
 import dev.sigstore.tuf.model.Targets;
 import io.github.netmikey.logunit.api.LogCapturer;
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -53,6 +52,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import okhttp3.mockwebserver.Dispatcher;
@@ -60,12 +60,6 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -212,8 +206,7 @@ class UpdaterTest {
     setupMirror("synthetic/test-template", "2.root.json");
     var updater = createTimeStaticUpdater(localStorePath, UPDATER_SYNTHETIC_TRUSTED_ROOT);
     var ex = assertThrows(FileNotFoundException.class, updater::update);
-    MatcherAssert.assertThat(
-        ex.getMessage(), CoreMatchers.startsWith("file (timestamp.json) was not found at source"));
+    assertThat(ex.getMessage()).startsWith("file (timestamp.json) was not found at source");
   }
 
   @Test
@@ -480,10 +473,9 @@ class UpdaterTest {
             JsonParseException.class,
             updater::update,
             "targets.json data should be causing a gson error due to missing TargetData. If at some point we support nullable TargetData this test should be updated to expect TargetMetadataMissingException while calling downloadTargets().");
-    MatcherAssert.assertThat(
-        ex.getMessage(),
-        CoreMatchers.endsWith(
-            "Cannot build TargetData, some of required attributes are not set [hashes, length]"));
+    assertThat(ex.getMessage())
+        .endsWith(
+            "Cannot build TargetData, some of required attributes are not set [hashes, length]");
   }
 
   @Test
@@ -640,13 +632,11 @@ class UpdaterTest {
       this.sha512 = sha512;
     }
 
-    @Nullable
     @Override
     public String getSha256() {
       return sha256;
     }
 
-    @Nullable
     @Override
     public String getSha512() {
       return sha512;
@@ -756,18 +746,18 @@ class UpdaterTest {
           .signature(
               "3045022075ec28360b3e310db9d3de281a5286e37884aefd9f0b7193ad67c68ab6ee95a2022100aa08a93c58d74d9cb128cea765cae378efe86092f253b75fd427aede48ac7e22")
           .build();
-  static final Pair<String, Key> PUB_KEY_1 =
-      Pair.of(
+  static final Map.Entry<String, Key> PUB_KEY_1 =
+      Map.entry(
           "2f64fb5eac0cf94dd39bb45308b98920055e9a0d8e012a7220787834c60aef97",
           newKey(
               "04cbc5cab2684160323c25cd06c3307178a6b1d1c9b949328453ae473c5ba7527e35b13f298b41633382241f3fd8526c262d43b45adee5c618fa0642c82b8a9803"));
-  static final Pair<String, Key> PUB_KEY_2 =
-      Pair.of(
+  static final Map.Entry<String, Key> PUB_KEY_2 =
+      Map.entry(
           "eaf22372f417dd618a46f6c627dbc276e9fd30a004fc94f9be946e73f8bd090b",
           newKey(
               "04117b33dd265715bf23315e368faa499728db8d1f0a377070a1c7b1aba2cc21be6ab1628e42f2cdd7a35479f2dce07b303a8ba646c55569a8d2a504ba7e86e447"));
-  static final Pair<String, Key> PUB_KEY_3 =
-      Pair.of(
+  static final Map.Entry<String, Key> PUB_KEY_3 =
+      Map.entry(
           "f40f32044071a9365505da3d1e3be6561f6f22d0e60cf51df783999f6c3429cb",
           newKey(
               "04cc1cd53a61c23e88cc54b488dfae168a257c34fac3e88811c55962b24cffbfecb724447999c54670e365883716302e49da57c79a33cd3e16f81fbc66f0bcdf48"));
@@ -778,11 +768,11 @@ class UpdaterTest {
 
     Map<String, Key> publicKeys =
         ImmutableMap.of(
-            PUB_KEY_1.getLeft(), PUB_KEY_1.getRight(),
-            PUB_KEY_2.getLeft(), PUB_KEY_2.getRight());
+            PUB_KEY_1.getKey(), PUB_KEY_1.getValue(),
+            PUB_KEY_2.getKey(), PUB_KEY_2.getValue());
     Role delegate =
         ImmutableRootRole.builder()
-            .addKeyids(PUB_KEY_1.getLeft(), PUB_KEY_2.getLeft())
+            .addKeyids(PUB_KEY_1.getKey(), PUB_KEY_2.getKey())
             .threshold(2)
             .build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
@@ -795,8 +785,8 @@ class UpdaterTest {
   public void testVerifyDelegate_verificationFailed() throws Exception {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
-    Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
-    Role delegate = ImmutableRootRole.builder().addKeyids(PUB_KEY_1.getLeft()).threshold(1).build();
+    Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getKey(), PUB_KEY_1.getValue());
+    Role delegate = ImmutableRootRole.builder().addKeyids(PUB_KEY_1.getKey()).threshold(1).build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
     var updater = Updater.builder().setVerifiers(ALWAYS_FAILS).build();
     try {
@@ -813,10 +803,10 @@ class UpdaterTest {
   public void testVerifyDelegate_belowThreshold() throws Exception {
     List<Signature> sigs = ImmutableList.of(SIG_1, SIG_2);
 
-    Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getLeft(), PUB_KEY_1.getRight());
+    Map<String, Key> publicKeys = ImmutableMap.of(PUB_KEY_1.getKey(), PUB_KEY_1.getValue());
     Role delegate =
         ImmutableRootRole.builder()
-            .addKeyids(PUB_KEY_1.getLeft(), PUB_KEY_2.getLeft())
+            .addKeyids(PUB_KEY_1.getKey(), PUB_KEY_2.getKey())
             .threshold(2)
             .build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
@@ -860,11 +850,11 @@ class UpdaterTest {
 
     Map<String, Key> publicKeys =
         ImmutableMap.of(
-            PUB_KEY_1.getLeft(), PUB_KEY_1.getRight(),
-            PUB_KEY_2.getLeft(), PUB_KEY_2.getRight());
+            PUB_KEY_1.getKey(), PUB_KEY_1.getValue(),
+            PUB_KEY_2.getKey(), PUB_KEY_2.getValue());
     Role delegate =
         ImmutableRootRole.builder()
-            .addKeyids(PUB_KEY_1.getLeft(), PUB_KEY_3.getLeft())
+            .addKeyids(PUB_KEY_1.getKey(), PUB_KEY_3.getKey())
             .threshold(2)
             .build();
     byte[] verificationMaterial = "alksdjfas".getBytes(StandardCharsets.UTF_8);
@@ -925,13 +915,11 @@ class UpdaterTest {
         .build();
   }
 
-  @NotNull
   private static Updater createTimeStaticUpdater(Path localStore, Path trustedRootFile)
       throws IOException {
     return createTimeStaticUpdater(localStore, trustedRootFile, TEST_STATIC_UPDATE_TIME);
   }
 
-  @NotNull
   private static Updater createTimeStaticUpdater(Path localStore, Path trustedRootFile, String time)
       throws IOException {
     var fsTufStore = FileSystemTufStore.newFileSystemStore(localStore);
@@ -949,7 +937,6 @@ class UpdaterTest {
         .build();
   }
 
-  @NotNull
   private static Updater createAlwaysVerifyingUpdater() {
     return Updater.builder().setVerifiers(ALWAYS_VERIFIES).build();
   }
@@ -973,8 +960,12 @@ class UpdaterTest {
 
   @AfterEach
   void clearLocalMirror() throws IOException {
-    for (File file : localMirrorPath.toFile().listFiles()) {
-      FileUtils.forceDelete(file);
+    try (var paths = Files.walk(localMirrorPath)) {
+      for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+        if (!path.equals(localMirrorPath)) {
+          Files.delete(path);
+        }
+      }
     }
   }
 

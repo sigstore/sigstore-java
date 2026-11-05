@@ -12,5 +12,6 @@ repositories {
 
 dependencies {
     implementation("dev.sigstore:sigstore-common")
+    implementation("dev.sigstore:sigstore-tuf")
     implementation("dev.sigstore:sigstore-java")
 }
