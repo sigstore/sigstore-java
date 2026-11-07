@@ -20,14 +20,38 @@ import dev.sigstore.ImmutableCTLogOptions;
 import dev.sigstore.VerificationOptions.CTLogOptions;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.encryption.certificates.Certificates;
+import dev.sigstore.trustroot.CertificateAuthority;
+import dev.sigstore.trustroot.ImmutableCertificateAuthority;
 import dev.sigstore.trustroot.ImmutableLogId;
+import dev.sigstore.trustroot.ImmutableSubject;
 import dev.sigstore.trustroot.ImmutableTransparencyLog;
+import dev.sigstore.trustroot.ImmutableValidFor;
 import dev.sigstore.trustroot.SigstoreTrustedRoot;
 import java.io.IOException;
 import java.io.StringReader;
+import java.math.BigInteger;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
+import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -130,7 +154,121 @@ public class FulcioVerifierTest {
     Assertions.assertEquals("No valid SCTs were found, all(1) SCTs were invalid", fve.getMessage());
   }
 
+  @Test
+  public void codeSigningLeafFromPrivateCa() throws Exception {
+    var ca = new TestCa();
+    var leaf =
+        ca.issueLeaf(
+            new KeyUsage(KeyUsage.digitalSignature),
+            new ExtendedKeyUsage(KeyPurposeId.id_kp_codeSigning));
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(List.of(ca.ca), List.of());
+
+    fulcioVerifier.verifySigningCertificate(
+        Certificates.toCertPath(leaf), CTLogOptions.builder().isEnabled(false).build());
+  }
+
+  @Test
+  public void leafWithoutCodeSigningEku() throws Exception {
+    var ca = new TestCa();
+    var leaf =
+        ca.issueLeaf(
+            new KeyUsage(KeyUsage.digitalSignature),
+            new ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth));
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(List.of(ca.ca), List.of());
+
+    var fve =
+        Assertions.assertThrows(
+            FulcioVerificationException.class,
+            () ->
+                fulcioVerifier.verifySigningCertificate(
+                    Certificates.toCertPath(leaf),
+                    CTLogOptions.builder().isEnabled(false).build()));
+    Assertions.assertEquals(
+        "Signing certificate extended key usage does not include codeSigning", fve.getMessage());
+  }
+
+  @Test
+  public void leafWithoutDigitalSignatureKeyUsage() throws Exception {
+    var ca = new TestCa();
+    var leaf =
+        ca.issueLeaf(
+            new KeyUsage(KeyUsage.keyEncipherment),
+            new ExtendedKeyUsage(KeyPurposeId.id_kp_codeSigning));
+    var fulcioVerifier = FulcioVerifier.newFulcioVerifier(List.of(ca.ca), List.of());
+
+    var fve =
+        Assertions.assertThrows(
+            FulcioVerificationException.class,
+            () ->
+                fulcioVerifier.verifySigningCertificate(
+                    Certificates.toCertPath(leaf),
+                    CTLogOptions.builder().isEnabled(false).build()));
+    Assertions.assertEquals(
+        "Signing certificate key usage does not include digitalSignature", fve.getMessage());
+  }
+
   private static @NonNull ImmutableCTLogOptions enabledCTLog() {
     return CTLogOptions.builder().isEnabled(true).build();
+  }
+
+  /** A self-signed CA, standing in for a private deployment's fulcio CA. */
+  private static class TestCa {
+    private final X500Name name = new X500Name("CN=test-ca,O=test");
+    private final KeyPair keyPair;
+    private final CertificateAuthority ca;
+    private final Instant now = Instant.now();
+
+    TestCa() throws Exception {
+      keyPair = newKeyPair();
+      var root =
+          new JcaX509v3CertificateBuilder(
+                  name,
+                  BigInteger.ONE,
+                  Date.from(now.minus(Duration.ofHours(1))),
+                  Date.from(now.plus(Duration.ofHours(1))),
+                  name,
+                  keyPair.getPublic())
+              .addExtension(Extension.basicConstraints, true, new BasicConstraints(true))
+              .addExtension(
+                  Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign));
+      ca =
+          ImmutableCertificateAuthority.builder()
+              .certPath(Certificates.toCertPath(sign(root)))
+              .uri(URI.create("https://fulcio.test"))
+              .validFor(ImmutableValidFor.builder().start(now.minus(Duration.ofHours(1))).build())
+              .subject(ImmutableSubject.builder().organization("test").commonName("test").build())
+              .build();
+    }
+
+    X509Certificate issueLeaf(KeyUsage keyUsage, ExtendedKeyUsage extendedKeyUsage)
+        throws Exception {
+      var leaf =
+          new JcaX509v3CertificateBuilder(
+                  name,
+                  BigInteger.TWO,
+                  Date.from(now.minus(Duration.ofMinutes(1))),
+                  Date.from(now.plus(Duration.ofMinutes(10))),
+                  new X500Name("O=sigstore.dev"),
+                  newKeyPair().getPublic())
+              .addExtension(Extension.basicConstraints, true, new BasicConstraints(false))
+              .addExtension(Extension.keyUsage, true, keyUsage)
+              .addExtension(Extension.extendedKeyUsage, false, extendedKeyUsage)
+              .addExtension(
+                  Extension.subjectAlternativeName,
+                  true,
+                  new GeneralNames(new GeneralName(GeneralName.rfc822Name, "test@test.com")));
+      return sign(leaf);
+    }
+
+    private X509Certificate sign(X509v3CertificateBuilder builder) throws Exception {
+      var signer = new JcaContentSignerBuilder("SHA256withECDSA").build(keyPair.getPrivate());
+      return new JcaX509CertificateConverter().getCertificate(builder.build(signer));
+    }
+
+    private static KeyPair newKeyPair() throws Exception {
+      var keyPairGenerator = KeyPairGenerator.getInstance("EC");
+      keyPairGenerator.initialize(256);
+      return keyPairGenerator.generateKeyPair();
+    }
   }
 }
