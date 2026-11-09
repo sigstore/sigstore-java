@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.sigstore.testkit.tuf;
+package dev.sigstore.tuf;
 
 import com.google.common.io.Resources;
 import dev.sigstore.common.json.JsonParseException;

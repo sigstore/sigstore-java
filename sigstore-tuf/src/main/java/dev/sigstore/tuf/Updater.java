@@ -562,8 +562,7 @@ public class Updater {
     targetStore.writeTarget(targetName, targetBytes);
   }
 
-  @VisibleForTesting
-  TargetStore getTargetStore() {
+  public TargetStore getTargetStore() {
     return targetStore;
   }
 
