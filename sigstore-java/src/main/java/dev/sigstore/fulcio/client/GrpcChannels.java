@@ -15,7 +15,7 @@
  */
 package dev.sigstore.fulcio.client;
 
-import dev.sigstore.common.http.HttpParams;
+import dev.sigstore.http.HttpParams;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URI;

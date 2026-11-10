@@ -17,4 +17,5 @@ module dev.sigstore.sandbox.modular {
   requires dev.sigstore;
   requires dev.sigstore.common;
   requires dev.sigstore.tuf;
+  requires dev.sigstore.http;
 }
