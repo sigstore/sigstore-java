@@ -23,7 +23,7 @@ dependencies {
     api(platform("com.google.http-client:google-http-client-bom:2.2.0"))
     api("com.google.http-client:google-http-client-apache-v5")
 
-    testImplementation(platform("org.junit:junit-bom:5.14.4"))
+    testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation(platform("org.mockito:mockito-bom:5.24.0"))
