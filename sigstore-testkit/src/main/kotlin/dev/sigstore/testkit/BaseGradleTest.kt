@@ -61,16 +61,16 @@ open class BaseGradleTest {
         @JvmStatic
         fun gradleVersions(): Iterable<GradleVersion> = listOf(
             // Gradle 7.2 fails with "No service of type ObjectFactory available in default services"
-            // So we require Gradle 7.3+
+            // So we require Gradle 7.3+ (also tests < 7.4 forUseAtConfigurationTime reflection)
             "7.3",
-            "7.5.1",
+            // Minimum version where Gradle's signing plugin supports configuration cache
             "8.1",
+            // Minimum version that supports Java 21
             "8.5",
-            "8.7",
-            "8.10.2",
             "8.14.3",
+            // Minimum version that supports Java 25
             "9.1.0",
-            "9.2.0",
+            // Gradle 9.7+ uses org.gradle.isolated-projects instead of unsafe property
             "9.7.1",
         ).map { GradleVersion.version(it) }
             .filter {
