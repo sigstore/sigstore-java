@@ -11,7 +11,7 @@ tasks.jar {
 }
 
 dependencies {
-    api("com.google.code.gson:gson:2.14.0")
+    api("com.google.code.gson:gson:2.15.0")
 }
 
 forbiddenApis {

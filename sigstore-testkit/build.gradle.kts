@@ -9,7 +9,7 @@ plugins {
 
 dependencies {
     implementation(project(":sigstore-java"))
-    implementation("com.google.code.gson:gson:2.14.0")
+    implementation("com.google.code.gson:gson:2.15.0")
     implementation("com.google.guava:guava:33.7.2-jre")
 
     // This is different from typical "testImplementation" dependencies, because

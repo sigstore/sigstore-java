@@ -17,7 +17,7 @@ dependencies {
     annotationProcessor("org.immutables:value:2.12.3")
 
     api(project(":sigstore-common"))
-    api("com.google.code.gson:gson:2.14.0")
+    api("com.google.code.gson:gson:2.15.0")
     implementation(project(":sigstore-http"))
 
     implementation(platform("com.google.http-client:google-http-client-bom:2.2.0"))
