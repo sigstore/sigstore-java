@@ -30,7 +30,7 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testImplementation("org.assertj:assertj-core:3.27.7")
 
-    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
     testImplementation("io.github.netmikey.logunit:logunit-core:2.0.0")
     testRuntimeOnly("io.github.netmikey.logunit:logunit-jul:2.0.0")
 }
