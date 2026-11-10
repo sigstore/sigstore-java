@@ -19,18 +19,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.api.client.http.HttpResponseException;
 import com.google.common.io.Resources;
 import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.encryption.certificates.Certificates;
 import dev.sigstore.encryption.signers.Signers;
 import dev.sigstore.testing.CertGenerator;
 import dev.sigstore.trustroot.Service;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.UUID;
+import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -116,13 +119,22 @@ public class RekorClientHttpMockTest {
   @Test
   public void putEntry_otherError500_propagates() throws Exception {
     try (var server = new MockWebServer()) {
-      server.enqueue(new MockResponse().setResponseCode(500).setBody("internal server error"));
+      server.setDispatcher(
+          new Dispatcher() {
+            @Override
+            public @NonNull MockResponse dispatch(@NonNull RecordedRequest recordedRequest) {
+              return new MockResponse()
+                  .setResponseCode(500)
+                  .setBody("{\"error\": \"Internal Server Error\"}");
+            }
+          });
       server.start();
 
       var client =
           RekorClientHttp.builder().setService(Service.of(server.url("/").uri(), 1)).build();
 
-      assertThrows(IOException.class, () -> client.putEntry(req));
+      var ex = assertThrows(HttpResponseException.class, () -> client.putEntry(req));
+      assertEquals(500, ex.getStatusCode());
     }
   }
 

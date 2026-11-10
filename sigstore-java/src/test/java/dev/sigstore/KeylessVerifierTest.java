@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +50,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 public class KeylessVerifierTest {
 
+  private static KeylessVerifier publicVerifier;
+  private static KeylessVerifier stagingVerifier;
+
+  @BeforeAll
+  public static void setupVerifiers() throws Exception {
+    publicVerifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    stagingVerifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+  }
+
   @Test
   public void testVerify_noDigestInBundle_rekorV1() throws Exception {
     var bundleFile =
@@ -57,8 +67,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
-    verifier.verify(
+    publicVerifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
 
@@ -72,7 +81,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var thrown =
         Assertions.assertThrows(
@@ -99,7 +108,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var thrown =
         Assertions.assertThrows(
@@ -138,7 +147,7 @@ public class KeylessVerifierTest {
     var modifiedBundleFile = originalBundleFile.replace(canonicalizedBodyB64, modifiedB64);
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     var thrown =
         Assertions.assertThrows(
@@ -177,7 +186,7 @@ public class KeylessVerifierTest {
     var modifiedBundleFile = originalBundleFile.replace(canonicalizedBodyB64, modifiedB64);
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -220,7 +229,7 @@ public class KeylessVerifierTest {
     var modifiedBundleFile = originalBundleFile.replace(canonicalizedBodyB64, modifiedB64);
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     var thrown =
         Assertions.assertThrows(
@@ -265,7 +274,7 @@ public class KeylessVerifierTest {
     var modifiedBundleFile = originalBundleFile.replace(canonicalizedBodyB64, modifiedB64);
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     var thrown =
         Assertions.assertThrows(
@@ -290,7 +299,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var thrown =
         Assertions.assertThrows(
@@ -335,7 +344,7 @@ public class KeylessVerifierTest {
     var bundleFile =
         Resources.toString(Resources.getResource(bundleResourcePath), StandardCharsets.UTF_8);
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     verifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
@@ -348,7 +357,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     verifier.verify(
         Path.of(artifact),
         Bundle.from(new StringReader(bundleFile)),
@@ -363,7 +372,7 @@ public class KeylessVerifierTest {
 
   @Test
   public void verifyCertificateMatches_noneProvided() throws Exception {
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     var certificate =
         (X509Certificate)
             CertGenerator.newCert(
@@ -374,7 +383,7 @@ public class KeylessVerifierTest {
 
   @Test
   public void verifyCertificateMatches_anyOf() throws Exception {
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     var certificate =
         (X509Certificate)
             CertGenerator.newCert(
@@ -397,7 +406,7 @@ public class KeylessVerifierTest {
 
   @Test
   public void verifyCertificateMatches_noneMatch() throws Exception {
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     var certificate =
         (X509Certificate)
             CertGenerator.newCert(
@@ -431,7 +440,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     verifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
@@ -467,13 +476,7 @@ public class KeylessVerifierTest {
             Resources.getResource("dev/sigstore/samples/bundles/" + bundleName),
             StandardCharsets.UTF_8);
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var builder = KeylessVerifier.builder();
-    if (bundleName.contains("rekor-v2")) {
-      builder.sigstoreStagingDefaults();
-    } else {
-      builder.sigstorePublicDefaults();
-    }
-    var verifier = builder.build();
+    var verifier = bundleName.contains("rekor-v2") ? stagingVerifier : publicVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -494,7 +497,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var badArtifactDigest =
         Hashing.sha256().hashString("nonsense", StandardCharsets.UTF_8).asBytes();
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -521,7 +524,7 @@ public class KeylessVerifierTest {
     var testBundle = ImmutableBundle.builder().from(baseBundle).entries(List.of()).build();
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     // By default a transparency-log entry is required, so a bundle without one is rejected with a
     // clear error (rather than the incidental IndexOutOfBoundsException it used to raise).
@@ -547,7 +550,7 @@ public class KeylessVerifierTest {
             "\"payloadType\": \"application/json\"");
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -580,7 +583,7 @@ public class KeylessVerifierTest {
                 "eyJhcGlWZXJzaW9uIjoiMC4wLjMi"); // base64 of '{"apiVersion":"0.0.3"'
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -603,7 +606,7 @@ public class KeylessVerifierTest {
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/bundles/bundle-with-timestamp.sigstore"),
             StandardCharsets.UTF_8);
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     Assertions.assertDoesNotThrow(
         () ->
@@ -629,7 +632,7 @@ public class KeylessVerifierTest {
             Resources.getResource("dev/sigstore/samples/bundles/bundle.v3.sigstore"),
             StandardCharsets.UTF_8);
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var baseBundle = Bundle.from(new StringReader(bundleFile));
     var testBundle =
@@ -662,7 +665,7 @@ public class KeylessVerifierTest {
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/bundles/bundle.v3.sigstore"),
             StandardCharsets.UTF_8);
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var baseBundle = Bundle.from(new StringReader(bundleFileContent));
     var testBundle =
@@ -689,7 +692,7 @@ public class KeylessVerifierTest {
         Resources.toString(
             Resources.getResource("dev/sigstore/samples/bundles/bundle-with-timestamp.sigstore"),
             StandardCharsets.UTF_8);
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     Assertions.assertDoesNotThrow(
         () ->
@@ -708,7 +711,7 @@ public class KeylessVerifierTest {
                 "dev/sigstore/samples/bundles/bundle-with-rekor-v2-entry.sigstore"),
             StandardCharsets.UTF_8);
 
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
     verifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
@@ -721,7 +724,7 @@ public class KeylessVerifierTest {
             Resources.getResource("dev/sigstore/samples/bundles/bundle.dsse.rekor-v2.sigstore"),
             StandardCharsets.UTF_8);
 
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     verifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
@@ -734,7 +737,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
     var badArtifactDigest =
         Hashing.sha256().hashString("nonsense", StandardCharsets.UTF_8).asBytes();
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -767,7 +770,7 @@ public class KeylessVerifierTest {
     var noRfc3161Timestamps = "\"rfc3161Timestamps\": []";
     var invalidBundleFile = bundleFile.replace(validRfc3161Timestamps, noRfc3161Timestamps);
 
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
     var ex =
         Assertions.assertThrows(
             IllegalStateException.class,
@@ -792,7 +795,7 @@ public class KeylessVerifierTest {
             "\"integratedTime\": \"1747928754\"", "\"integratedTime\": \"1747928000\"");
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstoreStagingDefaults().build();
+    var verifier = stagingVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -820,7 +823,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var ex =
         Assertions.assertThrows(
@@ -851,7 +854,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
     verifier.verify(
         Path.of(artifact), Bundle.from(new StringReader(bundleFile)), VerificationOptions.empty());
   }
@@ -865,7 +868,7 @@ public class KeylessVerifierTest {
             StandardCharsets.UTF_8);
 
     var artifact = Resources.getResource("dev/sigstore/samples/bundles/artifact.txt").getPath();
-    var verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+    var verifier = publicVerifier;
 
     var sha512 = Hashing.sha512().hashBytes(Files.readAllBytes(Path.of(artifact))).asBytes();
 
