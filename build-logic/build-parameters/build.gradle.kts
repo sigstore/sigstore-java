@@ -12,6 +12,11 @@ buildParameters {
         mandatory.set(true)
         description.set("Java version for source and target compatibility")
     }
+    integer("testTargetJavaVersion") {
+        defaultValue.set(17)
+        mandatory.set(true)
+        description.set("Java version for compiling test sources (--release)")
+    }
     val projectName = "sigstore-java"
     integer("jdkBuildVersion") {
         defaultValue.set(21)
