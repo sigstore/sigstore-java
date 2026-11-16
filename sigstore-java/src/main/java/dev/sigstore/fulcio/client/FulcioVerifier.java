@@ -32,6 +32,7 @@ import java.security.cert.CertPathValidator;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.PKIXParameters;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
@@ -44,9 +45,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
 
 /** Verifier for fulcio generated signing certificates */
 public class FulcioVerifier {
+  private static final String BASIC_CONSTRAINTS_OID = Extension.basicConstraints.getId();
+  private static final String KEY_USAGE_OID = Extension.keyUsage.getId();
+  private static final String EXTENDED_KEY_USAGE_OID = Extension.extendedKeyUsage.getId();
+  private static final String CODE_SIGNING_EKU_OID = KeyPurposeId.id_kp_codeSigning.getId();
+  private static final int DIGITAL_SIGNATURE_KEY_USAGE_INDEX = 0;
+
   private final List<CertificateAuthority> cas;
   private final List<TransparencyLog> ctLogs;
   private final CTVerifier ctVerifier;
@@ -146,9 +155,9 @@ public class FulcioVerifier {
   }
 
   /**
-   * Verify that a cert chain is valid and chains up to the trust anchor (fulcio public key)
-   * configured in this validator. Also verify that the leaf certificate contains at least one valid
-   * SCT
+   * Verify that the leaf certificate conforms to the Sigstore X.509 leaf profile, that the cert
+   * chain is valid and chains up to the trust anchor (fulcio public key) configured in this
+   * validator, and that the leaf certificate contains at least one valid SCT.
    *
    * @param signingCertificate containing a certificate chain, this chain should not contain any
    *     trusted root or trusted intermediates
@@ -160,13 +169,114 @@ public class FulcioVerifier {
   }
 
   /**
-   * Verify a signing certificate, applying the given certificate-transparency policy (see {@link
-   * #verifySct(CertPath, CTLogOptions)}).
+   * Verify a signing certificate against the Sigstore X.509 leaf profile and trust anchors,
+   * applying the given certificate-transparency policy (see {@link #verifySct(CertPath,
+   * CTLogOptions)}).
    */
   public void verifySigningCertificate(CertPath signingCertificate, CTLogOptions ctLogOptions)
       throws FulcioVerificationException, IOException {
+    verifyLeafCertificate(Certificates.getLeaf(signingCertificate));
     CertPath fullCertPath = validateCertPath(signingCertificate);
+    verifyIntermediateCertificates(fullCertPath);
     verifySct(fullCertPath, ctLogOptions);
+  }
+
+  /**
+   * Verify that the leaf certificate conforms to the Sigstore X.509 leaf profile: X.509 v3, not a
+   * CA (critical BasicConstraints if present), critical KeyUsage with only digitalSignature, and
+   * non-critical ExtendedKeyUsage with only codeSigning. PKIX path validation does not check these
+   * constraints for the end-entity certificate.
+   */
+  private static void verifyLeafCertificate(X509Certificate leaf)
+      throws FulcioVerificationException {
+    if (leaf.getVersion() != 3) {
+      throw new FulcioVerificationException(
+          "Signing certificate must be X.509 v3, but was v" + leaf.getVersion());
+    }
+
+    // Check BasicConstraints criticality before getBasicConstraints(): JDK X509CertImpl returns -1
+    // for unparseable non-critical BasicConstraints, so this check is what rejects malformed ones.
+    var nonCriticalOids = leaf.getNonCriticalExtensionOIDs();
+    if (nonCriticalOids != null && nonCriticalOids.contains(BASIC_CONSTRAINTS_OID)) {
+      throw new FulcioVerificationException(
+          "Signing certificate BasicConstraints extension must be marked critical");
+    }
+    if (leaf.getBasicConstraints() != -1) {
+      throw new FulcioVerificationException("Signing certificate must not be a CA");
+    }
+
+    if (nonCriticalOids != null && nonCriticalOids.contains(KEY_USAGE_OID)) {
+      throw new FulcioVerificationException(
+          "Signing certificate KeyUsage extension must be marked critical");
+    }
+    var keyUsage = leaf.getKeyUsage();
+    if (keyUsage == null) {
+      throw new FulcioVerificationException("Signing certificate is missing KeyUsage extension");
+    }
+    if (keyUsage.length <= DIGITAL_SIGNATURE_KEY_USAGE_INDEX
+        || !keyUsage[DIGITAL_SIGNATURE_KEY_USAGE_INDEX]) {
+      throw new FulcioVerificationException(
+          "Signing certificate key usage does not include digitalSignature");
+    }
+    for (int i = 0; i < keyUsage.length; i++) {
+      if (i != DIGITAL_SIGNATURE_KEY_USAGE_INDEX && keyUsage[i]) {
+        throw new FulcioVerificationException(
+            "Signing certificate key usage must only include digitalSignature");
+      }
+    }
+
+    var criticalOids = leaf.getCriticalExtensionOIDs();
+    if (criticalOids != null && criticalOids.contains(EXTENDED_KEY_USAGE_OID)) {
+      throw new FulcioVerificationException(
+          "Signing certificate ExtendedKeyUsage extension must not be marked critical");
+    }
+    var extendedKeyUsage = getExtendedKeyUsage(leaf, "signing certificate");
+    if (extendedKeyUsage == null) {
+      throw new FulcioVerificationException(
+          "Signing certificate is missing ExtendedKeyUsage extension");
+    }
+    if (!extendedKeyUsage.contains(CODE_SIGNING_EKU_OID)) {
+      throw new FulcioVerificationException(
+          "Signing certificate extended key usage does not include codeSigning");
+    }
+    if (extendedKeyUsage.size() != 1) {
+      throw new FulcioVerificationException(
+          "Signing certificate extended key usage must only include codeSigning");
+    }
+  }
+
+  /**
+   * Verify that any intermediate CA certificates in the validated chain (excluding the leaf and
+   * trust anchor) that specify an ExtendedKeyUsage extension include {@code codeSigning}.
+   */
+  private static void verifyIntermediateCertificates(CertPath fullCertPath)
+      throws FulcioVerificationException {
+    var certs = fullCertPath.getCertificates();
+    for (int i = 1; i < certs.size() - 1; i++) {
+      var intermediate = (X509Certificate) certs.get(i);
+      var extendedKeyUsage = getExtendedKeyUsage(intermediate, "intermediate certificate");
+      if (extendedKeyUsage != null && !extendedKeyUsage.contains(CODE_SIGNING_EKU_OID)) {
+        throw new FulcioVerificationException(
+            "Intermediate certificate extended key usage does not include codeSigning");
+      }
+    }
+  }
+
+  private static List<String> getExtendedKeyUsage(X509Certificate cert, String certType)
+      throws FulcioVerificationException {
+    List<String> extendedKeyUsage;
+    try {
+      extendedKeyUsage = cert.getExtendedKeyUsage();
+    } catch (CertificateParsingException e) {
+      throw new FulcioVerificationException(
+          "Could not parse " + certType + " ExtendedKeyUsage extension", e);
+    }
+    // JDK <= 17 X509CertImpl returns null (instead of throwing) for unparseable non-critical EKU.
+    if (extendedKeyUsage == null && cert.getExtensionValue(EXTENDED_KEY_USAGE_OID) != null) {
+      throw new FulcioVerificationException(
+          "Could not parse " + certType + " ExtendedKeyUsage extension");
+    }
+    return extendedKeyUsage;
   }
 
   public CertPath trimTrustedParent(CertPath signingCertificate)
