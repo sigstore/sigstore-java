@@ -7,7 +7,9 @@
  * thread</a> and <a href="https://github.com/theupdateframework/python-tuf/issues/457">related
  * issue</a>.
  *
- * <p>There is just a minor edit to {@link dev.sigstore.tuf.json.canonicalizer.JsonCanonicalizer}
- * line 43.
+ * <p>Our fork makes two small edits to {@link
+ * dev.sigstore.tuf.json.canonicalizer.JsonCanonicalizer}: passing newline characters through
+ * unescaped, and enforcing a maximum JSON nesting depth in {@code JsonDecoder} to guard against
+ * stack overflow on untrusted inputs.
  */
 package dev.sigstore.tuf.json.canonicalizer;
