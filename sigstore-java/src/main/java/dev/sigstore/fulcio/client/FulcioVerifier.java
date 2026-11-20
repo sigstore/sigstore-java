@@ -32,6 +32,7 @@ import java.security.cert.CertPathValidator;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.PKIXParameters;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
@@ -47,6 +48,8 @@ import java.util.stream.Collectors;
 
 /** Verifier for fulcio generated signing certificates */
 public class FulcioVerifier {
+  private static final String CODE_SIGNING_EKU = "1.3.6.1.5.5.7.3.3";
+
   private final List<CertificateAuthority> cas;
   private final List<TransparencyLog> ctLogs;
   private final CTVerifier ctVerifier;
@@ -166,7 +169,31 @@ public class FulcioVerifier {
   public void verifySigningCertificate(CertPath signingCertificate, CTLogOptions ctLogOptions)
       throws FulcioVerificationException, IOException {
     CertPath fullCertPath = validateCertPath(signingCertificate);
+    verifyKeyUsage(Certificates.getLeaf(fullCertPath));
     verifySct(fullCertPath, ctLogOptions);
+  }
+
+  /**
+   * Fulcio signing certificates must have a key usage of digitalSignature and an extended key usage
+   * of codeSigning. PKIX path validation does not check either for the leaf.
+   */
+  private static void verifyKeyUsage(X509Certificate leaf) throws FulcioVerificationException {
+    var keyUsage = leaf.getKeyUsage();
+    if (keyUsage == null || !keyUsage[0]) {
+      throw new FulcioVerificationException(
+          "Signing certificate key usage does not include digitalSignature");
+    }
+    List<String> extendedKeyUsage;
+    try {
+      extendedKeyUsage = leaf.getExtendedKeyUsage();
+    } catch (CertificateParsingException e) {
+      throw new FulcioVerificationException(
+          "Could not parse signing certificate extended key usage", e);
+    }
+    if (extendedKeyUsage == null || !extendedKeyUsage.contains(CODE_SIGNING_EKU)) {
+      throw new FulcioVerificationException(
+          "Signing certificate extended key usage does not include codeSigning");
+    }
   }
 
   public CertPath trimTrustedParent(CertPath signingCertificate)
