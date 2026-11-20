@@ -44,12 +44,12 @@ spotless {
     java {
         targetExclude(
             "build/**/*.java",
-            "src/*/java/dev/sigstore/tuf/json/canonicalizer/*.java",
+            "src/main/java/dev/sigstore/tuf/json/canonicalizer/*.java",
         )
     }
     format("webPki", com.diffplug.gradle.spotless.JavaExtension::class.java) {
         googleJavaFormat("1.35.0")
         licenseHeaderFile("$rootDir/config/webPKILicenseHeader")
-        target("src/*/java/dev/sigstore/tuf/json/canonicalizer/*.java")
+        target("src/main/java/dev/sigstore/tuf/json/canonicalizer/*.java")
     }
 }

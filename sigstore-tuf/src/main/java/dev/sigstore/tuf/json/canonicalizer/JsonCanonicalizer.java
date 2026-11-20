@@ -51,9 +51,8 @@ public class JsonCanonicalizer {
     for (char c : value.toCharArray()) {
       switch (c) {
         case '\n':
-          // the below line is the only difference in our fork with the original code. We pass the
-          // newline character
-          // through rather than escaping. See package-info for more information.
+          // Note: our fork passes the newline character through rather than escaping. See
+          // package-info for more information.
           buffer.append(c);
           break;
 
@@ -156,9 +155,14 @@ class JsonDecoder {
   static final Pattern BOOLEAN_PATTERN = Pattern.compile("true|false");
   static final Pattern NUMBER_PATTERN = Pattern.compile("-?[0-9]+(\\.[0-9]+)?([eE][-+]?[0-9]+)?");
 
+  // Matches Gson's JsonReader default nesting limit (DEFAULT_NESTING_LIMIT = 255).
+  static final int MAX_NESTING_DEPTH = 255;
+
   int index;
 
   int maxLength;
+
+  int depth;
 
   String jsonData;
 
@@ -198,38 +202,52 @@ class JsonDecoder {
   }
 
   Object parseObject() throws IOException {
-    TreeMap<String, Object> dict = new TreeMap<String, Object>();
-    boolean next = false;
-    while (testNextNonWhiteSpaceChar() != RIGHT_CURLY_BRACKET) {
-      if (next) {
-        scanFor(COMMA_CHARACTER);
-      }
-      next = true;
-      scanFor(DOUBLE_QUOTE);
-      String name = parseQuotedString();
-      scanFor(COLON_CHARACTER);
-      if (dict.put(name, parseElement()) != null) {
-        throw new IOException("Duplicate property: " + name);
-      }
+    if (++depth > MAX_NESTING_DEPTH) {
+      throw new IOException("Maximum nesting depth exceeded: " + MAX_NESTING_DEPTH);
     }
-    scan();
-    return dict;
+    try {
+      TreeMap<String, Object> dict = new TreeMap<String, Object>();
+      boolean next = false;
+      while (testNextNonWhiteSpaceChar() != RIGHT_CURLY_BRACKET) {
+        if (next) {
+          scanFor(COMMA_CHARACTER);
+        }
+        next = true;
+        scanFor(DOUBLE_QUOTE);
+        String name = parseQuotedString();
+        scanFor(COLON_CHARACTER);
+        if (dict.put(name, parseElement()) != null) {
+          throw new IOException("Duplicate property: " + name);
+        }
+      }
+      scan();
+      return dict;
+    } finally {
+      depth--;
+    }
   }
 
   @SuppressWarnings("JdkObsolete")
   Object parseArray() throws IOException {
-    Vector<Object> array = new Vector<Object>();
-    boolean next = false;
-    while (testNextNonWhiteSpaceChar() != RIGHT_BRACKET) {
-      if (next) {
-        scanFor(COMMA_CHARACTER);
-      } else {
-        next = true;
-      }
-      array.add(parseElement());
+    if (++depth > MAX_NESTING_DEPTH) {
+      throw new IOException("Maximum nesting depth exceeded: " + MAX_NESTING_DEPTH);
     }
-    scan();
-    return array;
+    try {
+      Vector<Object> array = new Vector<Object>();
+      boolean next = false;
+      while (testNextNonWhiteSpaceChar() != RIGHT_BRACKET) {
+        if (next) {
+          scanFor(COMMA_CHARACTER);
+        } else {
+          next = true;
+        }
+        array.add(parseElement());
+      }
+      scan();
+      return array;
+    } finally {
+      depth--;
+    }
   }
 
   Object parseSimpleType() throws IOException {
