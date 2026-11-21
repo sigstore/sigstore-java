@@ -19,10 +19,18 @@ val BuildParametersExtension.buildJdkVersion: Int
 
 val BuildParametersExtension.testJdk: ToolchainProperties?
     get() {
+        val minTestBytecode = testTargetJavaVersion
+        if (minTestBytecode < 17) {
+            throw InvalidUserDataException(
+                "testTargetJavaVersion must be at least 17 (got $minTestBytecode)"
+            )
+        }
         val requestedVersion = jdkTestVersion.orNull?.takeIf { it != 0 }
         val finalVersion = requestedVersion ?: buildJdkVersion
-        if (finalVersion < 17) {
-            throw InvalidUserDataException("Unit tests require at least Java 17. Resolved: $finalVersion")
+        if (finalVersion < minTestBytecode) {
+            throw InvalidUserDataException(
+                "Unit tests require at least Java $minTestBytecode (testTargetJavaVersion). Resolved: $finalVersion"
+            )
         }
         return requestedVersion?.let { ToolchainProperties(it, jdkTestVendor.orNull, jdkTestImplementation.orNull) }
             ?: buildJdk

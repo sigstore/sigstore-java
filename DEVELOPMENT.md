@@ -8,6 +8,11 @@
 ./gradlew build -PjdkTestVersion=23
 ```
 
+## compile test sources for a different `--release` (default 17)
+```sh
+./gradlew build -PtestTargetJavaVersion=21
+```
+
 # list build parameters
 
 ```sh
